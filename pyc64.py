@@ -2,7 +2,7 @@
 class Memory:
     def __getitem__(self, item):
         value = super().__getitem__(item)
-        print(f"Memory read at {item}: {value}")
+        #print(f"Memory read at {item}: {value}")
         return value
 
     def __setitem__(self, key, value):
@@ -51,18 +51,30 @@ class CPU:
     def __str__(self):
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X}"
 
+class Screen:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def refresh(self):
+        print("\n".join(
+            ["".join(map(chr,self.memory[1024 + i*40: 1024 + i*40 + 39])) for i in range(0, 24, 40)])
+        )
+
 
 class Machine:
-    def __init__(self, cpu):
+    def __init__(self, cpu, screen):
         self.cpu = cpu
         self.memory = cpu.memory
-
+        self.screen = screen(self.memory)
 
 if __name__ == '__main__':
-    c64 = Machine(CPU(BytearrayMemory(65536)))
+    c64 = Machine(CPU(BytearrayMemory(65536)), Screen)
     c64.memory[0] = 42
-    c64.memory[42]
+    c64.memory[1024] = 65
     c64.cpu.fetch()
     print(c64.memory)
     print(c64.cpu)
+    c64.screen.refresh()
+    c64.memory[1024] = 66
+    c64.screen.refresh()
 
