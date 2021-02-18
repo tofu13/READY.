@@ -1,3 +1,5 @@
+from constants import *
+
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
     def __getitem__(self, item):
@@ -36,6 +38,13 @@ class CPU:
         self.SP = SP
         self.F = {'N': 1, 'V': 1, 'B': 1, 'D': 1, 'I': 1, 'Z': 1, 'C': 1}
 
+        self.opcodes = dict()
+        for opcode, specs in OPCODES.items():
+            if specs is not None:
+                if not hasattr(self, specs[0]):
+                    setattr(self, specs[0], None)
+                self.opcodes[opcode] = getattr(self, specs[0])
+
     def push(self, value):
         self.memory[self.SP] = value
         self.SP += 1
@@ -46,16 +55,16 @@ class CPU:
 
     def fetch(self):
         opcode = self.memory[self.PC]
-        print(f"Fetched at {self.PC}: {opcode:02X}")
+        print(f"Fetched at {self.PC}: {self.opcodes[opcode]}")
         self.PC += 1
         return opcode
 
-
-
     def __str__(self):
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} "\
-            f"{self.F}"
+            f"{self.F} {self.opcodes}"
 
+    def BRK(self):
+        pass
 
 class Screen:
     memory = None
