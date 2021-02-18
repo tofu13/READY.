@@ -26,8 +26,9 @@ class BytearrayMemory(Memory, bytearray):
 # noinspection PyPep8Naming
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
-    def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
-        self.memory = memory
+    memory = None
+
+    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.A = A
         self.X = X
         self.Y = Y
@@ -36,10 +37,10 @@ class CPU:
 
     def push(self, value):
         self.memory[self.SP] = value
-        self.SP -= 1
+        self.SP += 1
 
     def pop(self):
-        self.SP += 1
+        self.SP -= 1
         return self.memory[self.SP - 1]
 
     def fetch(self):
@@ -51,9 +52,9 @@ class CPU:
     def __str__(self):
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X}"
 
+
 class Screen:
-    def __init__(self, memory):
-        self.memory = memory
+    memory = None
 
     def refresh(self):
         print("\n".join(
@@ -62,13 +63,17 @@ class Screen:
 
 
 class Machine:
-    def __init__(self, cpu, screen):
+    def __init__(self, memory, cpu, screen):
+        self.memory = memory
         self.cpu = cpu
-        self.memory = cpu.memory
-        self.screen = screen(self.memory)
+        self.screen = screen
+
+        self.cpu.memory = self.memory
+        self.screen.memory = self.memory
+
 
 if __name__ == '__main__':
-    c64 = Machine(CPU(BytearrayMemory(65536)), Screen)
+    c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
     c64.memory[0] = 42
     c64.memory[1024] = 65
     c64.cpu.fetch()
@@ -77,4 +82,3 @@ if __name__ == '__main__':
     c64.screen.refresh()
     c64.memory[1024] = 66
     c64.screen.refresh()
-
