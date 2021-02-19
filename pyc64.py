@@ -69,8 +69,8 @@ class CPU:
     def step(self):
         opcode = self.fetch()
         instruction, data = OPCODES[opcode]
-        print(f"Executing {instruction} {data if data != '_' else ''}")
-        getattr(self, instruction)(getattr(self,data))
+        print(f"Executing {instruction} {data if data != 'None' else ''}")
+        getattr(self, instruction)(getattr(self, f"addressing_{data}"))
         if instruction == 'BRK':
             return False
         return True
@@ -81,7 +81,7 @@ class CPU:
         while self.step():
             print(self)
 
-    def _(self):
+    def addressing_None(self, value):
         return None
 
     def _setNZ(self, value):
