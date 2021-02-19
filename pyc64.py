@@ -30,7 +30,7 @@ class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
 
-    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0x00):
         self.A = A
         self.X = X
         self.Y = Y
@@ -49,6 +49,13 @@ class CPU:
                 setattr(self, f"addressing_{addressing}", NotImplementedError)
         pass
 
+    def __str__(self):
+        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} "\
+            f"{self.F}"
+
+    def _not_implemented(self, *args):
+        raise NotImplementedError()
+
     def push(self, value):
         self.memory[self.SP] = value
         self.SP += 1
@@ -59,20 +66,21 @@ class CPU:
 
     def fetch(self):
         opcode = self.memory[self.PC]
-        print(f"Fetched at {self.PC}: {self.opcodes[opcode]}")
+        #print(f"Fetched at {self.PC:04X}: {self.opcodes[opcode]}")
         self.PC += 1
         return opcode
 
-    def __str__(self):
-        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} "\
-            f"{self.F} {self.opcodes}"
+    def step(self):
+        opcode = self.fetch()
+        instruction, data  = OPCODES[opcode]
+        getattr(self, instruction)(data)
 
-    def _not_implemented(self, *args):
-        raise NotImplementedError()
 
-    def BRK(self):
+    def BRK(self, *_):
         pass
 
+    def INX(self, *_):
+        self.X += 1
 
 class Screen:
     memory = None
@@ -95,11 +103,13 @@ class Machine:
 
 if __name__ == '__main__':
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
-    c64.memory[0] = 42
+    c64.memory[0] = 0xe8
     c64.memory[1024] = 65
-    c64.cpu.fetch()
-    print(c64.memory)
+    #print(c64.memory)
     print(c64.cpu)
-    c64.screen.refresh()
-    c64.memory[1024] = 66
-    c64.screen.refresh()
+    c64.cpu.step()
+    print(c64.cpu)
+
+    #c64.screen.refresh()
+    #c64.memory[1024] = 66
+    #c64.screen.refresh()
