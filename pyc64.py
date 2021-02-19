@@ -91,6 +91,18 @@ class CPU:
     def BRK(self, *value):
         pass
 
+    def CLC(self, *value):
+        self.F['C'] = 0
+
+    def CLD(self, *value):
+        self.F['D'] = 0
+
+    def CLI(self, *value):
+        self.F['I'] = 0
+
+    def CLV(self, *value):
+        self.F['V'] = 0
+
     def DEX(self, *value):
         self.X -= 1
 
@@ -106,17 +118,26 @@ class CPU:
     def NOP(self, *value):
         pass
 
+    def SEC(self, *value):
+        self.F['C'] = 1
+
+    def SED(self, *value):
+        self.F['D'] = 1
+
+    def SEI(self, *value):
+        self.F['I'] = 1
+
     def TAX(self, *value):
         self.X = self.A
 
     def TAY(self, *value):
-        self.X = self.A
+        self.Y = self.A
 
     def TXA(self, *value):
         self.A = self.X
 
     def TYA(self, *value):
-        self.A = self.X
+        self.A = self.Y
 
 
 
