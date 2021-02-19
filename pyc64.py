@@ -84,6 +84,10 @@ class CPU:
     def _(self):
         return None
 
+    def _setNZ(self, value):
+        self.F['N'] = value >> 7
+        self.F['Z'] = int(value == 0)
+
     def BRK(self, value):
         pass
 
@@ -100,16 +104,20 @@ class CPU:
         self.F['V'] = 0
 
     def DEX(self, value):
-        self.X -= 1
+        self.X -= 1 & 0xFF
+        self._setNZ(self.X)
 
     def DEY(self, value):
-        self.X -= 1
+        self.Y -= 1 & 0xFF
+        self._setNZ(self.Y)
 
     def INX(self, value):
-        self.X += 1
+        self.X += 1 & 0xFF
+        self._setNZ(self.X)
 
     def INY(self, value):
-        self.X += 1
+        self.Y += 1 & 0xFF
+        self._setNZ(self.Y)
 
     def NOP(self, value):
         pass
@@ -125,15 +133,19 @@ class CPU:
 
     def TAX(self, value):
         self.X = self.A
+        self._setNZ(self.A)
 
     def TAY(self, value):
         self.Y = self.A
+        self._setNZ(self.A)
 
     def TXA(self, value):
         self.A = self.X
+        self._setNZ(self.X)
 
     def TYA(self, value):
         self.A = self.Y
+        self._setNZ(self.Y)
 
 
 
