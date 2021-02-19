@@ -73,14 +73,25 @@ class CPU:
     def step(self):
         opcode = self.fetch()
         instruction, data  = OPCODES[opcode]
+        print(f"Executing {instruction} {data if data is not None else ''}")
+        if instruction == 'BRK':
+            return False
         getattr(self, instruction)(data)
+        return True
 
+    def run(self):
+        while self.step():
+            print(self)
 
     def BRK(self, *_):
         pass
 
     def INX(self, *_):
         self.X += 1
+
+    def DEX(self, *_):
+        self.X -= 1
+
 
 class Screen:
     memory = None
@@ -104,11 +115,11 @@ class Machine:
 if __name__ == '__main__':
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
     c64.memory[0] = 0xe8
+    c64.memory[1] = 0xca
     c64.memory[1024] = 65
     #print(c64.memory)
     print(c64.cpu)
-    c64.cpu.step()
-    print(c64.cpu)
+    c64.cpu.run()
 
     #c64.screen.refresh()
     #c64.memory[1024] = 66
