@@ -169,13 +169,15 @@ class Machine:
 
     def load(self, filename):
         with open(filename, 'rb') as f:
+            # First two bytes are base address for loading into memory (cbm file format, little endian)
             l, h = f.read(2)
             data = f.read()
-        pc = h << 8 | l
+        begin = h << 8 | l
         for i, b in enumerate(data):
-            self.memory[pc + i] = b
-        print(f"Loaded {len(data)} at ${pc:04X}")
-        self.cpu.run(pc)
+            self.memory[begin + i] = b
+        print(f"Loaded {len(data)} at ${begin:04X}")
+        return begin
+
 
 if __name__ == '__main__':
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
@@ -190,5 +192,6 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    c64.load("programs/test1")
+    base = c64.load("programs/test1")
+    c64.cpu.run(base)
 
