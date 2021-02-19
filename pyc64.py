@@ -79,7 +79,9 @@ class CPU:
             return False
         return True
 
-    def run(self):
+    def run(self, address=None):
+        if address is not None:
+            self.PC = address
         while self.step():
             print(self)
 
@@ -136,6 +138,15 @@ class Machine:
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
 
+    def load(self, filename):
+        with open(filename, 'rb') as f:
+            l, h = f.read(2)
+            data = f.read()
+        pc = h << 8 | l
+        for i, b in enumerate(data):
+            self.memory[pc + i] = b
+        print(f"Loaded {len(data)} at ${pc:04X}")
+        self.cpu.run(pc)
 
 if __name__ == '__main__':
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
@@ -149,3 +160,6 @@ if __name__ == '__main__':
     #c64.screen.refresh()
     #c64.memory[1024] = 66
     #c64.screen.refresh()
+
+    c64.load("programs/test1")
+
