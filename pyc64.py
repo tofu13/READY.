@@ -72,25 +72,50 @@ class CPU:
 
     def step(self):
         opcode = self.fetch()
-        instruction, data  = OPCODES[opcode]
-        print(f"Executing {instruction} {data if data is not None else ''}")
+        instruction, data = OPCODES[opcode]
+        print(f"Executing {instruction} {data if data != '_' else ''}")
+        getattr(self, instruction)(getattr(self,data))
         if instruction == 'BRK':
             return False
-        getattr(self, instruction)(data)
         return True
 
     def run(self):
         while self.step():
             print(self)
 
-    def BRK(self, *_):
+    def _(self):
+        return None
+
+    def BRK(self, *value):
         pass
 
-    def INX(self, *_):
+    def DEX(self, *value):
+        self.X -= 1
+
+    def DEY(self, *value):
+        self.X -= 1
+
+    def INX(self, *value):
         self.X += 1
 
-    def DEX(self, *_):
-        self.X -= 1
+    def INY(self, *value):
+        self.X += 1
+
+    def NOP(self, *value):
+        pass
+
+    def TAX(self, *value):
+        self.X = self.A
+
+    def TAY(self, *value):
+        self.X = self.A
+
+    def TXA(self, *value):
+        self.A = self.X
+
+    def TYA(self, *value):
+        self.A = self.X
+
 
 
 class Screen:
