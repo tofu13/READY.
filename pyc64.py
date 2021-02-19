@@ -42,11 +42,11 @@ class CPU:
         for opcode, specs in OPCODES.items():
             if specs is not None:
                 if not hasattr(self, specs[0]):
-                    setattr(self, specs[0], None)
+                    setattr(self, specs[0], NotImplementedError)
                 self.opcodes[opcode] = getattr(self, specs[0])
         for addressing in ADDRESSING_METHODS:
-            if not hasattr(self, f"addrssing_{addressing}"):
-                setattr(self, f"addrssing_{addressing}", None)
+            if not hasattr(self, f"addressing_{addressing}"):
+                setattr(self, f"addressing_{addressing}", NotImplementedError)
         pass
 
     def push(self, value):
@@ -66,6 +66,9 @@ class CPU:
     def __str__(self):
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} "\
             f"{self.F} {self.opcodes}"
+
+    def _not_implemented(self, *args):
+        raise NotImplementedError()
 
     def BRK(self):
         pass
