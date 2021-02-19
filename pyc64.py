@@ -50,11 +50,7 @@ class CPU:
         pass
 
     def __str__(self):
-        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} "\
-            f"{self.F}"
-
-    def _not_implemented(self, *args):
-        raise NotImplementedError()
+        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {self.F}"
 
     def push(self, value):
         self.memory[self.SP] = value
@@ -88,55 +84,55 @@ class CPU:
     def _(self):
         return None
 
-    def BRK(self, *value):
+    def BRK(self, value):
         pass
 
-    def CLC(self, *value):
+    def CLC(self, value):
         self.F['C'] = 0
 
-    def CLD(self, *value):
+    def CLD(self, value):
         self.F['D'] = 0
 
-    def CLI(self, *value):
+    def CLI(self, value):
         self.F['I'] = 0
 
-    def CLV(self, *value):
+    def CLV(self, value):
         self.F['V'] = 0
 
-    def DEX(self, *value):
+    def DEX(self, value):
         self.X -= 1
 
-    def DEY(self, *value):
+    def DEY(self, value):
         self.X -= 1
 
-    def INX(self, *value):
+    def INX(self, value):
         self.X += 1
 
-    def INY(self, *value):
+    def INY(self, value):
         self.X += 1
 
-    def NOP(self, *value):
+    def NOP(self, value):
         pass
 
-    def SEC(self, *value):
+    def SEC(self, value):
         self.F['C'] = 1
 
-    def SED(self, *value):
+    def SED(self, value):
         self.F['D'] = 1
 
-    def SEI(self, *value):
+    def SEI(self, value):
         self.F['I'] = 1
 
-    def TAX(self, *value):
+    def TAX(self, value):
         self.X = self.A
 
-    def TAY(self, *value):
+    def TAY(self, value):
         self.Y = self.A
 
-    def TXA(self, *value):
+    def TXA(self, value):
         self.A = self.X
 
-    def TYA(self, *value):
+    def TYA(self, value):
         self.A = self.Y
 
 
