@@ -1,3 +1,39 @@
+from enum import Enum, auto
+
+
+class ADDRESSING_MODE(Enum):
+    _ = auto()
+    A = auto()
+    IMM = auto() # next word as literal
+    REL = auto() # next word as signed integer
+    ABS = auto()  # get next 16 bits as address
+    ZP = auto() # get next 8 bits as address for zeroth memory page
+    ABS_X = auto() # as with ABS but add X to address
+    ABS_Y = auto() # as with ABS but add Y to address
+    ZP_X = auto() # as with ZP but add X to address
+    ZP_Y = auto() # as with ZP but add Y to address
+    IND = auto() # Use next word as zero-page addr and the following byte from that zero page
+    # as another 8 bits, and combine the two into a 16-bit address
+    IND_X = auto() # As with the above, but add X to the ZP
+    IND_Y = auto() # As with the above, but add Y to the
+
+
+ADDRESSING_METHODS = [
+    "None",
+    "A",
+    "IMM",
+    "REL",
+    "ABS",
+    "ZP",
+    "ABS_X",
+    "ABS_Y",
+    "ZP_X",
+    "ZP_Y",
+    "IND",
+    "IND_X"
+    "IND_Y"
+]
+
 OPCODES = {
     0x00: ("BRK", None),
     0x01: ("ORA", "IND_X"),

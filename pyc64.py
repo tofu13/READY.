@@ -44,6 +44,10 @@ class CPU:
                 if not hasattr(self, specs[0]):
                     setattr(self, specs[0], None)
                 self.opcodes[opcode] = getattr(self, specs[0])
+        for addressing in ADDRESSING_METHODS:
+            if not hasattr(self, f"addrssing_{addressing}"):
+                setattr(self, f"addrssing_{addressing}", None)
+        pass
 
     def push(self, value):
         self.memory[self.SP] = value
@@ -65,6 +69,7 @@ class CPU:
 
     def BRK(self):
         pass
+
 
 class Screen:
     memory = None
