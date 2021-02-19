@@ -70,7 +70,7 @@ class CPU:
         opcode = self.fetch()
         instruction, data = OPCODES[opcode]
         print(f"Executing {instruction} {data if data != 'None' else ''}")
-        getattr(self, instruction)(getattr(self, f"addressing_{data}"))
+        getattr(self, instruction)(getattr(self, f"addressing_{data}")())
         if instruction == 'BRK':
             return False
         return True
@@ -81,8 +81,50 @@ class CPU:
         while self.step():
             print(self)
 
-    def addressing_None(self, value):
+    def addressing_None(self):
         return None
+
+    def addressing_IMM(self):
+        value = self.memory[self.PC]
+        self.PC += 1
+        return value
+
+    def addressing_A(self):
+        return self.A
+
+    def addressing_REL(self):
+        value = self.memory[self.PC]
+        self.PC += 1
+        return value if value <127 else value - 256
+
+    def addressing_ABS(self):
+        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        self.PC += 2
+        return self.memory[h << 8 | l]
+
+    def addressing_ZP(s): # get next 8 bits as address for zeroth memory page
+        pass
+
+    def addressing_ABS_X(self): # as with ABS but add X to address
+        pass
+
+    def addressing_ABS_Y(self): # as with ABS but add Y to address
+        pass
+
+    def addressing_ZP_X(self): # as with ZP but add X to address
+        pass
+
+    def addressing_ZP_Y(self): # as with ZP but add Y to address
+        pass
+
+    def addressing_IND(self): # Use next word as zero-page addr and the following byte from that zero page as another 8 bits, and combine the two into a 16-bit address
+        pass
+
+    def addressing_IND_X(self): # As with the above, but add X to the ZP
+        pass
+
+    def addressing_IND_Y(self): # As with the above, but add Y to the
+        pass
 
     def _setNZ(self, value):
         self.F['N'] = value >> 7
