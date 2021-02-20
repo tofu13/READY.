@@ -31,7 +31,7 @@ class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
 
-    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0x00):
+    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0x01FF):
         self.A = A
         self.X = X
         self.Y = Y
@@ -60,7 +60,7 @@ class CPU:
         :return: None
         """
         self.memory[self.SP] = value
-        self.SP = (self.SP + 1) & 0xFF
+        self.SP = (self.SP - 1) & 0xFF
 
     def pop(self):
         """
@@ -68,7 +68,7 @@ class CPU:
         :return: The popped value
         """
         value = self.memory[self.SP]
-        self.SP = (self.SP - 1) & 0xFF
+        self.SP = (self.SP + 1) & 0xFF
         return value
 
     def fetch(self):
