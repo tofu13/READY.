@@ -54,20 +54,38 @@ class CPU:
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {self.F}"
 
     def push(self, value):
+        """
+        Push a value on the stack, update SP
+        :param value: The value to push
+        :return: None
+        """
         self.memory[self.SP] = value
-        self.SP += 1
+        self.SP = (self.SP + 1) & 0xFF
 
     def pop(self):
-        self.SP -= 1
-        return self.memory[self.SP - 1]
+        """
+        Pop a value from the stack, update SP
+        :return: The popped value
+        """
+        value = self.memory[self.SP]
+        self.SP = (self.SP - 1) & 0xFF
+        return value
 
     def fetch(self):
+        """
+        Fetch next istruction (memory read at PC, advance PC)
+        :return: None
+        """
         opcode = self.memory[self.PC]
         #print(f"Fetched at {self.PC:04X}: {self.opcodes[opcode]}")
         self.PC += 1
         return opcode
 
     def step(self):
+        """
+        Execute next instruction
+        :return: False if instruction is BRK, else True
+        """
         opcode = self.fetch()
         instruction, data = OPCODES[opcode]
         print(f"Executing {instruction} {data if data != 'None' else ''}")
@@ -75,6 +93,11 @@ class CPU:
         return instruction != 'BRK'
 
     def run(self, address=None):
+        """
+        Run from address (or PC if not specified) until BRK
+        :param address: address to start execution
+        :return: None
+        """
         if address is not None:
             self.PC = address
         while self.step():
@@ -82,11 +105,22 @@ class CPU:
 
     # Utils
     def _setNZ(self, value):
+        """
+        Set N and Z status flags according to value
+        :param value:
+        :return: None
+        """
         self.F['N'] = value >> 7
         self.F['Z'] = int(value == 0)
 
     @staticmethod
     def _combine(low, high):
+        """
+        Returns a 16 bit value by combining low and high bytes LITTLE ENDIAN
+        :param low: The low byte
+        :param high: The high byte
+        :return: 2-byte value
+        """
         return high << 8 | low
 
     def _not_implemented(self, value, address):
@@ -94,7 +128,8 @@ class CPU:
 
     # Addressing methods
     @staticmethod
-    def addressing_None():
+    def addressing_IMP():
+        # The data is implied by the operation.
         return None, None
 
     def addressing_A(self):
@@ -108,6 +143,7 @@ class CPU:
         return value, None
 
     def addressing_REL(self):
+        # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective address.
         value = self.memory[self.PC]
         self.PC += 1
         return value if value < 127 else value - 256, None
@@ -119,6 +155,7 @@ class CPU:
         return None, self._combine(l, h)
 
     def addressing_ZP(self):
+        # An 8-bit address is provided within the zero page.
         l = self.memory[self.PC]
         self.PC += 1
         return None, l
@@ -136,28 +173,33 @@ class CPU:
         return None, self._combine(l, h) + self.Y
 
     def addressing_ZP_X(self):
+        # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, the address wraps around within the zero page).
         l = self.memory[self.PC]
         self.PC += 1
         return None, (l + self.X) & 0xFF
 
     def addressing_ZP_Y(self):
+        # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows, the address wraps around within the zero page).
         l = self.memory[self.PC]
         self.PC += 1
         return None, (l + self.Y) & 0xFF
 
     def addressing_IND(self):
+        # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the opcode.
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
         address = self._combine(l, h)
         return None, self._combine(self.memory[address], self.memory[address + 1])
 
     def addressing_X_IND(self):
+        # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, the address wraps around within page 0). The resulting address is used as a pointer to the data being accessed.
         l = self.memory[self.PC]
         self.PC += 1
         address = (l + self.X) & 0xFF
         return self.memory[address], None
 
     def addressing_IND_Y(self):
+        # An 8-bit address identifies a pointer. The value of the Y register is added to the address contained in the pointer. Effectively, the pointer is the base address and the Y register is an index past that base address.
         l = self.memory[self.PC]
         self.PC += 1
         return (self.memory[l] + self.Y) & 0xFF, None
@@ -290,7 +332,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test_IND_XY"
+    filename = "test1"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
