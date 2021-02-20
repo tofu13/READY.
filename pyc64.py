@@ -43,11 +43,11 @@ class CPU:
         for opcode, specs in OPCODES.items():
             if specs is not None:
                 if not hasattr(self, specs[0]):
-                    setattr(self, specs[0], NotImplementedError)
+                    setattr(self, specs[0], self._not_implemented)
                 self.opcodes[opcode] = getattr(self, specs[0])
         for addressing in ADDRESSING_METHODS:
             if not hasattr(self, f"addressing_{addressing}"):
-                setattr(self, f"addressing_{addressing}", NotImplementedError)
+                setattr(self, f"addressing_{addressing}", self._not_implemented)
         pass
 
     def __str__(self):
@@ -88,6 +88,9 @@ class CPU:
     @staticmethod
     def _combine(low, high):
         return high << 8 | low
+
+    def _not_implemented(self, value, address):
+        raise NotImplementedError
 
     # Addressing methods
     @staticmethod
@@ -140,8 +143,8 @@ class CPU:
     def addressing_IND(self):
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        address = self._combine(h, l)
-        return None, self.memory[self._combine(self.memory[address], self.memory[address + 1])]
+        address = self._combine(l, h)
+        return None, self._combine(self.memory[address], self.memory[address + 1])
 
     def addressing_IND_X(self): # As with the above, but add X to the ZP
         pass
@@ -179,6 +182,9 @@ class CPU:
     def INY(self, value, address):
         self.Y += 1 & 0xFF
         self._setNZ(self.Y)
+
+    def JMP(self, value, address):
+        self.PC = address
 
     def LDA(self, value, address):
         if value is not None:
