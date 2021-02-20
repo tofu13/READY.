@@ -1,4 +1,5 @@
 from constants import *
+import subprocess
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
@@ -245,17 +246,19 @@ class Machine:
 
 if __name__ == '__main__':
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
-    c64.memory[0] = 0xe8
-    c64.memory[1] = 0xca
-    c64.memory[1024] = 65
+    #c64.memory[0] = 0xe8
+    #c64.memory[1] = 0xca
+    #c64.memory[1024] = 65
     #print(c64.memory)
     print(c64.cpu)
-    c64.cpu.run()
+    #c64.cpu.run()
 
     #c64.screen.refresh()
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    base = c64.load("programs/test2")
+    filename = "test2"
+    subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
+    base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
 
