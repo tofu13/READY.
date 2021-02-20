@@ -70,10 +70,8 @@ class CPU:
         opcode = self.fetch()
         instruction, data = OPCODES[opcode]
         print(f"Executing {instruction} {data if data != 'None' else ''}")
-        getattr(self, instruction)(getattr(self, f"addressing_{data}")())
-        if instruction == 'BRK':
-            return False
-        return True
+        getattr(self, instruction)(*getattr(self, f"addressing_{data}")())
+        return instruction != 'BRK'
 
     def run(self, address=None):
         if address is not None:
@@ -81,31 +79,34 @@ class CPU:
         while self.step():
             print(self)
 
+    # Addressing methods
     def addressing_None(self):
-        return None
+        return None, None
+
+    def addressing_A(self):
+        return self.A, None
 
     def addressing_IMM(self):
         value = self.memory[self.PC]
         self.PC += 1
-        return value
-
-    def addressing_A(self):
-        return self.A
+        return value, None
 
     def addressing_REL(self):
         value = self.memory[self.PC]
         self.PC += 1
-        return value if value <127 else value - 256
+        return value if value <127 else value - 256, None
 
     def addressing_ABS(self):
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return self.memory[h << 8 | l]
+        return None, self.memory[h << 8 | l]
 
-    def addressing_ZP(s): # get next 8 bits as address for zeroth memory page
-        pass
+    def addressing_ZP(self):
+        l = self.memory[self.PC]
+        self.PC += 1
+        return None, l
 
-    def addressing_ABS_X(self): # as with ABS but add X to address
+    def addressing_ABS_X(self):
         pass
 
     def addressing_ABS_Y(self): # as with ABS but add Y to address
@@ -130,62 +131,62 @@ class CPU:
         self.F['N'] = value >> 7
         self.F['Z'] = int(value == 0)
 
-    def BRK(self, value):
+    def BRK(self, value, address):
         pass
 
-    def CLC(self, value):
+    def CLC(self, value, address):
         self.F['C'] = 0
 
-    def CLD(self, value):
+    def CLD(self, value, address):
         self.F['D'] = 0
 
-    def CLI(self, value):
+    def CLI(self, value, address):
         self.F['I'] = 0
 
-    def CLV(self, value):
+    def CLV(self, value, address):
         self.F['V'] = 0
 
-    def DEX(self, value):
+    def DEX(self, value, address):
         self.X -= 1 & 0xFF
         self._setNZ(self.X)
 
-    def DEY(self, value):
+    def DEY(self, value, address):
         self.Y -= 1 & 0xFF
         self._setNZ(self.Y)
 
-    def INX(self, value):
+    def INX(self, value, address):
         self.X += 1 & 0xFF
         self._setNZ(self.X)
 
-    def INY(self, value):
+    def INY(self, value, address):
         self.Y += 1 & 0xFF
         self._setNZ(self.Y)
 
-    def NOP(self, value):
+    def NOP(self, value, address):
         pass
 
-    def SEC(self, value):
+    def SEC(self, value, address):
         self.F['C'] = 1
 
-    def SED(self, value):
+    def SED(self, value, address):
         self.F['D'] = 1
 
-    def SEI(self, value):
+    def SEI(self, value, address):
         self.F['I'] = 1
 
-    def TAX(self, value):
+    def TAX(self, value, address):
         self.X = self.A
         self._setNZ(self.A)
 
-    def TAY(self, value):
+    def TAY(self, value, address):
         self.Y = self.A
         self._setNZ(self.A)
 
-    def TXA(self, value):
+    def TXA(self, value, address):
         self.A = self.X
         self._setNZ(self.X)
 
-    def TYA(self, value):
+    def TYA(self, value, address):
         self.A = self.Y
         self._setNZ(self.Y)
 
@@ -214,11 +215,11 @@ class Machine:
             # First two bytes are base address for loading into memory (cbm file format, little endian)
             l, h = f.read(2)
             data = f.read()
-        begin = h << 8 | l
+        base = h << 8 | l
         for i, b in enumerate(data):
-            self.memory[begin + i] = b
-        print(f"Loaded {len(data)} at ${begin:04X}")
-        return begin
+            self.memory[base + i] = b
+        print(f"Loaded {len(data)} bytes starting at ${base:04X}")
+        return base
 
 
 if __name__ == '__main__':
