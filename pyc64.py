@@ -98,9 +98,11 @@ class CPU:
         return None, None
 
     def addressing_A(self):
+        # The operation works on the accumulator. No additional data is required.
         return self.A, None
 
     def addressing_IMM(self):
+        # Data is taken from the byte following the opcode.
         value = self.memory[self.PC]
         self.PC += 1
         return value, None
@@ -111,6 +113,7 @@ class CPU:
         return value if value < 127 else value - 256, None
 
     def addressing_ABS(self):
+        # Data is accessed using 16-bit address specified as a constant.
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
         return None, self._combine(l, h)
@@ -121,11 +124,13 @@ class CPU:
         return None, l
 
     def addressing_ABS_X(self):
+        # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is added (with carry).
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
         return None, self._combine(l, h) + self.X
 
     def addressing_ABS_Y(self):
+        # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is added (with carry).
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
         return None, self._combine(l, h) + self.Y
@@ -146,12 +151,18 @@ class CPU:
         address = self._combine(l, h)
         return None, self._combine(self.memory[address], self.memory[address + 1])
 
-    def addressing_IND_X(self): # As with the above, but add X to the ZP
-        pass
+    def addressing_X_IND(self):
+        l = self.memory[self.PC]
+        self.PC += 1
+        address = (l + self.X) & 0xFF
+        return self.memory[address], None
 
-    def addressing_IND_Y(self): # As with the above, but add Y to the
-        pass
+    def addressing_IND_Y(self):
+        l = self.memory[self.PC]
+        self.PC += 1
+        return (self.memory[l] + self.Y) & 0xFF, None
 
+    # Instructions
     def BRK(self, value, address):
         pass
 
@@ -235,6 +246,7 @@ class CPU:
         self.A = self.Y
         self._setNZ(self.Y)
 
+
 class Screen:
     memory = None
 
@@ -278,7 +290,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test_IND"
+    filename = "test_IND_XY"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)

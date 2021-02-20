@@ -30,15 +30,15 @@ ADDRESSING_METHODS = [
     "ZP_X",
     "ZP_Y",
     "IND",
-    "IND_X"
+    "X_IND"
     "IND_Y"
 ]
 
 OPCODES = {
     0x00: ("BRK", "None"),
-    0x01: ("ORA", "IND_X"),
+    0x01: ("ORA", "X_IND"),
     0x02: None,
-    0x03: None,  # ("SLO", "IND_X"),
+    0x03: None,  # ("SLO", "X_IND"),
     0x04: ("NOP", "ZP"),
     0x05: ("ORA", "ZP"),
     0x06: ("ASL", "ZP"),
@@ -70,9 +70,9 @@ OPCODES = {
     0x1f: None,  # ("SLO", "ABS_X"),
 
     0x20: ("JSR", "ABS"),
-    0x21: ("AND", "IND_X"),
+    0x21: ("AND", "X_IND"),
     0x22: None,
-    0x23: ("RLA", "IND_X"),
+    0x23: ("RLA", "X_IND"),
     0x24: ("BIT", "ZP"),
     0x25: ("AND", "ZP"),
     0x26: ("ROL", "ZP"),
@@ -104,9 +104,9 @@ OPCODES = {
     0x3f: ("RLA", "ABS_X"),
 
     0x40: ("RTI", "None"),
-    0x41: ("EOR", "IND_X"),
+    0x41: ("EOR", "X_IND"),
     0x42: None,
-    0x43: ("SRE", "IND_X"),
+    0x43: ("SRE", "X_IND"),
     0x44: ("NOP", "ZP"),
     0x45: ("EOR", "ZP"),
     0x46: ("LSR", "ZP"),
@@ -138,9 +138,9 @@ OPCODES = {
     0x5f: ("SRE", "ABS_X"),
 
     0x60: ("RTS", "None"),
-    0x61: ("ADC", "IND_X"),
+    0x61: ("ADC", "X_IND"),
     0x62: None,
-    0x63: ("RRA", "IND_X"),
+    0x63: ("RRA", "X_IND"),
     0x64: ("NOP", "ZP"),
     0x65: ("ADC", "ZP"),
     0x66: ("ROR", "ZP"),
@@ -172,9 +172,9 @@ OPCODES = {
     0x7f: ("RRA", "ABS_X"),
 
     0x80: ("NOP", "IMM"),
-    0x81: ("STA", "IND_X"),
+    0x81: ("STA", "X_IND"),
     0x82: ("NOP", "IMM"),
-    0x83: ("SAX", "IND_X"),
+    0x83: ("SAX", "X_IND"),
     0x84: ("STY", "ZP"),
     0x85: ("STA", "ZP"),
     0x86: ("STX", "ZP"),
@@ -206,9 +206,9 @@ OPCODES = {
     0x9f: ("AHX", "ABS_X"),
 
     0xa0: ("LDY", "IMM"),
-    0xa1: ("LDA", "IND_X"),
+    0xa1: ("LDA", "X_IND"),
     0xa2: ("LDX", "IMM"),
-    0xa3: ("LAX", "IND_X"),
+    0xa3: ("LAX", "X_IND"),
     0xa4: ("LDY", "ZP"),
     0xa5: ("LDA", "ZP"),
     0xa6: ("LDX", "ZP"),
@@ -240,9 +240,9 @@ OPCODES = {
     0xbf: ("LAX", "ABS_X"),
 
     0xc0: ("CPY", "IMM"),
-    0xc1: ("CMP", "IND_X"),
+    0xc1: ("CMP", "X_IND"),
     0xc2: ("NOP", "IMM"),
-    0xc3: ("DCP", "IND_X"),
+    0xc3: ("DCP", "X_IND"),
     0xc4: ("CPY", "ZP"),
     0xc5: ("CMP", "ZP"),
     0xc6: ("DEC", "ZP"),
@@ -274,9 +274,9 @@ OPCODES = {
     0xdf: ("DCP", "ANS_X"),
 
     0xe0: ("CPX", "IMM"),
-    0xe1: ("SBC", "IND_X"),
+    0xe1: ("SBC", "X_IND"),
     0xe2: ("NOP", "IMM"),
-    0xe3: ("ISC", "IND_X"),
+    0xe3: ("ISC", "X_IND"),
     0xe4: ("CPX", "ZP"),
     0xe5: ("SBC", "ZP"),
     0xe6: ("INC", "ZP"),
