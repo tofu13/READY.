@@ -11,7 +11,7 @@ class Memory:
     def __setitem__(self, key, value):
         if value < 0 or value > 255:
             raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
-        print(f"Memory write at {key}: {value}")
+        #print(f"Memory write at {key}: {value}")
         super().__setitem__(key, value)
 
     def __str__(self, start=0, end=None):
@@ -108,10 +108,14 @@ class CPU:
         return None, l
 
     def addressing_ABS_X(self):
-        pass
+        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        self.PC += 2
+        return None, (h << 8 | l) + self.X
 
-    def addressing_ABS_Y(self): # as with ABS but add Y to address
-        pass
+    def addressing_ABS_Y(self):
+        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        self.PC += 2
+        return None, (h << 8 | l) + self.Y
 
     def addressing_ZP_X(self): # as with ZP but add X to address
         pass
@@ -212,8 +216,6 @@ class CPU:
         self.A = self.Y
         self._setNZ(self.Y)
 
-
-
 class Screen:
     memory = None
 
@@ -257,7 +259,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test2"
+    filename = "test_ABS_XY"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
