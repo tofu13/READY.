@@ -1,7 +1,7 @@
         * = $C000
-        CLC
-        LDA #$00
-.loop   ADC #$01
-        BNE .loop
+        SEC
+        CLV
+        LDA #$40
+.loop   ADC #$40
         BRK
 

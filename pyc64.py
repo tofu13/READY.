@@ -134,15 +134,15 @@ class CPU:
 
     def addressing_IMM(self):
         # Data is taken from the byte following the opcode.
-        value = self.memory[self.PC]
+        address = self.PC
         self.PC += 1
-        return value
+        return address
 
     def addressing_REL(self):
         # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective address.
-        value = self.memory[self.PC]
+        address = self.memory[self.PC]
         self.PC += 1
-        return value if value < 127 else value - 256
+        return address if address < 127 else address - 256
 
     def addressing_ABS(self):
         # Data is accessed using 16-bit address specified as a constant.
@@ -152,9 +152,9 @@ class CPU:
 
     def addressing_ZP(self):
         # An 8-bit address is provided within the zero page.
-        value = self.memory[self.PC]
+        address = self.memory[self.PC]
         self.PC += 1
-        return value
+        return address
 
     def addressing_ABS_X(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is added (with carry).
@@ -204,7 +204,7 @@ class CPU:
     # Instructions
     def ADC(self, address):
         result = self.A + self.memory[address] + self.F['C']
-        self._setNZ(result)
+        self._setNZ(result & 0xFF)
         self.F['C'] = int(result > 0xFF)
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         self.F['V'] = int(((self.A ^ result) & (self.memory[address] ^ result) & 0x80) > 0)
