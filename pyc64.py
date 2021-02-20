@@ -80,8 +80,18 @@ class CPU:
         while self.step():
             print(self)
 
+    # Utils
+    def _setNZ(self, value):
+        self.F['N'] = value >> 7
+        self.F['Z'] = int(value == 0)
+
+    @staticmethod
+    def _combine(low, high):
+        return high << 8 | low
+
     # Addressing methods
-    def addressing_None(self):
+    @staticmethod
+    def addressing_None():
         return None, None
 
     def addressing_A(self):
@@ -95,12 +105,12 @@ class CPU:
     def addressing_REL(self):
         value = self.memory[self.PC]
         self.PC += 1
-        return value if value <127 else value - 256, None
+        return value if value < 127 else value - 256, None
 
     def addressing_ABS(self):
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, h << 8 | l
+        return None, self._combine(l, h)
 
     def addressing_ZP(self):
         l = self.memory[self.PC]
@@ -110,12 +120,12 @@ class CPU:
     def addressing_ABS_X(self):
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, (h << 8 | l) + self.X
+        return None, self._combine(l, h) + self.X
 
     def addressing_ABS_Y(self):
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, (h << 8 | l) + self.Y
+        return None, self._combine(l, h) + self.Y
 
     def addressing_ZP_X(self):
         l = self.memory[self.PC]
@@ -127,18 +137,17 @@ class CPU:
         self.PC += 1
         return None, (l + self.Y) & 0xFF
 
-    def addressing_IND(self): # Use next word as zero-page addr and the following byte from that zero page as another 8 bits, and combine the two into a 16-bit address
-        pass
+    def addressing_IND(self):
+        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        self.PC += 2
+        address = self._combine(h, l)
+        return None, self.memory[self._combine(self.memory[address], self.memory[address + 1])]
 
     def addressing_IND_X(self): # As with the above, but add X to the ZP
         pass
 
     def addressing_IND_Y(self): # As with the above, but add Y to the
         pass
-
-    def _setNZ(self, value):
-        self.F['N'] = value >> 7
-        self.F['Z'] = int(value == 0)
 
     def BRK(self, value, address):
         pass
@@ -263,7 +272,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test_ABS_XY_ZP"
+    filename = "test_IND"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
