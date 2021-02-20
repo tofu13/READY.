@@ -117,11 +117,15 @@ class CPU:
         self.PC += 2
         return None, (h << 8 | l) + self.Y
 
-    def addressing_ZP_X(self): # as with ZP but add X to address
-        pass
+    def addressing_ZP_X(self):
+        l = self.memory[self.PC]
+        self.PC += 1
+        return None, (l + self.X) & 0xFF
 
-    def addressing_ZP_Y(self): # as with ZP but add Y to address
-        pass
+    def addressing_ZP_Y(self):
+        l = self.memory[self.PC]
+        self.PC += 1
+        return None, (l + self.Y) & 0xFF
 
     def addressing_IND(self): # Use next word as zero-page addr and the following byte from that zero page as another 8 bits, and combine the two into a 16-bit address
         pass
@@ -259,7 +263,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test_ABS_XY"
+    filename = "test_ABS_XY_ZP"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
