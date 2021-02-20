@@ -99,7 +99,7 @@ class CPU:
     def addressing_ABS(self):
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, self.memory[h << 8 | l]
+        return None, h << 8 | l
 
     def addressing_ZP(self):
         l = self.memory[self.PC]
@@ -160,6 +160,27 @@ class CPU:
 
     def INY(self, value, address):
         self.Y += 1 & 0xFF
+        self._setNZ(self.Y)
+
+    def LDA(self, value, address):
+        if value is not None:
+            self.A = value
+        else:
+            self.A = self.memory[address]
+        self._setNZ(self.A)
+
+    def LDX(self, value, address):
+        if value is not None:
+            self.X = value
+        else:
+            self.X = self.memory[address]
+        self._setNZ(self.X)
+
+    def LDY(self, value, address):
+        if value is not None:
+            self.Y = value
+        else:
+            self.Y = self.memory[address]
         self._setNZ(self.Y)
 
     def NOP(self, value, address):
@@ -235,6 +256,6 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    base = c64.load("programs/test1")
+    base = c64.load("programs/test2")
     c64.cpu.run(base)
 
