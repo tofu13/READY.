@@ -202,8 +202,16 @@ class CPU:
         return address
 
     # Instructions
+    def ADC(self, address):
+        result = self.A + self.memory[address] + self.F['C']
+        self._setNZ(result)
+        self.F['C'] = int(result > 0xFF)
+        # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        self.F['V'] = int(((self.A ^ result) & (self.memory[address] ^ result) & 0x80) > 0)
+        self.A = result & 0xFF
+
     def BRK(self, address):
-        pass
+        self.F['I'] = 1
 
     def BPL(self, address):
         if not self.F['N']:
@@ -361,8 +369,8 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test_ST"
+    filename = "test_ADC"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
-    print(c64.memory)
+    #print(c64.memory)
