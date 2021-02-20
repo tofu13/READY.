@@ -8,3 +8,5 @@ Credits for inspiration, informations and tools go to:
 - https://github.com/andrewsg/python-c64
 - https://github.com/meonwax/acme
 - https://wiki.cdot.senecacollege.ca/wiki/6502
+- http://6502.cdot.systems/
+
