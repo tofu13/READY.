@@ -196,13 +196,14 @@ class CPU:
         l = self.memory[self.PC]
         self.PC += 1
         address = (l + self.X) & 0xFF
-        return self.memory[address], None
+        return self.memory[address], address
 
     def addressing_IND_Y(self):
         # An 8-bit address identifies a pointer. The value of the Y register is added to the address contained in the pointer. Effectively, the pointer is the base address and the Y register is an index past that base address.
         l = self.memory[self.PC]
         self.PC += 1
-        return (self.memory[l] + self.Y) & 0xFF, None
+        address = (self.memory[l] + self.Y) & 0xFF
+        return self.memory[address], address
 
     # Instructions
     def BRK(self, value, address):
@@ -272,6 +273,15 @@ class CPU:
     def SEI(self, value, address):
         self.F['I'] = 1
 
+    def STA(self, value, address):
+        self.memory[address] = self.A
+
+    def STX(self, value, address):
+        self.memory[address] = self.X
+
+    def STY(self, value, address):
+        self.memory[address] = self.Y
+
     def TAX(self, value, address):
         self.X = self.A
         self._setNZ(self.A)
@@ -332,8 +342,8 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test1"
+    filename = "test_ST"
     subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
     base = c64.load(f"programs/{filename}")
     c64.cpu.run(base)
-
+    print(c64.memory)
