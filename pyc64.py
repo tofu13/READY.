@@ -209,6 +209,40 @@ class CPU:
     def BRK(self, value, address):
         pass
 
+    def BPL(self, value, address):
+        if not self.F['N']:
+            self.PC += value
+
+    def BMI(self, value, address):
+        if self.F['N']:
+            self.PC += value
+
+    def BVC(self, value, address):
+        if not self.F['V']:
+            self.PC += value
+
+    def BVS(self, value, address):
+        if self.F['V']:
+            self.PC += value
+
+    def BCC(self, value, address):
+        if not self.F['C']:
+            self.PC += value
+
+    def BCS(self, value, address):
+        if self.F['C']:
+            self.PC += value
+
+    def BNE(self, value, address):
+        if not self.F['Z']:
+            self.PC += value
+
+    def BEQ(self, value, address):
+        if self.F['Z']:
+            self.PC += value
+
+
+
     def CLC(self, value, address):
         self.F['C'] = 0
 
