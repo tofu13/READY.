@@ -20,7 +20,6 @@ class ADDRESSING_MODE(Enum):
 
 ADDRESSING_METHODS = [
     "IMP",
-    "A",
     "IMM",
     "REL",
     "ABS",

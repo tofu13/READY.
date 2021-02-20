@@ -89,7 +89,7 @@ class CPU:
         opcode = self.fetch()
         instruction, data = OPCODES[opcode]
         print(f"Executing {instruction} {data if data != 'None' else ''}")
-        getattr(self, instruction)(*getattr(self, f"addressing_{data}")())
+        getattr(self, instruction)(getattr(self, f"addressing_{data}")())
         return instruction != 'BRK'
 
     def run(self, address=None):
@@ -130,205 +130,190 @@ class CPU:
     @staticmethod
     def addressing_IMP():
         # The data is implied by the operation.
-        return None, None
-
-    def addressing_A(self):
-        # The operation works on the accumulator. No additional data is required.
-        return self.A, None
+        return None
 
     def addressing_IMM(self):
         # Data is taken from the byte following the opcode.
         value = self.memory[self.PC]
         self.PC += 1
-        return value, None
+        return value
 
     def addressing_REL(self):
         # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective address.
         value = self.memory[self.PC]
         self.PC += 1
-        return value if value < 127 else value - 256, None
+        return value if value < 127 else value - 256
 
     def addressing_ABS(self):
         # Data is accessed using 16-bit address specified as a constant.
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, self._combine(l, h)
+        return self._combine(l, h)
 
     def addressing_ZP(self):
         # An 8-bit address is provided within the zero page.
-        l = self.memory[self.PC]
+        value = self.memory[self.PC]
         self.PC += 1
-        return None, l
+        return value
 
     def addressing_ABS_X(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is added (with carry).
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, self._combine(l, h) + self.X
+        return self._combine(l, h) + self.X
 
     def addressing_ABS_Y(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is added (with carry).
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
-        return None, self._combine(l, h) + self.Y
+        return self._combine(l, h) + self.Y
 
     def addressing_ZP_X(self):
         # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, the address wraps around within the zero page).
         l = self.memory[self.PC]
         self.PC += 1
-        return None, (l + self.X) & 0xFF
+        return (l + self.X) & 0xFF
 
     def addressing_ZP_Y(self):
         # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows, the address wraps around within the zero page).
         l = self.memory[self.PC]
         self.PC += 1
-        return None, (l + self.Y) & 0xFF
+        return (l + self.Y) & 0xFF
 
     def addressing_IND(self):
         # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the opcode.
         l, h = self.memory[self.PC], self.memory[self.PC +1]
         self.PC += 2
         address = self._combine(l, h)
-        return None, self._combine(self.memory[address], self.memory[address + 1])
+        return self._combine(self.memory[address], self.memory[address + 1])
 
     def addressing_X_IND(self):
         # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, the address wraps around within page 0). The resulting address is used as a pointer to the data being accessed.
         l = self.memory[self.PC]
         self.PC += 1
         address = (l + self.X) & 0xFF
-        return self.memory[address], address
+        return address
 
     def addressing_IND_Y(self):
         # An 8-bit address identifies a pointer. The value of the Y register is added to the address contained in the pointer. Effectively, the pointer is the base address and the Y register is an index past that base address.
         l = self.memory[self.PC]
         self.PC += 1
         address = (self.memory[l] + self.Y) & 0xFF
-        return self.memory[address], address
+        return address
 
     # Instructions
-    def BRK(self, value, address):
+    def BRK(self, address):
         pass
 
-    def BPL(self, value, address):
+    def BPL(self, address):
         if not self.F['N']:
-            self.PC += value
+            self.PC += address
 
-    def BMI(self, value, address):
+    def BMI(self, address):
         if self.F['N']:
-            self.PC += value
+            self.PC += address
 
-    def BVC(self, value, address):
+    def BVC(self, address):
         if not self.F['V']:
-            self.PC += value
+            self.PC += address
 
-    def BVS(self, value, address):
+    def BVS(self, address):
         if self.F['V']:
-            self.PC += value
+            self.PC += address
 
-    def BCC(self, value, address):
+    def BCC(self, address):
         if not self.F['C']:
-            self.PC += value
+            self.PC += address
 
-    def BCS(self, value, address):
+    def BCS(self, address):
         if self.F['C']:
-            self.PC += value
+            self.PC += address
 
-    def BNE(self, value, address):
+    def BNE(self, address):
         if not self.F['Z']:
-            self.PC += value
+            self.PC += address
 
-    def BEQ(self, value, address):
+    def BEQ(self, address):
         if self.F['Z']:
-            self.PC += value
+            self.PC += address
 
-
-
-    def CLC(self, value, address):
+    def CLC(self, address):
         self.F['C'] = 0
 
-    def CLD(self, value, address):
+    def CLD(self, address):
         self.F['D'] = 0
 
-    def CLI(self, value, address):
+    def CLI(self, address):
         self.F['I'] = 0
 
-    def CLV(self, value, address):
+    def CLV(self, address):
         self.F['V'] = 0
 
-    def DEX(self, value, address):
+    def DEX(self, address):
         self.X -= 1 & 0xFF
         self._setNZ(self.X)
 
-    def DEY(self, value, address):
+    def DEY(self, address):
         self.Y -= 1 & 0xFF
         self._setNZ(self.Y)
 
-    def INX(self, value, address):
+    def INX(self, address):
         self.X += 1 & 0xFF
         self._setNZ(self.X)
 
-    def INY(self, value, address):
+    def INY(self, address):
         self.Y += 1 & 0xFF
         self._setNZ(self.Y)
 
-    def JMP(self, value, address):
+    def JMP(self, address):
         self.PC = address
 
-    def LDA(self, value, address):
-        if value is not None:
-            self.A = value
-        else:
-            self.A = self.memory[address]
+    def LDA(self, address):
+        self.A = self.memory[address]
         self._setNZ(self.A)
 
-    def LDX(self, value, address):
-        if value is not None:
-            self.X = value
-        else:
-            self.X = self.memory[address]
+    def LDX(self, address):
+        self.X = self.memory[address]
         self._setNZ(self.X)
 
-    def LDY(self, value, address):
-        if value is not None:
-            self.Y = value
-        else:
-            self.Y = self.memory[address]
+    def LDY(self, address):
+        self.Y = self.memory[address]
         self._setNZ(self.Y)
 
-    def NOP(self, value, address):
+    def NOP(self, address):
         pass
 
-    def SEC(self, value, address):
+    def SEC(self, address):
         self.F['C'] = 1
 
-    def SED(self, value, address):
+    def SED(self, address):
         self.F['D'] = 1
 
-    def SEI(self, value, address):
+    def SEI(self, address):
         self.F['I'] = 1
 
-    def STA(self, value, address):
+    def STA(self, address):
         self.memory[address] = self.A
 
-    def STX(self, value, address):
+    def STX(self, address):
         self.memory[address] = self.X
 
-    def STY(self, value, address):
+    def STY(self, address):
         self.memory[address] = self.Y
 
-    def TAX(self, value, address):
+    def TAX(self, address):
         self.X = self.A
         self._setNZ(self.A)
 
-    def TAY(self, value, address):
+    def TAY(self, address):
         self.Y = self.A
         self._setNZ(self.A)
 
-    def TXA(self, value, address):
+    def TXA(self, address):
         self.A = self.X
         self._setNZ(self.X)
 
-    def TYA(self, value, address):
+    def TYA(self, address):
         self.A = self.Y
         self._setNZ(self.Y)
 
