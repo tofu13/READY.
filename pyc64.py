@@ -38,7 +38,7 @@ class CPU:
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 1, 'V': 1, '-': 1, 'B': 1, 'D': 0, 'I': 1, 'Z': 1, 'C': 1}
+        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 1, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
 
         self.opcodes = dict()
         for opcode, specs in OPCODES.items():
@@ -294,17 +294,17 @@ class CPU:
 
     def CMP(self, address):
         result = self.A - self.memory[address]
-        self.F['C'] = int(result > 0)
+        self.F['C'] = int(result >= 0)
         self._setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory[address]
-        self.F['C'] = int(result > 0)
+        self.F['C'] = int(result >= 0)
         self._setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory[address]
-        self.F['C'] = int(result > 0)
+        self.F['C'] = int(result >= 0)
         self._setNZ(result)
 
     def DEC(self, address):
@@ -475,12 +475,15 @@ class Machine:
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
 
-    def load(self, filename):
+    def load(self, filename, format_cbm=False):
         with open(filename, 'rb') as f:
-            # First two bytes are base address for loading into memory (cbm file format, little endian)
-            l, h = f.read(2)
+            if format_cbm:
+                # First two bytes are base address for loading into memory (cbm file format, little endian)
+                l, h = f.read(2)
+                base = h << 8 | l
+            else:
+                base = DEFAULT_LOAD_ADDRESS
             data = f.read()
-        base = h << 8 | l
         for i, b in enumerate(data):
             self.memory[base + i] = b
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
@@ -500,7 +503,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/easy_6502_stack"
+    filename = "programs/easy_6502_branching"
     if utils.compile(filename):
         base = c64.load(filename + ".obj")
         c64.cpu.run(base)

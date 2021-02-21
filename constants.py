@@ -13,6 +13,7 @@ COMPILERS = {
         },
 }
 
+DEFAULT_LOAD_ADDRESS = 0x0801
 
 class ADDRESSING_MODE(Enum):
     _ = auto()
