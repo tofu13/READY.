@@ -348,6 +348,26 @@ class CPU:
     def PLP(self, address):
         self.F = self._unpack_status_register(self.pop())
 
+    def ROL(self, address):
+        if address is None:
+            value = self.A
+        else:
+            value = self.memory[address]
+        result = ((value << 1) | self.F['C']) & 0xFF
+        self.F['C'] = value >> 7
+        self._setNZ(result)
+        self.A = result
+
+    def ROR(self, address):
+        if address is None:
+            value = self.A
+        else:
+            value = self.memory[address]
+        result = ((value >> 1) | self.F['C'] << 7) & 0xFF
+        self.F['C'] = value & 0x01
+        self._setNZ(result)
+        self.A = result
+
     def RTI(self, Address):
         # TODO: untested
         self.F = self._unpack_status_register(self.pop())

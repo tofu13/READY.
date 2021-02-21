@@ -19,3 +19,26 @@
     LSR
     LSR
     LSR
+
+    LDA #%10101010
+    ROL
+    ROL
+    ROL
+    ROL
+    ROL
+    ROL
+    ROL
+    ROL
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
+    ROR
