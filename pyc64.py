@@ -224,6 +224,16 @@ class CPU:
         self.F['V'] = int(((self.A ^ result) & (self.memory[address] ^ result) & 0x80) > 0)
         self.A = result & 0xFF
 
+    def ASL(self, address):
+        if address is None:
+            value = self.A
+        else:
+            value = self.memory[address]
+        self.F['C'] = value >> 7
+        result = (value << 1) & 0xFF
+        self._setNZ(result)
+        self.A = result
+
     def BRK(self, address):
         self.F['I'] = 1
 
@@ -312,6 +322,16 @@ class CPU:
     def LDY(self, address):
         self.Y = self.memory[address]
         self._setNZ(self.Y)
+
+    def LSR(self, address):
+        if address is None:
+            value = self.A
+        else:
+            value = self.memory[address]
+        result = value >> 1
+        self._setNZ(result)
+        self.F['C'] = value & 0x01
+        self.A = result
 
     def NOP(self, address):
         pass
@@ -424,7 +444,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_JSR"
+    filename = "programs/test_ASL_RSL"
     try:
         utils.compile(COMPILERS['acme'], filename)
     except Exception as e:
@@ -432,4 +452,4 @@ if __name__ == '__main__':
     else:
         base = c64.load(filename)
         c64.cpu.run(base)
-    print(c64.memory)
+    #print(c64.memory)
