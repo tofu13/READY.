@@ -203,15 +203,15 @@ class CPU:
 
     def addressing_X_IND(self):
         # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, the address wraps around within page 0). The resulting address is used as a pointer to the data being accessed.
-        l = self.memory[self.PC]
+        base = self.memory[self.PC] + self.X
         self.PC += 1
-        address = (l + self.X) & 0xFF
+        address = self._combine(self.memory[base], self.memory[base + 1])
         return address
 
     def addressing_IND_Y(self):
         base = self.memory[self.PC]
-        address = self._combine(self.memory[base], self.memory[base + 1]) + self.Y
         self.PC += 1
+        address = self._combine(self.memory[base], self.memory[base + 1]) + self.Y
         return address
 
     # Instructions
@@ -502,7 +502,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/easy_6502_indexed_indirect_Y"
+    filename = "programs/easy_6502_indexed_indirect_X"
     if utils.compile(filename):
         base = c64.load(filename + ".obj")
         c64.cpu.run(base)
