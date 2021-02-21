@@ -90,7 +90,7 @@ class CPU:
         """
         opcode = self.fetch()
         instruction, data = OPCODES[opcode]
-        print(f"Executing {instruction} {data if data != 'None' else ''}")
+        print(f"{self} Executing {instruction} {data if data != 'None' else ''}")
         getattr(self, instruction)(getattr(self, f"addressing_{data}")())
         return instruction != 'BRK'
 
@@ -103,7 +103,7 @@ class CPU:
         if address is not None:
             self.PC = address
         while self.step():
-            print(self)
+            pass
 
     # Utils
     def _setNZ(self, value):
@@ -503,7 +503,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/easy_6502_branching"
+    filename = "programs/easy_6502_indexed_indirect_Y"
     if utils.compile(filename):
         base = c64.load(filename + ".obj")
         c64.cpu.run(base)
