@@ -209,10 +209,9 @@ class CPU:
         return address
 
     def addressing_IND_Y(self):
-        # An 8-bit address identifies a pointer. The value of the Y register is added to the address contained in the pointer. Effectively, the pointer is the base address and the Y register is an index past that base address.
-        l = self.memory[self.PC]
+        base = self.memory[self.PC]
+        address = self._combine(self.memory[base], self.memory[base + 1]) + self.Y
         self.PC += 1
-        address = (self.memory[l] + self.Y) & 0xFF
         return address
 
     # Instructions
