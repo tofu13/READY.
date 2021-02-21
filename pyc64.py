@@ -485,12 +485,9 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_bit"
-    try:
-        utils.compile(COMPILERS['acme'], filename)
-    except Exception as e:
-        raise e
-    else:
-        base = c64.load(filename)
+    filename = "programs/easy_6502_stack"
+    if utils.compile(filename):
+        base = c64.load(filename + ".obj")
         c64.cpu.run(base)
+        pass
     #print(c64.memory)

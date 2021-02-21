@@ -4,12 +4,12 @@ COMPILERS = {
     "acme":
         {
             "path": "programs/acme",
-            "options": "-f cbm"
+            "cmd_line": "{path} -f cbm -o {filename}.obj {filename}"
         },
     "xa":
         {
-            "path": "",
-            "options": ""
+            "path": "programs/xa",
+            "cmd_line": "{path} -o {filename}.obj {filename}"
         },
 }
 
