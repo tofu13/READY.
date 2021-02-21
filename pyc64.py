@@ -15,11 +15,11 @@ class Memory:
         #print(f"Memory write at {key}: {value}")
         super().__setitem__(key, value)
 
-    def __str__(self, start=0, end=None):
+    def __str__(self, start=0x100, end=None):
         if end is None:
             end = start + 0x0100
         return "\n".join(
-            [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i+15))}" for i in range(start, end, 16)]
+            [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i+16))}" for i in range(start, end, 16)]
         )
 
 
@@ -32,13 +32,13 @@ class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
 
-    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0x01FF):
+    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.A = A
         self.X = X
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 1, 'V': 1, 'B': 1, 'D': 1, 'I': 1, 'Z': 1, 'C': 1}
+        self.F = {'N': 1, 'V': 1, '-': 1, 'B': 1, 'D': 0, 'I': 1, 'Z': 1, 'C': 1}
 
         self.opcodes = dict()
         for opcode, specs in OPCODES.items():
@@ -60,7 +60,8 @@ class CPU:
         :param value: The value to push
         :return: None
         """
-        self.memory[self.SP] = value
+        # Stack memory is at page 1 (0x100)
+        self.memory[0x100 | self.SP] = value
         self.SP = (self.SP - 1) & 0xFF
 
     def pop(self):
@@ -68,9 +69,9 @@ class CPU:
         Pop a value from the stack, update SP
         :return: The popped value
         """
-        value = self.memory[self.SP]
+        # Stack memory is at page 1 (0x100)
         self.SP = (self.SP + 1) & 0xFF
-        return value
+        return self.memory[0x100 | self.SP]
 
     def fetch(self):
         """
@@ -123,6 +124,18 @@ class CPU:
         :return: 2-byte value
         """
         return high << 8 | low
+
+    def _pack_status_register(self, value):
+        result = 0
+        for i, flag in enumerate(value.values()):
+            result |= 2**(7 - i) * flag
+        return result
+
+    def _unpack_status_register(self, value):
+        result = dict()
+        for i, flag in enumerate(self.F.keys()):
+            result[flag] = (value & 2**(7 - i)) >> (7 - i)
+        return result
 
     def _not_implemented(self, address):
         raise NotImplementedError
@@ -297,6 +310,18 @@ class CPU:
     def NOP(self, address):
         pass
 
+    def PHA(self, address):
+        self.push(self.A)
+
+    def PHP(self, address):
+        self.push(self._pack_status_register(self.F))
+
+    def PLA(self, address):
+        self.A = self.pop()
+
+    def PLP(self, address):
+        self.F = self._unpack_status_register(self.pop())
+
     def SBC(self, address):
         result = self.A - self.memory[address] - (1 - self.F['C'])
         self._setNZ(result & 0xFF)
@@ -383,7 +408,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_INC_DEC"
+    filename = "programs/test_stack"
     try:
         utils.compile(COMPILERS['acme'], filename)
     except Exception as e:
@@ -391,4 +416,4 @@ if __name__ == '__main__':
     else:
         base = c64.load(filename)
         c64.cpu.run(base)
-    #print(c64.memory)
+    print(c64.memory)

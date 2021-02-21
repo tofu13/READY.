@@ -1,0 +1,18 @@
+* = $0C00
+lda #$42
+PHA
+lda #$10
+PHA
+lda #$FF
+PHA
+
+PHP
+CLC
+CLI
+CLV
+CLD
+PLP
+
+PLA
+PLA
+PLA
