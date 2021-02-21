@@ -112,7 +112,7 @@ class CPU:
         :param value:
         :return: None
         """
-        self.F['N'] = value >> 7
+        self.F['N'] = (value & 0xFF) >> 7
         self.F['Z'] = int(value == 0)
 
     @staticmethod
@@ -502,7 +502,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/easy_6502_indexed_indirect_X"
+    filename = "programs/easy_6502_stack"
     if utils.compile(filename):
         base = c64.load(filename + ".obj")
         c64.cpu.run(base)
