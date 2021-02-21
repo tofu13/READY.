@@ -1,5 +1,6 @@
 from constants import *
-import subprocess
+
+import utils
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
@@ -369,8 +370,12 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "test_ADC"
-    subprocess.run(f"programs/acme -f cbm -o programs/{filename} programs/{filename}.asm".split())
-    base = c64.load(f"programs/{filename}")
-    c64.cpu.run(base)
+    filename = "programs/test_ADCz"
+    try:
+        utils.compile(COMPILERS['acme'], filename)
+    except Exception as e:
+        raise e
+    else:
+        base = c64.load(filename)
+        c64.cpu.run(base)
     #print(c64.memory)

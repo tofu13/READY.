@@ -1,5 +1,18 @@
 from enum import Enum, auto
 
+COMPILERS = {
+    "acme":
+        {
+            "path": "programs/acme",
+            "options": "-f cbm"
+        },
+    "xa":
+        {
+            "path": "",
+            "options": ""
+        },
+}
+
 
 class ADDRESSING_MODE(Enum):
     _ = auto()
