@@ -292,6 +292,21 @@ class CPU:
     def CLV(self, address):
         self.F['V'] = 0
 
+    def CMP(self, address):
+        result = self.A - self.memory[address]
+        self.F['C'] = int(result > 0)
+        self._setNZ(result)
+
+    def CPX(self, address):
+        result = self.X - self.memory[address]
+        self.F['C'] = int(result > 0)
+        self._setNZ(result)
+
+    def CPY(self, address):
+        result = self.Y - self.memory[address]
+        self.F['C'] = int(result > 0)
+        self._setNZ(result)
+
     def DEC(self, address):
         result = (self.memory[address] - 1) & 0xFF
         self.memory[address] = result
