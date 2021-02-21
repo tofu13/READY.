@@ -124,7 +124,7 @@ class CPU:
         """
         return high << 8 | low
 
-    def _not_implemented(self, value, address):
+    def _not_implemented(self, address):
         raise NotImplementedError
 
     # Addressing methods
@@ -258,6 +258,11 @@ class CPU:
     def CLV(self, address):
         self.F['V'] = 0
 
+    def DEC(self, address):
+        result = (self.memory[address] - 1) & 0xFF
+        self.memory[address] = result
+        self._setNZ(result)
+
     def DEX(self, address):
         self.X -= 1 & 0xFF
         self._setNZ(self.X)
@@ -378,7 +383,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_ADC"
+    filename = "programs/test_INC_DEC"
     try:
         utils.compile(COMPILERS['acme'], filename)
     except Exception as e:
