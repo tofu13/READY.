@@ -1,5 +1,4 @@
 import subprocess
-from os.path import basename
 
 
 def compile(compiler, filename):

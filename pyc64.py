@@ -292,6 +292,14 @@ class CPU:
     def NOP(self, address):
         pass
 
+    def SBC(self, address):
+        result = self.A - self.memory[address] - (1 - self.F['C'])
+        self._setNZ(result & 0xFF)
+        self.F['C'] = int(result >= 0x00)
+        # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        self.F['V'] = int(((self.A ^ result) & ((0xFF - self.memory[address]) ^ result) & 0x80) > 0)
+        self.A = result & 0xFF
+
     def SEC(self, address):
         self.F['C'] = 1
 
@@ -370,7 +378,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_ADCz"
+    filename = "programs/test_ADC"
     try:
         utils.compile(COMPILERS['acme'], filename)
     except Exception as e:
