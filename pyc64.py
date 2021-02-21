@@ -328,6 +328,12 @@ class CPU:
     def PLP(self, address):
         self.F = self._unpack_status_register(self.pop())
 
+    def RTI(self, Address):
+        # TODO: untested
+        self.F = self._unpack_status_register(self.pop())
+        value = self.pop() + (self.pop() << 8)
+        self.PC = value + 1
+
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
         self.PC = value + 1
