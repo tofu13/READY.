@@ -295,6 +295,12 @@ class CPU:
     def JMP(self, address):
         self.PC = address
 
+    def JSR(self, address):
+        value = self.PC - 1
+        self.push((value & 0xFF00) >> 8) # save high byte of PC
+        self.push(value & 0x00FF) # save low byte of PC
+        self.PC = address
+
     def LDA(self, address):
         self.A = self.memory[address]
         self._setNZ(self.A)
@@ -321,6 +327,10 @@ class CPU:
 
     def PLP(self, address):
         self.F = self._unpack_status_register(self.pop())
+
+    def RTS(self, address):
+        value = self.pop() + (self.pop() << 8)
+        self.PC = value + 1
 
     def SBC(self, address):
         result = self.A - self.memory[address] - (1 - self.F['C'])
@@ -408,7 +418,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_stack"
+    filename = "programs/test_JSR"
     try:
         utils.compile(COMPILERS['acme'], filename)
     except Exception as e:
