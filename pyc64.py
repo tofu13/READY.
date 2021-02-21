@@ -224,6 +224,11 @@ class CPU:
         self.F['V'] = int(((self.A ^ result) & (self.memory[address] ^ result) & 0x80) > 0)
         self.A = result & 0xFF
 
+    def AND(self, address):
+        result = self.A & self.memory[address]
+        self._setNZ(result)
+        self.A = result
+
     def ASL(self, address):
         if address is None:
             value = self.A
@@ -269,6 +274,12 @@ class CPU:
         if self.F['Z']:
             self.PC += address
 
+    def BIT(self, address):
+        value = self.memory[address]
+        self._setNZ(value & self.A)
+        self.F['N'] = value >> 7
+        self.F['V'] = (value & 0x40) >> 6
+
     def CLC(self, address):
         self.F['C'] = 0
 
@@ -293,6 +304,11 @@ class CPU:
     def DEY(self, address):
         self.Y -= 1 & 0xFF
         self._setNZ(self.Y)
+
+    def EOR(self, address):
+        result = self.A ^ self.memory[address]
+        self._setNZ(result)
+        self.A = result
 
     def INX(self, address):
         self.X += 1 & 0xFF
@@ -335,6 +351,11 @@ class CPU:
 
     def NOP(self, address):
         pass
+
+    def ORA(self, address):
+        result = self.A | self.memory[address]
+        self._setNZ(result)
+        self.A = result
 
     def PHA(self, address):
         self.push(self.A)
@@ -464,7 +485,7 @@ if __name__ == '__main__':
     #c64.memory[1024] = 66
     #c64.screen.refresh()
 
-    filename = "programs/test_ASL_RSL"
+    filename = "programs/test_bit"
     try:
         utils.compile(COMPILERS['acme'], filename)
     except Exception as e:
