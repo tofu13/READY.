@@ -336,11 +336,11 @@ class CPU:
         self.A = result
 
     def INX(self, address):
-        self.X += 1 & 0xFF
+        self.X = (self.X + 1) & 0xFF
         self._setNZ(self.X)
 
     def INY(self, address):
-        self.Y += 1 & 0xFF
+        self.Y = (self.Y + 1) & 0xFF
         self._setNZ(self.Y)
 
     def JMP(self, address):
