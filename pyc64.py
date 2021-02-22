@@ -4,14 +4,25 @@ import utils
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
+    read_watchers = []
+    write_watchers = []
+
     def __getitem__(self, item):
         value = super().__getitem__(item)
         #print(f"Memory read at {item}: {value}")
+        for start, end, callback in self.read_watchers:
+            if start <= key <= end:
+                callback(item, value)
+                break
         return value
 
     def __setitem__(self, key, value):
         if value < 0 or value > 255:
             raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
+        for start, end, callback in self.write_watchers:
+            if start <= key <= end:
+                callback(key, value)
+                break
         #print(f"Memory write at {key}: {value}")
         super().__setitem__(key, value)
 
@@ -459,7 +470,10 @@ class CPU:
 class Screen:
     memory = None
 
-    def refresh(self):
+    def init(self):
+        self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
+
+    def refresh(self, *args):
         print("\n".join(
             ["".join(map(chr,self.memory[1024 + i*40: 1024 + i*40 + 39])) for i in range(0, 24, 40)])
         )
@@ -473,6 +487,7 @@ class Machine:
 
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
+        self.screen.init()
 
     def load(self, filename, format_cbm=False):
         with open(filename, 'rb') as f:
