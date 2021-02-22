@@ -323,11 +323,11 @@ class CPU:
         self._setNZ(result)
 
     def DEX(self, address):
-        self.X -= 1 & 0xFF
+        self.X = (self.X - 1) & 0xFF
         self._setNZ(self.X)
 
     def DEY(self, address):
-        self.Y -= 1 & 0xFF
+        self.Y = (self.Y - 1) & 0xFF
         self._setNZ(self.Y)
 
     def EOR(self, address):
