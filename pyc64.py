@@ -1,4 +1,5 @@
 from constants import *
+import sys
 
 import utils
 
@@ -99,10 +100,12 @@ class CPU:
         Execute next instruction
         :return: False if instruction is BRK, else True
         """
+        pc = self.PC
         opcode = self.fetch()
-        instruction, data = OPCODES[opcode]
-        print(f"{self} Executing {instruction} {data if data != 'None' else ''}")
-        getattr(self, instruction)(getattr(self, f"addressing_{data}")())
+        instruction, mode = OPCODES[opcode]
+        address = getattr(self, f"addressing_{mode}")()
+        print(f"@${pc:04X} Executing {instruction}\t{mode if mode != 'None' else ''}\t{self}")
+        getattr(self, instruction)(address)
         return instruction != 'BRK'
 
     def run(self, address=None):
@@ -471,7 +474,8 @@ class Screen:
     memory = None
 
     def init(self):
-        self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
+        pass
+    #    self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
 
     def refresh(self, *args):
         print("\n".join(
@@ -505,21 +509,12 @@ class Machine:
 
 
 if __name__ == '__main__':
+    filename = sys.argv[1]
+
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
-    #c64.memory[0] = 0xe8
-    #c64.memory[1] = 0xca
-    #c64.memory[1024] = 65
-    #print(c64.memory)
     print(c64.cpu)
-    #c64.cpu.run()
 
-    #c64.screen.refresh()
-    #c64.memory[1024] = 66
-    #c64.screen.refresh()
-
-    filename = "programs/easy_6502_stack"
-    if utils.compile(filename):
-        base = c64.load(filename + ".obj")
+    #if utils.compile(filename):
+    if True:
+        base = c64.load(filename)
         c64.cpu.run(base)
-        pass
-    #print(c64.memory)
