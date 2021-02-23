@@ -27,6 +27,8 @@ Code is organized in modules corresponding to single hardware components.
 - Audio (TDB)
 
 ## Installation (on GNU/Linux)
+Python >= 3.7 is required.
+
 ```
 git clone https://github.com/tofu13/pyc64.git
 cd pyc64
