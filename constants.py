@@ -10,7 +10,7 @@ COMPILERS = {
             "cmd_line": "{path} -o {filename}.obj {filename}"
         },
 }
-
+DEFAULT_COMPILER = "acme"
 DEFAULT_LOAD_ADDRESS = 0x0801
 
 ADDRESSING_METHODS = [
