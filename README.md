@@ -46,4 +46,22 @@ pip install -r requirements.txt
 
 where ```[filename]``` is a binary object. It will be loaded at $0801 and run (no "cbm format" with address at first two bytes of binary file).
 
+Complete usage:
+```
+python READY..py --help
+usage: READY..py [-h] [-1] [-a] [-c COMPILER] [-s LOAD_ADDRESS] filename
+
+positional arguments:
+  filename
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -1, --cbm-format      First two bytes of file are little endian load address (like in LOAD"*",8,1)
+  -a, --assembly        Compile and run an assembler file using compiler specified with -c (default acme). See config.
+  -c COMPILER, --compiler COMPILER
+                        Use this compiler. Available: acme, xa. See config.
+  -s LOAD_ADDRESS, --load-address LOAD_ADDRESS
+                        Load binary file at address (if not specified: $0801). Use (escaped)$ or 0x for hex value.
+```
+
 You can use [acme](https://github.com/meonwax/acme) or [xa](https://www.floodgap.com/retrotech/xa) to compile an assembler file, see the [programs](https://github.com/tofu13/READY./tree/master/programs) folder for some example.
