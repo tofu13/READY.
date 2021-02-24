@@ -1,5 +1,5 @@
-# pyc64
-pyc64 is a Commodore 64 emulator written in python 3.
+# READY.
+READY. is a Commodore 64 emulator written in python 3.
 
 Target is not perfect emulation, but rather learning how that computer works and rebuilding it after 35 years using technologies that are orders of magnitude more powerful.
 
@@ -30,8 +30,8 @@ Code is organized in modules corresponding to single hardware components.
 Python >= 3.7 is required.
 
 ```
-git clone https://github.com/tofu13/pyc64.git
-cd pyc64
+git clone https://github.com/tofu13/READY..git
+cd READY.
 ```
 
 For a standalone environment it is suggested to: 
@@ -42,8 +42,8 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-```python pyc64 [filename]```
+```python READY. [filename]```
 
 where ```[filename]``` is a binary object. It will be loaded at $0801 and run (no "cbm format" with address at first two bytes of binary file).
 
-You can use [acme](https://github.com/meonwax/acme) or [xa](https://www.floodgap.com/retrotech/xa) to compile an assembler file, see the [programs](https://github.com/tofu13/pyc64/tree/master/programs) folder for some example.
+You can use [acme](https://github.com/meonwax/acme) or [xa](https://www.floodgap.com/retrotech/xa) to compile an assembler file, see the [programs](https://github.com/tofu13/READY./tree/master/programs) folder for some example.
