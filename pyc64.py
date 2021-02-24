@@ -64,7 +64,8 @@ class CPU:
         pass
 
     def __str__(self):
-        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {self.F}"
+        st = "".join(f"{k}:{v} " for k,v in self.F.items())
+        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {st}"
 
     def push(self, value):
         """
