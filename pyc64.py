@@ -1,5 +1,6 @@
 from constants import *
 import sys
+import argparse
 
 import utils
 
@@ -509,12 +510,15 @@ class Machine:
 
 
 if __name__ == '__main__':
-    filename = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+
+    args = parser.parse_args()
 
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
     print(c64.cpu)
 
     #if utils.compile(filename):
     if True:
-        base = c64.load(filename)
+        base = c64.load(args.filename)
         c64.cpu.run(base)
