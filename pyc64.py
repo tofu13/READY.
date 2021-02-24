@@ -50,7 +50,7 @@ class CPU:
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 1, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
+        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
 
         self.opcodes = dict()
         for opcode, specs in OPCODES.items():
@@ -61,7 +61,6 @@ class CPU:
         for addressing in ADDRESSING_METHODS:
             if not hasattr(self, f"addressing_{addressing}"):
                 setattr(self, f"addressing_{addressing}", self._not_implemented)
-        pass
 
     def __str__(self):
         st = "".join(f"{k}:{v} " for k,v in self.F.items())
@@ -117,8 +116,8 @@ class CPU:
         """
         if address is not None:
             self.PC = address
-        while self.step():
-            pass
+        while not self.F['B']:
+            self.step()
 
     # Utils
     def _setNZ(self, value):
@@ -254,7 +253,7 @@ class CPU:
         self.A = result
 
     def BRK(self, address):
-        self.F['I'] = 1
+        self.F['B'] = 1
 
     def BPL(self, address):
         if not self.F['N']:
