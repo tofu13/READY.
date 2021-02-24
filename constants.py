@@ -1,5 +1,3 @@
-from enum import Enum, auto
-
 COMPILERS = {
     "acme":
         {
@@ -14,23 +12,6 @@ COMPILERS = {
 }
 
 DEFAULT_LOAD_ADDRESS = 0x0801
-
-class ADDRESSING_MODE(Enum):
-    _ = auto()
-    A = auto()
-    IMM = auto() # next word as literal
-    REL = auto() # next word as signed integer
-    ABS = auto()  # get next 16 bits as address
-    ZP = auto() # get next 8 bits as address for zeroth memory page
-    ABS_X = auto() # as with ABS but add X to address
-    ABS_Y = auto() # as with ABS but add Y to address
-    ZP_X = auto() # as with ZP but add X to address
-    ZP_Y = auto() # as with ZP but add Y to address
-    IND = auto() # Use next word as zero-page addr and the following byte from that zero page
-    # as another 8 bits, and combine the two into a 16-bit address
-    IND_X = auto() # As with the above, but add X to the ZP
-    IND_Y = auto() # As with the above, but add Y to the
-
 
 ADDRESSING_METHODS = [
     "IMP",
@@ -51,36 +32,36 @@ OPCODES = {
     0x00: ("BRK", "IMP"),
     0x01: ("ORA", "X_IND"),
     0x02: None,
-    0x03: None,  # ("SLO", "X_IND"),
+    0x03: None,
     0x04: ("NOP", "ZP"),
     0x05: ("ORA", "ZP"),
     0x06: ("ASL", "ZP"),
-    0x07: None,  # ("SLO", "ZP"),
+    0x07: None,
     0x08: ("PHP", "IMP"),
     0x09: ("ORA", "IMM"),
     0x0a: ("ASL", "IMP"),
-    0x0b: None,  # ("ANC", "IMM"),
+    0x0b: None,
     0x0c: ("NOP", "ABS"),
     0x0d: ("ORA", "ABS"),
     0x0e: ("ASL", "ABS"),
-    0x0f: None,  # ("SLO", "ABS"),
+    0x0f: None,
 
     0x10: ("BPL", "REL"),
     0x11: ("ORA", "IND_Y"),
     0x12: None,
-    0x13: None,  # ("SLO", "IND_Y"),
+    0x13: None,
     0x14: ("NOP", "ZP_X"),
     0x15: ("ORA", "ZP_X"),
     0x16: ("ASL", "ZP_X"),
-    0x17: None,  # ("SLO", "ZP_X"),
+    0x17: None,
     0x18: ("CLC", "IMP"),
     0x19: ("ORA", "ABS_Y"),
     0x1a: ("NOP", "IMP"),
-    0x1b: None,  # ("SLO", "ABS_Y"),
+    0x1b: None,
     0x1c: ("NOP", "ABS_X"),
     0x1d: ("ORA", "ABS_X"),
     0x1e: ("ASL", "ABS_X"),
-    0x1f: None,  # ("SLO", "ABS_X"),
+    0x1f: None,
 
     0x20: ("JSR", "ABS"),
     0x21: ("AND", "X_IND"),
