@@ -24,7 +24,7 @@ Code is organized in modules corresponding to single hardware components.
 - ROM (TDB)
 - Keyboard (TBD)
 - Storage (TBD)
-- Audio (TDB)
+- Audio (TBD)
 
 ## Installation (on GNU/Linux)
 Python >= 3.7 is required.
