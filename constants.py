@@ -1,16 +1,3 @@
-COMPILERS = {
-    "acme":
-        {
-            "path": "programs/acme",
-            "cmd_line": "{path} -f cbm -o {filename}.obj {filename}"
-        },
-    "xa":
-        {
-            "path": "programs/xa",
-            "cmd_line": "{path} -o {filename}.obj {filename}"
-        },
-}
-DEFAULT_COMPILER = "acme"
 DEFAULT_LOAD_ADDRESS = 0x0801
 
 ADDRESSING_METHODS = [

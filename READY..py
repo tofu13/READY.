@@ -1,8 +1,7 @@
 from constants import *
-import sys
-import argparse
+from config import *
 
-import utils
+import argparse
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
@@ -494,14 +493,12 @@ class Machine:
         self.screen.memory = self.memory
         self.screen.init()
 
-    def load(self, filename, format_cbm=False):
+    def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
             if format_cbm:
                 # First two bytes are base address for loading into memory (cbm file format, little endian)
                 l, h = f.read(2)
                 base = h << 8 | l
-            else:
-                base = DEFAULT_LOAD_ADDRESS
             data = f.read()
         for i, b in enumerate(data):
             self.memory[base + i] = b
@@ -516,7 +513,7 @@ if __name__ == '__main__':
                         help="First two bytes of file are little endian load address (like in LOAD\"*\",8,1)")
     parser.add_argument("-a", "--assembly", action='store_true',
                         help=f"Compile and run an assembler file using compiler specified with"
-                             f" -c (default {DEFAULT_COMPILER}). See config.")
+                             f" -c (default: {DEFAULT_COMPILER}). See config.")
     parser.add_argument("-c", "--compiler", action='store', default=f"{DEFAULT_COMPILER}",
                         help=f"Use this compiler. Available: {', '.join(COMPILERS.keys()) or 'none :( '}. See config.")
     parser.add_argument("-s", "--load-address", action='store',
@@ -548,5 +545,5 @@ if __name__ == '__main__':
     print(c64.cpu)
 
     if True:
-        base = c64.load(args.filename, args.cbm_format, base or DEFAULT_LOAD_ADDRESS)
+        base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.cpu.run(base)
