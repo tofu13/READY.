@@ -1,5 +1,11 @@
 DEFAULT_LOAD_ADDRESS = 0x0801
 
+ROMSLIST = [
+    ("basic", 0xA000, 0xBFFF),
+    ("chargen", 0xD000, 0xDFFF),
+    ("kernal", 0xE000, 0xFFFF),
+]
+
 ADDRESSING_METHODS = [
     "IMP",
     "IMM",

@@ -11,3 +11,4 @@ COMPILERS = {
         },
 }
 DEFAULT_COMPILER = "acme"
+ROMS_FOLDER = "roms"

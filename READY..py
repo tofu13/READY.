@@ -2,19 +2,19 @@ from constants import *
 from config import *
 
 import argparse
+import os.path
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
     read_watchers = []
     write_watchers = []
 
-    def __getitem__(self, item):
-        value = super().__getitem__(item)
+    def __getitem__(self, address):
+        value = super().__getitem__(address)
         #print(f"Memory read at {item}: {value}")
         for start, end, callback in self.read_watchers:
-            if start <= key <= end:
-                callback(item, value)
-                break
+            if start <= address <= end:
+                return callback(address, value)
         return value
 
     def __setitem__(self, key, value):
@@ -475,23 +475,47 @@ class Screen:
 
     def init(self):
         pass
-    #    self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
+    #   self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
 
-    def refresh(self, *args):
+    def refresh(self, address, value):
         print("\n".join(
             ["".join(map(chr,self.memory[1024 + i*40: 1024 + i*40 + 39])) for i in range(0, 24, 40)])
         )
+        return value
+
+class ROMS:
+    def __init__(self):
+        self.contents = {}
+        self.load()
+
+    def load(self):
+        for name, begin, end in ROMSLIST:
+            with open(os.path.join(ROMS_FOLDER, name), 'rb') as rom:
+                self.contents[name] = bytearray(rom.read())
+
+    def init(self):
+        for name, begin, end in ROMSLIST:
+            self.memory.read_watchers.append([begin, end, self.read_rom])
+
+    def read_rom(self, address, value):
+        for name, begin, end in ROMSLIST:
+            if begin <= address <= end: # TODO: handle visibility $01
+                return self.contents[name][address-begin]
+
 
 
 class Machine:
-    def __init__(self, memory, cpu, screen):
+    def __init__(self, memory, cpu, screen, roms):
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
+        self.roms = roms
 
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
         self.screen.init()
+        self.roms.memory = self.memory
+        self.roms.init()
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
@@ -539,9 +563,12 @@ if __name__ == '__main__':
         if not 0 <= base <= 0xFFFF:
             raise parser.error(f"Invalid load address {args.load_address}")
 
-    c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
+    base = None
+
+    c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), ROMS())
     print(c64.cpu)
 
     if True:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.cpu.run(base)
+        pass
