@@ -538,8 +538,6 @@ if __name__ == '__main__':
             raise parser.error(f"Invalid load address {args.load_address}")
         if not 0 <= base <= 0xFFFF:
             raise parser.error(f"Invalid load address {args.load_address}")
-    else:
-        base = None
 
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
     print(c64.cpu)
