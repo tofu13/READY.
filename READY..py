@@ -120,6 +120,17 @@ class CPU:
         while not self.F['B']:
             self.step()
 
+    def SYS(self, address):
+        """
+        Emulate SYS
+        :param address: addres to JSR to
+        :return: None
+        """
+        sp = self.SP
+        self.JSR(address)
+        while not sp == self.SP:
+            self.step()
+
     # Utils
     def _setNZ(self, value):
         """
@@ -539,6 +550,8 @@ if __name__ == '__main__':
             raise parser.error(f"Invalid load address {args.load_address}")
         if not 0 <= base <= 0xFFFF:
             raise parser.error(f"Invalid load address {args.load_address}")
+
+    base = None
 
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
     print(c64.cpu)
