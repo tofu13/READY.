@@ -120,6 +120,17 @@ class CPU:
         while not self.F['B']:
             self.step()
 
+    def SYS(self, address):
+        """
+        Emulate SYS
+        :param address: addres to JSR to
+        :return: None
+        """
+        sp = self.SP
+        self.JSR(address)
+        while not sp == self.SP:
+            self.step()
+
     # Utils
     def _setNZ(self, value):
         """
@@ -566,7 +577,7 @@ if __name__ == '__main__':
 
     base = None
 
-    c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), ROMS())
+    c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
     print(c64.cpu)
 
     if True:
