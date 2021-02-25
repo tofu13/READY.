@@ -114,6 +114,7 @@ class CPU:
         :param address: address to start execution
         :return: None
         """
+        self.F['B'] = 0
         if address is not None:
             self.PC = address
         while not self.F['B']:
