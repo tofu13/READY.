@@ -529,8 +529,9 @@ class Machine:
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
         self.screen.init()
-        self.roms.memory = self.memory
-        self.roms.init()
+        if self.roms is not None:
+            self.roms.memory = self.memory
+            self.roms.init()
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
@@ -550,15 +551,16 @@ if __name__ == '__main__':
     parser.add_argument("filename")
     parser.add_argument("-1", "--cbm-format", action='store_true',
                         help="First two bytes of file are little endian load address (like in LOAD\"*\",8,1)")
-    parser.add_argument("-a", "--assembly", action='store_true',
-                        help=f"Compile and run an assembler file using compiler specified with"
-                             f" -c (default: {DEFAULT_COMPILER}). See config.")
+    #parser.add_argument("-a", "--assembly", action='store_true',
+    #                    help=f"Compile and run an assembler file using compiler specified with"
+    #                         f" -c (default: {DEFAULT_COMPILER}). See config.")
     parser.add_argument("-c", "--compiler", action='store', default=f"{DEFAULT_COMPILER}",
                         help=f"Use this compiler. Available: {', '.join(COMPILERS.keys()) or 'none :( '}. See config.")
     parser.add_argument("-s", "--load-address", action='store',
                         help=f"Load binary file at address (if not specified: ${DEFAULT_LOAD_ADDRESS:04X}). "
-                             f"Use (escaped)$ or 0x for hex value."
-                        )
+                             f"Use (escaped)$ or 0x for hex value.")
+    parser.add_argument("-n","--no-roms", action='store_true', default=False,
+                        help="Do not load roms")
     args = parser.parse_args()
 
     print(args)
@@ -580,7 +582,9 @@ if __name__ == '__main__':
 
     base = None
 
-    c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), ROMS())
+    roms = None if args.no_roms else ROMS()
+
+    c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), roms)
     print(c64.cpu)
 
     if True:
