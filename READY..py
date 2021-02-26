@@ -585,11 +585,13 @@ if __name__ == '__main__':
     roms = None if args.no_roms else ROMS()
 
     c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), roms)
-    print(c64.cpu)
+
+    if roms:
+        # Set default bank switching (all roms on)
+        c64.memory[0x0000] = 0xE9
+        c64.memory[0x0001] = 0x07
 
     if True:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.cpu.run(base)
         pass
-    c64.memory[1] = 0x07
-    print(c64.memory[0xD000])
