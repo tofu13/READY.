@@ -1,5 +1,6 @@
 from constants import *
 from config import *
+from utils import *
 
 import argparse
 import os.path
@@ -120,7 +121,7 @@ class CPU:
         while not self.F['B']:
             self.step()
 
-    def SYS(self, address):
+    def sys(self, address):
         """
         Emulate SYS
         :param address: addres to JSR to
@@ -128,7 +129,7 @@ class CPU:
         """
         sp = self.SP
         self.JSR(address)
-        while not sp == self.SP:
+        while not sp == self.SP or not self.F['B']:
             self.step()
 
     # Utils
@@ -501,18 +502,20 @@ class ROMS:
         self.load()
 
     def load(self):
-        for name, begin, end in ROMSLIST:
+        for name, begin, end, bank_bit in ROMSLIST:
             with open(os.path.join(ROMS_FOLDER, name), 'rb') as rom:
                 self.contents[name] = bytearray(rom.read())
 
     def init(self):
-        for name, begin, end in ROMSLIST:
+        for name, begin, end, bank_bit in ROMSLIST:
             self.memory.read_watchers.append([begin, end, self.read_rom])
 
     def read_rom(self, address, value):
-        for name, begin, end in ROMSLIST:
-            if begin <= address <= end: # TODO: handle visibility $01
+        for name, begin, end, bank_bit in ROMSLIST:
+            # Check bank switching bit too
+            if begin <= address <= end and bit(self.memory[SYMBOLS['R6510']], bank_bit):
                 return self.contents[name][address-begin]
+        return value
 
 
 
@@ -577,10 +580,12 @@ if __name__ == '__main__':
 
     base = None
 
-    c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
+    c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), ROMS())
     print(c64.cpu)
 
     if True:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.cpu.run(base)
         pass
+    c64.memory[1] = 0x07
+    print(c64.memory[0xD000])

@@ -35,5 +35,8 @@ def bit(value, position, length=1):
     :return:
     """
     binary = bin(value)[2:]
-    size = len(binary)
-    return int(binary[size - position: size - position + length] ,2)
+    size = len(binary) - 1
+    if position > size:
+        return 0
+    else:
+        return int(binary[size - position: size - position + length] ,2)
