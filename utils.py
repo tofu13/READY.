@@ -1,6 +1,7 @@
 import subprocess
 
 from constants import *
+from config import *
 
 
 def compile(filename, compiler=None):
@@ -11,6 +12,7 @@ def compile(filename, compiler=None):
                 return True
     else:
         return run_compiler(filename, compiler)
+
 
 def run_compiler(filename, compiler):
     result = subprocess.run(
@@ -23,3 +25,18 @@ def run_compiler(filename, compiler):
     else:
         print("Ok!")
         return True
+
+def bit(value, position, length=1):
+    """
+    Return bit of number value at position
+    Position starts from 0 (LSB)
+    :param value:
+    :param position:
+    :return:
+    """
+    binary = bin(value)[2:]
+    size = len(binary) - 1
+    if position > size:
+        return 0
+    else:
+        return int(binary[size - position: size - position + length] ,2)

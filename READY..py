@@ -1,20 +1,21 @@
 from constants import *
 from config import *
+from utils import *
 
 import argparse
+import os.path
 
 # noinspection PyUnresolvedReferences,PyUnresolvedReferences,PyUnresolvedReferences
 class Memory:
     read_watchers = []
     write_watchers = []
 
-    def __getitem__(self, item):
-        value = super().__getitem__(item)
+    def __getitem__(self, address):
+        value = super().__getitem__(address)
         #print(f"Memory read at {item}: {value}")
         for start, end, callback in self.read_watchers:
-            if start <= key <= end:
-                callback(item, value)
-                break
+            if start <= address <= end:
+                return callback(address, value)
         return value
 
     def __setitem__(self, key, value):
@@ -114,9 +115,21 @@ class CPU:
         :param address: address to start execution
         :return: None
         """
+        self.F['B'] = 0
         if address is not None:
             self.PC = address
         while not self.F['B']:
+            self.step()
+
+    def sys(self, address):
+        """
+        Emulate SYS
+        :param address: addres to JSR to
+        :return: None
+        """
+        sp = self.SP
+        self.JSR(address)
+        while not sp == self.SP or not self.F['B']:
             self.step()
 
     # Utils
@@ -475,23 +488,50 @@ class Screen:
 
     def init(self):
         pass
-    #    self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
+    #   self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
 
-    def refresh(self, *args):
+    def refresh(self, address, value):
         print("\n".join(
             ["".join(map(chr,self.memory[1024 + i*40: 1024 + i*40 + 39])) for i in range(0, 24, 40)])
         )
+        return value
+
+class ROMS:
+    def __init__(self):
+        self.contents = {}
+        self.load()
+
+    def load(self):
+        for name, begin, end, bank_bit in ROMSLIST:
+            with open(os.path.join(ROMS_FOLDER, name), 'rb') as rom:
+                self.contents[name] = bytearray(rom.read())
+
+    def init(self):
+        for name, begin, end, bank_bit in ROMSLIST:
+            self.memory.read_watchers.append([begin, end, self.read_rom])
+
+    def read_rom(self, address, value):
+        for name, begin, end, bank_bit in ROMSLIST:
+            # Check bank switching bit too
+            if begin <= address <= end and bit(self.memory[SYMBOLS['R6510']], bank_bit):
+                return self.contents[name][address-begin]
+        return value
+
 
 
 class Machine:
-    def __init__(self, memory, cpu, screen):
+    def __init__(self, memory, cpu, screen, roms):
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
+        self.roms = roms
 
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
         self.screen.init()
+        if self.roms is not None:
+            self.roms.memory = self.memory
+            self.roms.init()
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
@@ -511,15 +551,16 @@ if __name__ == '__main__':
     parser.add_argument("filename")
     parser.add_argument("-1", "--cbm-format", action='store_true',
                         help="First two bytes of file are little endian load address (like in LOAD\"*\",8,1)")
-    parser.add_argument("-a", "--assembly", action='store_true',
-                        help=f"Compile and run an assembler file using compiler specified with"
-                             f" -c (default: {DEFAULT_COMPILER}). See config.")
+    #parser.add_argument("-a", "--assembly", action='store_true',
+    #                    help=f"Compile and run an assembler file using compiler specified with"
+    #                         f" -c (default: {DEFAULT_COMPILER}). See config.")
     parser.add_argument("-c", "--compiler", action='store', default=f"{DEFAULT_COMPILER}",
                         help=f"Use this compiler. Available: {', '.join(COMPILERS.keys()) or 'none :( '}. See config.")
     parser.add_argument("-s", "--load-address", action='store',
                         help=f"Load binary file at address (if not specified: ${DEFAULT_LOAD_ADDRESS:04X}). "
-                             f"Use (escaped)$ or 0x for hex value."
-                        )
+                             f"Use (escaped)$ or 0x for hex value.")
+    parser.add_argument("-n","--no-roms", action='store_true', default=False,
+                        help="Do not load roms")
     args = parser.parse_args()
 
     print(args)
@@ -539,9 +580,16 @@ if __name__ == '__main__':
         if not 0 <= base <= 0xFFFF:
             raise parser.error(f"Invalid load address {args.load_address}")
 
-    c64 = Machine(BytearrayMemory(65536), CPU(), Screen())
+    base = None
+
+    roms = None if args.no_roms else ROMS()
+
+    c64 = Machine(BytearrayMemory(65536), CPU(), Screen(), roms)
     print(c64.cpu)
 
     if True:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.cpu.run(base)
+        pass
+    c64.memory[1] = 0x07
+    print(c64.memory[0xD000])

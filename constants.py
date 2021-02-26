@@ -1,5 +1,17 @@
 DEFAULT_LOAD_ADDRESS = 0x0801
 
+SYMBOLS = {
+    'D6510' : 0x0000,
+    'R6510' : 0x0001,
+}
+
+ROMSLIST = [
+    # (File)Name, begin address, end address, bit of bank switch register (R6510)
+    ("basic", 0xA000, 0xBFFF, 0),
+    ("chargen", 0xD000, 0xDFFF, 1),
+    ("kernal", 0xE000, 0xFFFF, 2),
+]
+
 ADDRESSING_METHODS = [
     "IMP",
     "IMM",
