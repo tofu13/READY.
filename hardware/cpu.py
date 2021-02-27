@@ -13,12 +13,6 @@ class CPU:
         self.SP = SP
         self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
 
-        self.opcodes = dict()
-        for opcode, specs in OPCODES.items():
-            if specs is not None:
-                if not hasattr(self, specs[0]):
-                    setattr(self, specs[0], self._not_implemented)
-                self.opcodes[opcode] = getattr(self, specs[0])
         for addressing in ADDRESSING_METHODS:
             if not hasattr(self, f"addressing_{addressing}"):
                 setattr(self, f"addressing_{addressing}", self._not_implemented)
@@ -64,12 +58,14 @@ class CPU:
         pc = self.PC
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
+        if instruction is None:
+            raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
         address = getattr(self, f"addressing_{mode}")()
-        print(f"@${pc:04X} Executing {instruction}\t{mode if mode != 'None' else ''}", end="")
+        print(f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
             getattr(self, instruction)(address)
         except Exception as e:
-            print(hex(opcode), instruction, address, e)
+            print("ERROR:",hex(opcode), instruction, address, e)
         else:
             print(f"\t{self}")
         return instruction != 'BRK'
