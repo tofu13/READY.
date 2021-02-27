@@ -16,6 +16,10 @@ class ROMS:
         for name, begin, end, bank_bit in ROMSLIST:
             self.memory.read_watchers.append([begin, end, self.read_rom])
 
+        # Set default bank switching (all roms on)
+        self.memory[0x0000] = 0xE9
+        self.memory[0x0001] = 0x07
+
     def read_rom(self, address, value):
         for name, begin, end, bank_bit in ROMSLIST:
             # Check bank switching bit too
