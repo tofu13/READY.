@@ -434,9 +434,16 @@ class CPU:
         self.Y = self.A
         self._setNZ(self.A)
 
+    def TSX(self, adrress):
+        self.SP = self.X
+        self._setNZ(self.X)
+
     def TXA(self, address):
         self.A = self.X
         self._setNZ(self.X)
+
+    def TXS(self, address):
+        self.X = self.SP
 
     def TYA(self, address):
         self.A = self.Y
