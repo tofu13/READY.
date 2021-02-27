@@ -65,8 +65,13 @@ class CPU:
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
         address = getattr(self, f"addressing_{mode}")()
-        print(f"@${pc:04X} Executing {instruction}\t{mode if mode != 'None' else ''}\t{self}")
-        getattr(self, instruction)(address)
+        print(f"@${pc:04X} Executing {instruction}\t{mode if mode != 'None' else ''}", end="")
+        try:
+            getattr(self, instruction)(address)
+        except Exception as e:
+            print(hex(opcode), instruction, address, e)
+        else:
+            print(f"\t{self}")
         return instruction != 'BRK'
 
     def run(self, address=None):
@@ -310,6 +315,11 @@ class CPU:
         result = self.A ^ self.memory[address]
         self._setNZ(result)
         self.A = result
+
+    def INC(self, address):
+        value = (self.memory[address] + 1) & 0xFF
+        self.memory[address] = value
+        self._setNZ(value)
 
     def INX(self, address):
         self.X = (self.X + 1) & 0xFF
