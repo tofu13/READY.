@@ -1,6 +1,6 @@
 import subprocess
 
-from constants import *
+from hardware.constants import *
 from config import *
 
 
