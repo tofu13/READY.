@@ -1,19 +1,21 @@
 import asyncio
 from datetime import datetime
+from os import system
 
 class Screen:
     memory = None
 
     def init(self):
         pass
-    #   self.memory.write_watchers.append([0x0100, 0x07FF, self.refresh])
+        self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
     def refresh(self, address, value):
+        system("clear")
+        screen_memory = self.memory.read(slice(0x400, 0x7FF))
         print("\n".join(
-            ["".join(map(chr,self.memory[1024 + i*40: 1024 + i*40 + 39])) for i in range(0, 24, 40)])
+            [screen_memory[i*40: (i+1) * 40].decode('ascii') for i in range(25)])
         )
-        return value
 
     def get_registers(self, address, value):
         if address == 0xD012:
