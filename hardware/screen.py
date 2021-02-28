@@ -14,22 +14,23 @@ class Screen:
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
         pygame.init()
-        self.display = pygame.display.set_mode((320, 200), depth=8)#, flags=pygame.SCALED)
+        self.display = pygame.display.set_mode((320, 200), depth=8, flags=pygame.SCALED)
         self.font = pygame.font.Font("PetMe64.ttf", 8)
 
 
     def refresh(self, address, value):
-        pass
-        p = self.font.render(bytes([value]).decode('screencode-c64-uc'), 1, pygame.color.Color("White"))
-        coords = ((address - 0x400) % 40)*8, int((address - 0x400) / 40)*8
-        self.display.blit(p, coords)
-        pygame.display.flip()
-        #system("clear")
-        screen_memory = self.memory.read(slice(0x400, 0x7FF))
-        #print("\n".join(
-        #    [screen_memory[i*40: (i+1) * 40].decode('ascii') for i in range(25)])
-        #)
+        reverse = value > 0x7F
+        value %= 0x80
+        char = self.font.render(bytes([value]).decode('screencode-c64-uc'), 1, pygame.color.Color("White"))
+        if reverse:
+            for i in range(char.get_size()[0]):
+                for j in range(char.get_size()[1]):
+                    color = char.get_at((i,j))
+                    char.set_at((i,j), (255,255,255, 255-color[3])) #TODO: fix colors - will run only on white!
 
+        coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
+        self.display.blit(char, coords)
+        pygame.display.flip()
 
     def get_registers(self, address, value):
         if address == 0xD012:
