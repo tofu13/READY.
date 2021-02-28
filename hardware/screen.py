@@ -2,6 +2,10 @@ import asyncio
 from datetime import datetime
 from os import system
 
+import pygame
+# noinspection PyUnresolvedReferences
+import cbmcodecs
+
 class Screen:
     memory = None
 
@@ -9,13 +13,23 @@ class Screen:
         pass
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
+        pygame.init()
+        self.display = pygame.display.set_mode((320, 200), depth=8)#, flags=pygame.SCALED)
+        self.font = pygame.font.Font("PetMe64.ttf", 8)
+
 
     def refresh(self, address, value):
-        system("clear")
+        pass
+        p = self.font.render(bytes([value]).decode('screencode-c64-uc'), 1, pygame.color.Color("White"))
+        coords = ((address - 0x400) % 40)*8, int((address - 0x400) / 40)*8
+        self.display.blit(p, coords)
+        pygame.display.flip()
+        #system("clear")
         screen_memory = self.memory.read(slice(0x400, 0x7FF))
-        print("\n".join(
-            [screen_memory[i*40: (i+1) * 40].decode('ascii') for i in range(25)])
-        )
+        #print("\n".join(
+        #    [screen_memory[i*40: (i+1) * 40].decode('ascii') for i in range(25)])
+        #)
+
 
     def get_registers(self, address, value):
         if address == 0xD012:
