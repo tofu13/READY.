@@ -10,15 +10,31 @@ class Memory:
                 return callback(address, value)
         return value
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, address, value):
         if value < 0 or value > 255:
             raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
         for start, end, callback in self.write_watchers:
-            if start <= key <= end:
-                callback(key, value)
+            if start <= address <= end:
+                callback(address, value)
                 break
         #print(f"Memory write at {key}: {value}")
-        super().__setitem__(key, value)
+        super().__setitem__(address, value)
+
+    def read(self, address):
+        """
+        Direct read of address, no watchers involved
+        :param address:
+        :return: the value at address
+        """
+        return super().__getitem__(address)
+
+    def write(self, address, value):
+        """
+        Direct write of address, no watchers involved
+        :param address:
+        :return:
+        """
+        super().__setitem__(address, value)
 
     def __str__(self, start=0x100, end=None):
         if end is None:
