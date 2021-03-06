@@ -5,6 +5,7 @@ from os import system
 import pygame
 # noinspection PyUnresolvedReferences
 import cbmcodecs
+from .constants import *
 
 class Screen:
     memory = None
@@ -14,22 +15,45 @@ class Screen:
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
         pygame.init()
-        self.display = pygame.display.set_mode((320, 200), depth=8, flags=pygame.SCALED)
+        self.display = pygame.display.set_mode((480, 312))#, flags=pygame.SCALED)
         self.font = pygame.font.Font("PetMe64.ttf", 8)
+        self.buffer = pygame.Surface((320,200), depth=8)
+        self.buffer.set_palette([[q >> 16, (q >> 8) & 0xFF, q & 0xFF, 0xFF ] for q in COLORS])
+
+        self.display.fill("0x877BDFFF")
+
+        self.buffer.fill(6)
+        self.display.blit(self.buffer,(80,56))
+        pygame.display.flip()
+
+        self.font_cache = []
+        self.cache_fonts()
+
+    def cache_fonts(self):
+        chargen = [self.memory[a] for a in range(0xD000, 0xE000)] # Slow read... fix in memory.py
+        # Leggi 8 byte da chargen, ogni byte è una riga del carattere che va trasformata in binario a 8 cifre e poi in colore pieno dove "1"
+        for i in range(512):
+            matrix = chargen[i*8:(i+1)*8]
+            font = pygame.Surface((8,8))
+            for r, row in enumerate(matrix):
+                for c, bit in enumerate(f"{row:08b}"):
+                    font.set_at((c,r), (255,255,255,255) if bit=="1" else (0,0,0,0))
+            font.set_colorkey((0,0,0))
+            self.font_cache.append(font)
+        pass
 
 
     def refresh(self, address, value):
-        reverse = value > 0x7F
-        value %= 0x80
-        char = self.font.render(bytes([value]).decode('screencode-c64-uc'), 1, pygame.color.Color("White"))
-        if reverse:
-            for i in range(char.get_size()[0]):
-                for j in range(char.get_size()[1]):
-                    color = char.get_at((i,j))
-                    char.set_at((i,j), (255,255,255, 255-color[3])) #TODO: fix colors - will run only on white!
+        # Out of screen: skip (but mapped anyway)
+        if address > 0x07e7:
+            return
 
-        coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
-        self.display.blit(char, coords)
+        char = self.font_cache[value+256]
+        char.convert(self.buffer)
+        coords = ((address - 0x400) % 40) * 8 + 80, int((address - 0x400) / 40) * 8 + 56
+
+        pygame.draw.rect(self.display, pygame.Color("0x000000FF"), pygame.rect.Rect(coords, (8, 8)))
+        self.display.blit(char, coords) # Center screen
         pygame.display.flip()
 
     def get_registers(self, address, value):

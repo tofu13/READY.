@@ -7,10 +7,10 @@ class Machine:
 
         self.cpu.memory = self.memory
         self.screen.memory = self.memory
-        self.screen.init()
         if self.roms is not None:
             self.roms.memory = self.memory
             self.roms.init()
+        self.screen.init()
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
