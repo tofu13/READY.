@@ -6,11 +6,13 @@ class Machine:
         self.roms = roms
 
         self.cpu.memory = self.memory
+
+        self.memory.roms = self.roms.contents
+
         self.screen.memory = self.memory
         self.screen.init()
-        if self.roms is not None:
-            self.roms.memory = self.memory
-            self.roms.init()
+
+        self.memory[1] = 0x07
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
