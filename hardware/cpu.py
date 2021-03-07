@@ -1,4 +1,5 @@
-from .utils import *
+from .constants import *
+
 
 # noinspection PyPep8Naming
 class CPU:
@@ -20,7 +21,7 @@ class CPU:
                 setattr(self, f"addressing_{addressing}", self._not_implemented)
 
     def __str__(self):
-        st = "".join(f"{k}:{v} " for k,v in self.F.items())
+        st = "".join(f"{k}:{v} " for k, v in self.F.items())
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {st}"
 
     def push(self, value):
@@ -48,7 +49,7 @@ class CPU:
         :return: None
         """
         opcode = self.memory[self.PC]
-        #print(f"Fetched at {self.PC:04X}: {self.opcodes[opcode]}")
+        # print(f"Fetched at {self.PC:04X}: {self.opcodes[opcode]}")
         self.PC += 1
         return opcode
 
@@ -63,12 +64,12 @@ class CPU:
         if instruction is None:
             raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
         address = getattr(self, f"addressing_{mode}")()
-        #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+        # print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
             getattr(self, instruction)(address)
         except Exception as e:
-            print("ERROR:",hex(opcode), instruction, address, e)
-        #else:
+            print("ERROR:", hex(opcode), instruction, address, e)
+        # else:
         #    print(f"\t{self}")
         return instruction != 'BRK'
 
@@ -115,16 +116,17 @@ class CPU:
         """
         return high << 8 | low
 
-    def _pack_status_register(self, value):
+    @staticmethod
+    def _pack_status_register(value):
         result = 0
         for i, flag in enumerate(value.values()):
-            result |= 2**(7 - i) * flag
+            result |= 2 ** (7 - i) * flag
         return result
 
     def _unpack_status_register(self, value):
         result = dict()
         for i, flag in enumerate(self.F.keys()):
-            result[flag] = (value & 2**(7 - i)) >> (7 - i)
+            result[flag] = (value & 2 ** (7 - i)) >> (7 - i)
         return result
 
     def _not_implemented(self, address):
@@ -143,14 +145,15 @@ class CPU:
         return address
 
     def addressing_REL(self):
-        # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective address.
+        # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective 
+        # address. 
         address = self.memory[self.PC]
         self.PC += 1
         return address if address < 127 else address - 256
 
     def addressing_ABS(self):
         # Data is accessed using 16-bit address specified as a constant.
-        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        l, h = self.memory[self.PC], self.memory[self.PC + 1]
         self.PC += 2
         return self._combine(l, h)
 
@@ -161,38 +164,45 @@ class CPU:
         return address
 
     def addressing_ABS_X(self):
-        # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is added (with carry).
-        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is 
+        # added (with carry). 
+        l, h = self.memory[self.PC], self.memory[self.PC + 1]
         self.PC += 2
         return self._combine(l, h) + self.X
 
     def addressing_ABS_Y(self):
-        # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is added (with carry).
-        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is 
+        # added (with carry). 
+        l, h = self.memory[self.PC], self.memory[self.PC + 1]
         self.PC += 2
         return self._combine(l, h) + self.Y
 
     def addressing_ZP_X(self):
-        # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, the address wraps around within the zero page).
-        l = self.memory[self.PC]
+        # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, 
+        # the address wraps around within the zero page). 
+        base_address = self.memory[self.PC]
         self.PC += 1
-        return (l + self.X) & 0xFF
+        return (base_address + self.X) & 0xFF
 
     def addressing_ZP_Y(self):
-        # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows, the address wraps around within the zero page).
-        l = self.memory[self.PC]
+        # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows, 
+        # the address wraps around within the zero page). 
+        base_address = self.memory[self.PC]
         self.PC += 1
-        return (l + self.Y) & 0xFF
+        return (base_address + self.Y) & 0xFF
 
     def addressing_IND(self):
-        # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the opcode.
-        l, h = self.memory[self.PC], self.memory[self.PC +1]
+        # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the
+        # opcode. 
+        l, h = self.memory[self.PC], self.memory[self.PC + 1]
         self.PC += 2
         address = self._combine(l, h)
         return self._combine(self.memory[address], self.memory[address + 1])
 
     def addressing_X_IND(self):
-        # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, the address wraps around within page 0). The resulting address is used as a pointer to the data being accessed.
+        # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, 
+        # the address wraps around within page 0). The resulting address is used as a pointer to the data being 
+        # accessed. 
         base = self.memory[self.PC] + self.X
         self.PC += 1
         address = self._combine(self.memory[base], self.memory[base + 1])
@@ -332,10 +342,10 @@ class CPU:
 
     def JSR(self, address):
         value = self.PC - 1
-        self.push((value & 0xFF00) >> 8) # save high byte of PC
-        self.push(value & 0x00FF) # save low byte of PC
+        self.push((value & 0xFF00) >> 8)  # save high byte of PC
+        self.push(value & 0x00FF)  # save low byte of PC
         self.PC = address
-        self._indent +=1
+        self._indent += 1
 
     def LDA(self, address):
         self.A = self.memory[address]

@@ -1,6 +1,5 @@
 import subprocess
 
-from hardware.constants import *
 from config import *
 
 
@@ -26,12 +25,14 @@ def run_compiler(filename, compiler):
         print("Ok!")
         return True
 
+
 def bit(value, position, length=1):
     """
     Return bit of number value at position
     Position starts from 0 (LSB)
     :param value:
     :param position:
+    :param length:
     :return:
     """
     binary = bin(value)[2:]
@@ -39,4 +40,4 @@ def bit(value, position, length=1):
     if position > size:
         return 0
     else:
-        return int(binary[size - position: size - position + length] ,2)
+        return int(binary[size - position: size - position + length], 2)

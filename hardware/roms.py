@@ -1,6 +1,7 @@
 import os
 
-from .utils import *
+from .constants import *
+
 
 class ROMS:
     def __init__(self, roms_folder):

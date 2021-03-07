@@ -4,9 +4,9 @@ class Memory:
     roms = {}
 
     def __getitem__(self, address):
-        #print(f"Memory read at {item}: {value}")
+        # print(f"Memory read at {item}: {value}")
         value = super().__getitem__(address)
-        chargen, loram, hiram  = map(int,f"{super().__getitem__(1) & 0x7:03b}")
+        chargen, loram, hiram = map(int, f"{super().__getitem__(1) & 0x7:03b}")
 
         if 0xA000 <= address <= 0xBFFF:
             if hiram and loram:
@@ -30,14 +30,14 @@ class Memory:
             if start <= address <= end:
                 callback(address, value)
                 break
-        #print(f"Memory write at {key}: {value}")
+        # print(f"Memory write at {key}: {value}")
         super().__setitem__(address, value)
 
     def __str__(self, start=0x100, end=None):
         if end is None:
             end = start + 0x0100
         return "\n".join(
-            [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i+16))}" for i in range(start, end, 16)]
+            [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i + 16))}" for i in range(start, end, 16)]
         )
 
 
