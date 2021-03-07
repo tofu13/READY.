@@ -45,6 +45,8 @@ virtualenv venv -p python3
 pip install -r requirements.txt
 ```
 
+Then download basic, kernal and chargen into roms/ folder.
+
 ## Usage
 ```python READY. [filename]```
 
