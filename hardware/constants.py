@@ -12,6 +12,24 @@ ROMSLIST = [
     ("kernal", 0xE000, 0xFFFF, 2),
 ]
 
+COLORS = [ 0x000000,
+           0xFFFFFF,
+           0x93493E,
+           0x85C6CD,
+           0x9450B7,
+           0x73B34A,
+           0x4637AC,
+           0xD6E07D,
+           0x9A6929,
+           0x675100,
+           0xC28279,
+           0x606060,
+           0x8B8B8B,
+           0xB4ED92,
+           0x877BDF,
+           0xB5B5B5
+           ]
+
 ADDRESSING_METHODS = [
     "IMP",
     "IMM",

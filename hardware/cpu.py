@@ -13,6 +13,8 @@ class CPU:
         self.SP = SP
         self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
 
+        self._indent = 0
+
         for addressing in ADDRESSING_METHODS:
             if not hasattr(self, f"addressing_{addressing}"):
                 setattr(self, f"addressing_{addressing}", self._not_implemented)
@@ -61,13 +63,13 @@ class CPU:
         if instruction is None:
             raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
         address = getattr(self, f"addressing_{mode}")()
-        print(f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+        #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
             getattr(self, instruction)(address)
         except Exception as e:
             print("ERROR:",hex(opcode), instruction, address, e)
-        else:
-            print(f"\t{self}")
+        #else:
+        #    print(f"\t{self}")
         return instruction != 'BRK'
 
     def run(self, address=None):
@@ -333,6 +335,7 @@ class CPU:
         self.push((value & 0xFF00) >> 8) # save high byte of PC
         self.push(value & 0x00FF) # save low byte of PC
         self.PC = address
+        self._indent +=1
 
     def LDA(self, address):
         self.A = self.memory[address]
@@ -405,6 +408,7 @@ class CPU:
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
         self.PC = value + 1
+        self._indent -= 1
 
     def SBC(self, address):
         result = self.A - self.memory[address] - (1 - self.F['C'])

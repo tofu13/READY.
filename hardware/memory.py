@@ -17,7 +17,7 @@ class Memory:
         elif 0xD000 <= address <= 0xDFFF:
             if not chargen and (not hiram and not loram):
                 return self.roms['chargen'][address - 0xD000]
-            elif chargen and (not hiram and not loram):
+            elif chargen:
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
                         return callback(address, value)
