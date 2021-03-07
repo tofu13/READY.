@@ -17,6 +17,9 @@ class Screen:
     border_color = 14
     background_color = 6
     palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF, 0xFF] for q in COLORS]
+    buffer_pos = (80, 56)
+    buffer_size = (320,200)
+
     def init(self):
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
@@ -24,13 +27,13 @@ class Screen:
 
         pygame.init()
         self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
-        self.buffer = pygame.Surface((320, 200), depth=8)
+        self.buffer = pygame.Surface(self.buffer_size, depth=8)
         self.buffer.set_palette(self.palette)
 
         self.display.fill(self.palette[self.border_color])
 
         self.buffer.fill(self.background_color)
-        self.display.blit(self.buffer, (80, 56))
+        self.display.blit(self.buffer, self.buffer_pos)
         pygame.display.flip()
 
         self.font_cache = []
@@ -58,8 +61,8 @@ class Screen:
 
         pygame.draw.rect(self.buffer, self.palette[self.background_color], pygame.rect.Rect(coords, (8, 8)))
         self.buffer.blit(char, coords)
-        self.display.blit(self.buffer, (80,56))  # Center screen
-        pygame.display.flip()
+        self.display.blit(self.buffer, self.buffer_pos)  # Center screen
+        pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
 
     def get_registers(self, address, value):
         if address == 0xD012:
@@ -73,7 +76,16 @@ class Screen:
 
     def set_registers(self, address, value):
         if address == 0xD020:
-            self.border_color = value
+            self.border_color = value & 0x0F
+            self.display.fill(self.palette[self.border_color])
+            self.display.blit(self.buffer, self.buffer_pos)
+            pygame.display.flip()
+
+        elif address == 0xD021:
+            self.background_color = value & 0x0F
+            pygame.draw.rect(self.display, self.palette[self.background_color], pygame.rect.Rect(self.buffer_pos, self.buffer_size))
+            #self.display.blit(self.buffer, self.buffer_pos)
+            pygame.display.flip()
 
 
 if __name__ == '__main__':
