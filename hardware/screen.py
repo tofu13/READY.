@@ -14,20 +14,22 @@ class Screen:
     display = None
     buffer = None
     font_cache = None
-
+    border_color = 14
+    background_color = 6
+    palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF, 0xFF] for q in COLORS]
     def init(self):
-        pass
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
+        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         pygame.init()
         self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
         self.buffer = pygame.Surface((320, 200), depth=8)
-        self.buffer.set_palette([[q >> 16, (q >> 8) & 0xFF, q & 0xFF, 0xFF] for q in COLORS])
+        self.buffer.set_palette(self.palette)
 
-        self.display.fill("0x877BDFFF")
+        self.display.fill(self.palette[self.border_color])
 
-        self.buffer.fill(6)
+        self.buffer.fill(self.background_color)
         self.display.blit(self.buffer, (80, 56))
         pygame.display.flip()
 
@@ -52,10 +54,11 @@ class Screen:
             return
 
         char = self.font_cache[value + 256]
-        coords = ((address - 0x400) % 40) * 8 + 80, int((address - 0x400) / 40) * 8 + 56
+        coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
-        pygame.draw.rect(self.display, pygame.Color("0x000000FF"), pygame.rect.Rect(coords, (8, 8)))
-        self.display.blit(char, coords)  # Center screen
+        pygame.draw.rect(self.buffer, self.palette[self.background_color], pygame.rect.Rect(coords, (8, 8)))
+        self.buffer.blit(char, coords)
+        self.display.blit(self.buffer, (80,56))  # Center screen
         pygame.display.flip()
 
     def get_registers(self, address, value):
@@ -67,6 +70,10 @@ class Screen:
 
         if address == 0xD019:
             return 1  # Temporary, to be completed
+
+    def set_registers(self, address, value):
+        if address == 0xD020:
+            self.border_color = value
 
 
 if __name__ == '__main__':
