@@ -49,7 +49,6 @@ class Screen:
             return
 
         char = self.font_cache[value+256]
-        char.convert(self.buffer)
         coords = ((address - 0x400) % 40) * 8 + 80, int((address - 0x400) / 40) * 8 + 56
 
         pygame.draw.rect(self.display, pygame.Color("0x000000FF"), pygame.rect.Rect(coords, (8, 8)))
