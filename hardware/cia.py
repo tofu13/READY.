@@ -1,0 +1,23 @@
+from .constants import *
+
+class CIAA:
+    memory = None
+    def init(self):
+        self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
+        self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
+
+    def get_registers(self, address, value):
+        print("read ciaA", address)
+    def set_registers(self, address, value):
+        print("write ciaA", address, value)
+
+class CIAB:
+    memory = None
+    def init(self):
+        self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
+        self.memory.write_watchers.append((0xDD00, 0xDDFF, self.set_registers))
+
+    def get_registers(self, address, value):
+        print("read ciaA", address)
+    def set_registers(self, address, value):
+        print("write ciaA", address, value)

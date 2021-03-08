@@ -1,9 +1,10 @@
 class Machine:
-    def __init__(self, memory, cpu, screen, roms):
+    def __init__(self, memory, cpu, screen, roms, ciaA):
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
         self.roms = roms
+        self.ciaA = ciaA
 
         self.cpu.memory = self.memory
 
@@ -12,7 +13,12 @@ class Machine:
         self.screen.memory = self.memory
         self.screen.init()
 
+        self.ciaA.memory = self.memory
+        self.ciaA.init()
+
         self.memory[1] = 0x07
+
+
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
