@@ -16,7 +16,7 @@ class Screen:
     font_cache = None
     border_color = 14
     background_color = 6
-    palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF, 0xFF] for q in COLORS]
+    palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
     buffer_pos = (80, 56)
     buffer_size = (320,200)
 
@@ -30,7 +30,7 @@ class Screen:
         self.buffer = pygame.Surface(self.buffer_size, depth=8)
         self.buffer.set_palette(self.palette)
 
-        self.display.fill(self.palette[self.border_color])
+        self.display.fill(PALETTE[self.border_color])
 
         self.buffer.fill(self.background_color)
         self.display.blit(self.buffer, self.buffer_pos)
@@ -77,9 +77,10 @@ class Screen:
     def set_registers(self, address, value):
         if address == 0xD020:
             self.border_color = value & 0x0F
-            self.display.fill(self.palette[self.border_color])
+            self.display.fill(PALETTE[self.border_color])
             self.display.blit(self.buffer, self.buffer_pos)
             pygame.display.flip()
+
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
