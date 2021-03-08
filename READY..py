@@ -52,9 +52,21 @@ if __name__ == '__main__':
         roms,
     )
 
-    if args.filename:
+    if args.filename and True:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.cpu.run(base)
+        #c64.memory[0xd020] = 6
+        #c64.memory[0xd021] = 11
+        for i in range(255):
+            c64.memory[1024+i] = i
+        for i in range(255):
+            c64.memory[1024+i] = 255-i
+
+        #input()
+        c64.cpu.run(0xFCE2)
 
     else:
+        c64.memory[0xd020] = 11
+        c64.memory[0xd021] = 6
         c64.cpu.run(0xFCE2)
+
