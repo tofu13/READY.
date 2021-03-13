@@ -30,6 +30,8 @@ COLORS = [0x000000,
           0xB5B5B5
           ]
 
+PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
+
 ADDRESSING_METHODS = [
     "IMP",
     "IMM",

@@ -15,21 +15,25 @@ class Screen:
     display = None
     buffer = None
     font_cache = None
+    border_color = 14
+    background_color = 6
+    palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
+    buffer_pos = (80, 56)
+    buffer_size = (320,200)
 
     def init(self):
-        pass
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
+        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         pygame.init()
         self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
-        self.buffer = pygame.Surface((320, 200), depth=8)
-        self.buffer.set_palette([[q >> 16, (q >> 8) & 0xFF, q & 0xFF, 0xFF] for q in COLORS])
+        self.buffer = pygame.Surface(self.buffer_size)
 
-        self.display.fill("0x877BDFFF")
+        self.display.fill(PALETTE[self.border_color])
 
-        self.buffer.fill(6)
-        self.display.blit(self.buffer, (80, 56))
+        self.buffer.fill(PALETTE[self.background_color])
+        self.display.blit(self.buffer, self.buffer_pos)
         pygame.display.flip()
 
         self.font_cache = []
@@ -42,7 +46,7 @@ class Screen:
             font = pygame.Surface((8, 8))
             for r, row in enumerate(matrix):
                 for c, bit in enumerate(f"{row:08b}"):
-                    font.set_at((c, r), (255, 255, 255, 255) if bit == "1" else (0, 0, 0, 0))
+                    font.set_at((c, r), (255, 255, 255) if bit == "1" else (0, 0, 0))
             font.set_colorkey((0, 0, 0))
             self.font_cache.append(font)
         pass
@@ -52,12 +56,15 @@ class Screen:
         if address > 0x07e7:
             return
 
-        char = self.font_cache[value + 256]
-        coords = ((address - 0x400) % 40) * 8 + 80, int((address - 0x400) / 40) * 8 + 56
+        char = self.font_cache[value]
+        coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
-        pygame.draw.rect(self.display, pygame.Color("0x000000FF"), pygame.rect.Rect(coords, (8, 8)))
-        self.display.blit(char, coords)  # Center screen
-        pygame.display.flip()
+        pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
+        #self.buffer.fill(PALETTE[self.background_color], char.get_rect().move(coords))
+        self.buffer.blit(char, coords)
+        self.display.blit(self.buffer, self.buffer_pos)
+        pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
+        #pygame.display.flip()
 
     def get_registers(self, address, value):
         if address == 0xD012:
@@ -68,6 +75,23 @@ class Screen:
 
         if address == 0xD019:
             return 1  # Temporary, to be completed
+
+    def set_registers(self, address, value):
+        if address == 0xD020:
+            self.border_color = value & 0x0F
+            self.display.fill(PALETTE[self.border_color])
+            self.display.blit(self.buffer, self.buffer_pos)
+            pygame.display.flip()
+
+
+        elif address == 0xD021:
+            self.background_color = value & 0x0F
+            return
+
+            pygame.draw.rect(self.display, PALETTE[self.background_color], pygame.rect.Rect(self.buffer_pos, self.buffer_size))
+            self.display.blit(self.buffer, self.buffer_pos)
+            pygame.display.update(self.buffer.get_rect())
+
 
 if __name__ == '__main__':
     s = Screen()
