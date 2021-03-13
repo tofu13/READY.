@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 
 from os import environ
 
@@ -67,7 +68,6 @@ class Screen:
 
         if address == 0xD019:
             return 1  # Temporary, to be completed
-
 
 if __name__ == '__main__':
     s = Screen()

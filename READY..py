@@ -46,7 +46,7 @@ if __name__ == '__main__':
     roms = hardware.roms.ROMS(ROMS_FOLDER)
 
     c64 = hardware.machine.Machine(
-        hardware.memory.BytearrayMemory(65536),
+        hardware.memory.CTypesMemory(),
         hardware.cpu.CPU(),
         hardware.screen.Screen(),
         roms,

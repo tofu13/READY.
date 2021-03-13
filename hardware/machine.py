@@ -1,3 +1,5 @@
+from multiprocessing import Process, Array
+
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
         self.memory = memory
@@ -15,6 +17,7 @@ class Machine:
 
         self.ciaA.memory = self.memory
         self.ciaA.init()
+        Process(target=ciaA.loop, args=(self.memory,)).start()
 
         self.memory[1] = 0x07
 
