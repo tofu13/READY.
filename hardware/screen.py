@@ -59,8 +59,8 @@ class Screen:
         char = self.font_cache[value]
         coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
-        pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
-        #self.buffer.fill(PALETTE[self.background_color], char.get_rect().move(coords))
+        #pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
+        self.buffer.fill(PALETTE[self.background_color], char.get_rect().move(coords))
         self.buffer.blit(char, coords)
         self.display.blit(self.buffer, self.buffer_pos)
         pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
@@ -92,6 +92,14 @@ class Screen:
             self.display.blit(self.buffer, self.buffer_pos)
             pygame.display.update(self.buffer.get_rect())
 
+
+    def loop(self, memory):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and event.unicode:
+                    memory[0xC6] += 1
+                    memory[0x277] = ord(event.unicode)
+            time.sleep(.1)
 
 if __name__ == '__main__':
     s = Screen()

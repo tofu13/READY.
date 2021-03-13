@@ -14,6 +14,7 @@ class Machine:
 
         self.screen.memory = self.memory
         self.screen.init()
+        Process(target=screen.loop, args=(self.memory,)).start()
 
         self.ciaA.memory = self.memory
         self.ciaA.init()

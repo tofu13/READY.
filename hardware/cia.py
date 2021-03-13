@@ -9,7 +9,6 @@ class CIAA:
 
     def loop(self, memory):
         while True:
-            print(memory[1034])
             time.sleep(1)
 
 
@@ -27,7 +26,6 @@ class CIAB:
 
     def loop(self, memory):
         while True:
-            memory[0] = 255
             time.sleep(1)
 
 

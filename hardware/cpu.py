@@ -64,13 +64,13 @@ class CPU:
         if instruction is None:
             raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
         address = getattr(self, f"addressing_{mode}")()
-        print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+        # print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
             getattr(self, instruction)(address)
         except Exception as e:
             print("ERROR:", hex(opcode), instruction, address, e)
-        else:
-            print(f"\t{self}")
+        # else:
+        #    print(f"\t{self}")
         return instruction != 'BRK'
 
     def run(self, address=None):
