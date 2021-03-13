@@ -2,7 +2,6 @@ from datetime import datetime
 import time
 
 from os import environ
-
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
@@ -38,6 +37,9 @@ class Screen:
 
         self.font_cache = []
         self.cache_fonts()
+
+        for _ in range(0x400, 0x718):
+            self.memory[_] = 32
 
     def cache_fonts(self):
         chargen = [self.memory[a] for a in range(0xD000, 0xE000)]  # Slow read... fix in memory.py
@@ -96,10 +98,21 @@ class Screen:
     def loop(self, memory):
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN and event.unicode:
-                    memory[0xC6] += 1
-                    memory[0x277] = ord(event.unicode)
-            time.sleep(.1)
+                if event.type == pygame.KEYDOWN:
+                    if event.mod & pygame.KMOD_LSHIFT:
+                        selector = 1
+                    elif event.mod & pygame.KMOD_LALT:
+                        selector = 2
+                    else:
+                        selector = 0
+                    key = KEYTABLE.get(event.key)
+                    if key:
+                        key = key[selector]
+                    if key:
+                        # Inject char into keyboard buffer
+                        memory[0x277 + memory[0xC6]] = key
+                        # Update counter
+                        memory[0xC6] += 1
 
 if __name__ == '__main__':
     s = Screen()
