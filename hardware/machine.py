@@ -17,10 +17,11 @@ class Machine:
         self.screen.memory = self.memory
         self.screen.init()
         self.screen.pipe = pipeB
-        Process(target=screen.loop, args=(self.memory,)).start()
+        #Process(target=screen.loop, args=(self.memory,)).start()
 
         self.ciaA.memory = self.memory
         self.ciaA.init()
+        self.ciaA.pipe = pipeB
         Process(target=ciaA.loop, args=(self.memory,)).start()
 
         self.memory[1] = 0x07

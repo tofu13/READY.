@@ -19,6 +19,7 @@ class Screen:
     palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
     buffer_pos = (80, 56)
     buffer_size = (320,200)
+    pipe = None
 
     def init(self):
         self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
@@ -38,7 +39,8 @@ class Screen:
         self.font_cache = []
         self.cache_fonts()
 
-        for _ in range(0x400, 0x718):
+        # Clear screen
+        for _ in range(0x400, 0x7e8):
             self.memory[_] = 32
 
     def cache_fonts(self):
@@ -93,26 +95,6 @@ class Screen:
             pygame.draw.rect(self.display, PALETTE[self.background_color], pygame.rect.Rect(self.buffer_pos, self.buffer_size))
             self.display.blit(self.buffer, self.buffer_pos)
             pygame.display.update(self.buffer.get_rect())
-
-
-    def loop(self, memory):
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.mod & pygame.KMOD_LSHIFT:
-                        selector = 1
-                    elif event.mod & pygame.KMOD_LALT:
-                        selector = 2
-                    else:
-                        selector = 0
-                    key = KEYTABLE.get(event.key)
-                    if key:
-                        key = key[selector]
-                    if key:
-                        # Inject char into keyboard buffer
-                        memory[0x277 + memory[0xC6]] = key
-                        # Update counter
-                        memory[0xC6] += 1
 
 if __name__ == '__main__':
     s = Screen()

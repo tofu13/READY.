@@ -13,7 +13,7 @@ class CPU:
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
+        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
 
         self._indent = 0
 
@@ -87,7 +87,6 @@ class CPU:
             self.step()
             while self.pipe.poll():
                 msg = self.pipe.recv()
-                print(msg)
                 if msg == 'IRQ':
                     self.irq()
                 elif msg == 'NMI':
@@ -107,9 +106,10 @@ class CPU:
 
     def irq(self):
         if not self.F['I']:
+            print(f"Serving IRQ - PC={self.PC:04X})")
             self.push(self.PC >> 8)
             self.push(self.PC & 0XFF)
-            self.PHP(None)
+            self.push(self._pack_status_register(self.F))
             self.JMP(self._combine(self.memory[0xFFFE], self.memory[0xFFFF]))
     # Utils
     def _setNZ(self, value):
