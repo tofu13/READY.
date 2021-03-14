@@ -5,6 +5,7 @@ from .constants import *
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
+    pipe = None
 
     def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.A = A
@@ -84,6 +85,14 @@ class CPU:
             self.PC = address
         while not self.F['B']:
             self.step()
+            while self.pipe.poll():
+                msg = self.pipe.recv()
+                print(msg)
+                if msg == 'IRQ':
+                    self.irq()
+                elif msg == 'NMI':
+                    pass
+
 
     def sys(self, address):
         """
@@ -96,6 +105,12 @@ class CPU:
         while not sp == self.SP or not self.F['B']:
             self.step()
 
+    def irq(self):
+        if not self.F['I']:
+            self.push(self.PC >> 8)
+            self.push(self.PC & 0XFF)
+            self.PHP(None)
+            self.JMP(self._combine(self.memory[0xFFFE], self.memory[0xFFFF]))
     # Utils
     def _setNZ(self, value):
         """
