@@ -428,7 +428,7 @@ class CPU:
         # TODO: untested
         self.F = self._unpack_status_register(self.pop())
         value = self.pop() + (self.pop() << 8)
-        self.PC = value + 1
+        self.PC = value
 
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
@@ -470,7 +470,7 @@ class CPU:
         self._setNZ(self.A)
 
     def TSX(self, adrress):
-        self.SP = self.X
+        self.X = self.SP
         self._setNZ(self.X)
 
     def TXA(self, address):
@@ -478,7 +478,7 @@ class CPU:
         self._setNZ(self.X)
 
     def TXS(self, address):
-        self.X = self.SP
+        self.SP = self.X
 
     def TYA(self, address):
         self.A = self.Y
