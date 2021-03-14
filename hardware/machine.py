@@ -1,4 +1,4 @@
-from multiprocessing import Process, Array
+from multiprocessing import Process, Pipe
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -8,12 +8,15 @@ class Machine:
         self.roms = roms
         self.ciaA = ciaA
 
+        pipeA, pipeB =  Pipe()
         self.cpu.memory = self.memory
+        self.cpu.pipe = pipeA
 
         self.memory.roms = self.roms.contents
 
         self.screen.memory = self.memory
         self.screen.init()
+        self.screen.pipe = pipeB
         Process(target=screen.loop, args=(self.memory,)).start()
 
         self.ciaA.memory = self.memory
