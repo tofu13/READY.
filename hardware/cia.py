@@ -45,11 +45,11 @@ class CIAA:
                     self.memory[0xDC01] = 0xFF #No key pressed
 
 
-            time.sleep(.5)
+            time.sleep(.2)
 
 
     def get_registers(self, address, value):
-        print("read ciaA", address)
+        #print("read ciaA", address)
         if address == 0xDC01:
             if self.memory[0xDC00] == self.keyboard_row:
                 return self.keyboard_col
@@ -61,7 +61,7 @@ class CIAA:
         return value
 
     def set_registers(self, address, value):
-        print("write ciaA", address, value)
+        #print("write ciaA", address, value)
         self.memory.contents[address] = value
 
 
@@ -78,7 +78,8 @@ class CIAB:
 
 
     def get_registers(self, address, value):
-        print("read ciaA", address)
+        #print("read ciaA", address)
         return value
     def set_registers(self, address, value):
-        print("write ciaA", address, value)
+        #print("write ciaA", address, value)
+        pass
