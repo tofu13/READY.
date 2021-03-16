@@ -62,8 +62,8 @@ class CPU:
         pc = self.PC
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
-        if instruction is None:
-            raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
+        #if instruction is None:
+        #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
         address = getattr(self, f"addressing_{mode}")()
         # print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
@@ -226,8 +226,7 @@ class CPU:
     def addressing_IND_Y(self):
         base = self.memory[self.PC]
         self.PC += 1
-        address = self._combine(self.memory[base], self.memory[base + 1]) + self.Y
-        return address
+        return  self._combine(self.memory[base], self.memory[base + 1]) + self.Y
 
     # Instructions
     def ADC(self, address):
