@@ -1,6 +1,5 @@
 from .constants import *
 
-
 # noinspection PyPep8Naming
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
@@ -72,7 +71,6 @@ class CPU:
             print("ERROR:", hex(opcode), instruction, address, e)
         # else:
         #    print(f"\t{self}")
-        return instruction != 'BRK'
 
     def run(self, address=None):
         """
