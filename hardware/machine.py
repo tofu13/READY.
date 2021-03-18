@@ -1,7 +1,9 @@
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Value
+import pickle
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
+
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
@@ -26,7 +28,28 @@ class Machine:
 
         self.memory[1] = 0x07
 
+    @classmethod
+    def from_file(cls, filename):
+        with open(filename, 'rb') as f:
+            machine = cls()
+            machine.cpu.A = pickle.load(f)
+            machine.cpu.X = pickle.load(f)
+            machine.cpu.Y = pickle.load(f)
+            machine.cpu.PC = pickle.load(f)
+            machine.cpu.SP = pickle.load(f)
+            machine.cpu.F = pickle.load(f)
+            machine.cpu.memory = pickle.load(f)
+        return machine
 
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self.cpu.A, f)
+            pickle.dump(self.cpu.X, f)
+            pickle.dump(self.cpu.Y, f)
+            pickle.dump(self.cpu.PC, f)
+            pickle.dump(self.cpu.SP, f)
+            pickle.dump(self.cpu.F, f)
+            pickle.dump(self.memory, f)
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
