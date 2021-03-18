@@ -30,15 +30,13 @@ class Machine:
 
         self.cpu.PC = address
         cpu_loop = loop.create_task(self.cpu.run(event_queue))
-        try:
-            print("cpu start")
-            loop.run_until_complete(cpu_loop)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            ciaA_IRQ.cancel()
-            cpu_loop.cancel()
-            print("stop")
+
+        print("cpu start")
+        loop.run_until_complete(cpu_loop)
+
+        ciaA_IRQ.cancel()
+        cpu_loop.cancel()
+        print("stop")
 
 
     @classmethod
