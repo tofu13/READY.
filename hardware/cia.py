@@ -21,7 +21,7 @@ class CIAA:
         while True:
             #vpcf1.4
             await queue.put("IRQ")
-            await asyncio.sleep(.5)
+            await asyncio.sleep(.02)
 
             # for event in pygame.event.get():
             #     if event.type == pygame.KEYDOWN:

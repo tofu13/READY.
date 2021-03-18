@@ -105,7 +105,7 @@ class CPU:
 
     def irq(self):
         if not self.F['I']:
-            print(f"Serving IRQ - PC={self.PC:04X})")
+            #print(f"Serving IRQ - PC={self.PC:04X})")
             self.push(self.PC >> 8)
             self.push(self.PC & 0XFF)
             self.push(self._pack_status_register(self.F))

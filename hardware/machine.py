@@ -31,13 +31,10 @@ class Machine:
         self.cpu.PC = address
         cpu_loop = loop.create_task(self.cpu.run(event_queue))
 
-        print("cpu start")
         loop.run_until_complete(cpu_loop)
 
         ciaA_IRQ.cancel()
         cpu_loop.cancel()
-        print("stop")
-
 
     @classmethod
     def from_file(cls, filename):
