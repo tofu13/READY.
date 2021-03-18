@@ -1,4 +1,5 @@
 from .constants import *
+import asyncio
 
 # noinspection PyPep8Naming
 class CPU:
@@ -72,7 +73,7 @@ class CPU:
         # else:
         #    print(f"\t{self}")
 
-    def run(self, address=None):
+    async def run(self, queue, address=None):
         """
         Run from address (or PC if not specified) until BRK
         :param address: address to start execution
@@ -83,13 +84,13 @@ class CPU:
             self.PC = address
         while not self.F['B']:
             self.step()
-            while self.pipe.poll():
-                msg = self.pipe.recv()
-                if msg == 'IRQ':
+            await asyncio.sleep(0)
+            if not queue.empty():
+                event = await queue.get()
+                if event == 'IRQ':
                     self.irq()
-                elif msg == 'NMI':
+                elif event == 'NMI':
                     pass
-
 
     def sys(self, address):
         """

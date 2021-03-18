@@ -1,5 +1,6 @@
 from multiprocessing import Process, Pipe, Value
 import pickle
+import asyncio
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -10,23 +11,35 @@ class Machine:
         self.roms = roms
         self.ciaA = ciaA
 
-        pipeA, pipeB =  Pipe()
         self.cpu.memory = self.memory
-        self.cpu.pipe = pipeA
 
         self.memory.roms = self.roms.contents
 
         self.screen.memory = self.memory
         self.screen.init()
-        self.screen.pipe = pipeB
-        #Process(target=screen.loop, args=(self.memory,)).start()
 
         self.ciaA.memory = self.memory
         self.ciaA.init()
-        self.ciaA.pipe = pipeB
-        Process(target=ciaA.loop, args=(self.memory,)).start()
 
         self.memory[1] = 0x07
+
+    def run(self, address):
+        loop = asyncio.get_event_loop()
+        event_queue = asyncio.Queue()
+        ciaA_IRQ = asyncio.ensure_future(self.ciaA.loop(event_queue))
+
+        self.cpu.PC = address
+        cpu_loop = loop.create_task(self.cpu.run(event_queue))
+        try:
+            print("cpu start")
+            loop.run_until_complete(cpu_loop)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            ciaA_IRQ.cancel()
+            cpu_loop.cancel()
+            print("stop")
+
 
     @classmethod
     def from_file(cls, filename):

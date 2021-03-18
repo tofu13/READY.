@@ -5,6 +5,7 @@ from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
+import asyncio
 
 class CIAA:
     memory = None
@@ -16,10 +17,11 @@ class CIAA:
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         #self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
 
-    def loop(self, memory):
+    async def loop(self, queue):
         while True:
-            self.pipe.send("IRQ")
-            time.sleep(.4)
+            #vpcf1.4
+            await queue.put("IRQ")
+            await asyncio.sleep(.5)
 
             # for event in pygame.event.get():
             #     if event.type == pygame.KEYDOWN:

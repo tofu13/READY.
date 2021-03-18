@@ -46,7 +46,7 @@ if __name__ == '__main__':
     roms = hardware.roms.ROMS(ROMS_FOLDER)
 
     c64 = hardware.machine.Machine(
-        hardware.memory.CTypesMemory(),
+        hardware.memory.BytearrayMemory(65536),
         hardware.cpu.CPU(),
         hardware.screen.Screen(),
         roms,
@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
     if args.filename:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
-        c64.cpu.run(base)
-        c64.cpu.run(0xFCE2)
+        c64.run(base)
+        c64.run(0xFCE2)
 
     else:
         c64.cpu.run(0xFCE2)
