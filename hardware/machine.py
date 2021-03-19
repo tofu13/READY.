@@ -57,7 +57,10 @@ class Machine:
             self.cpu.PC = pickle.load(f)
             self.cpu.SP = pickle.load(f)
             self.cpu.F = pickle.load(f)
-            self.cpu.memory = pickle.load(f)
+            memory = pickle.load(f)
+            self.cpu.memory = memory
+            self.screen.memory = memory
+            self.ciaA.memory = memory
 
 
     def save(self, filename):
