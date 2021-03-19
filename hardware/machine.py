@@ -49,6 +49,17 @@ class Machine:
             machine.cpu.memory = pickle.load(f)
         return machine
 
+    def restore(self, filename):
+        with open(filename, 'rb') as f:
+            self.cpu.A = pickle.load(f)
+            self.cpu.X = pickle.load(f)
+            self.cpu.Y = pickle.load(f)
+            self.cpu.PC = pickle.load(f)
+            self.cpu.SP = pickle.load(f)
+            self.cpu.F = pickle.load(f)
+            self.cpu.memory = pickle.load(f)
+
+
     def save(self, filename):
         with open(filename, 'wb') as f:
             pickle.dump(self.cpu.A, f)
