@@ -28,8 +28,7 @@ class CIAA:
                      selector = 0
 
                  key = KEYTABLE.get(event.key)
-                 print(event.unicode, selector, key)
-
+                 # print(event.unicode, selector, key)
 
                  if key:
                     key = key[selector]
@@ -38,7 +37,7 @@ class CIAA:
                     self.memory[0x277 + self.memory[0xC6]] = key
                     # Update counter
                     self.memory[0xC6] += 1
-                    print (key)
+                    # print (key)
 
          #row, col = KEYSCAN.get(event.key, [8,8])
          #self.keyboard_row = 0xFF - 2 ** row
