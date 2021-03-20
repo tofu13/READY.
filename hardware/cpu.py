@@ -413,9 +413,10 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        self.F['C'] = value >> 7
+        _carrytemp =  value >> 7
         result = ((value << 1) | self.F['C']) & 0xFF
         self._setNZ(result)
+        self.F['C'] = _carrytemp
         if address is None:
             self.A = result
         else:
@@ -426,9 +427,10 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        self.F['C'] = value & 0x01
+        _carrytemp = value & 0x01
         result = ((value >> 1) | self.F['C'] << 7) & 0xFF
         self._setNZ(result)
+        self.F['C'] = _carrytemp
         if address is None:
             self.A = result
         else:
