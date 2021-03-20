@@ -50,11 +50,12 @@ if __name__ == '__main__':
         hardware.cpu.CPU(),
         hardware.screen.Screen(),
         roms,
+        hardware.cia.CIAA()
     )
 
     if args.filename:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
-        c64.cpu.run(base)
+        c64.run(base)
 
     else:
-        c64.cpu.run(0xFCE2)
+        c64.run(0xFCE2)

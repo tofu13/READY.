@@ -1,10 +1,11 @@
 from .constants import *
-
+import asyncio
 
 # noinspection PyPep8Naming
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
+    pipe = None
 
     def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.A = A
@@ -12,7 +13,7 @@ class CPU:
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 0, 'Z': 0, 'C': 0}
+        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
 
         self._indent = 0
 
@@ -61,19 +62,23 @@ class CPU:
         pc = self.PC
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
-        if instruction is None:
-            raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
-        address = getattr(self, f"addressing_{mode}")()
-        # print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
-            getattr(self, instruction)(address)
+            #if instruction is None:
+            #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
+            address = getattr(self, f"addressing_{mode}")()
         except Exception as e:
-            print("ERROR:", hex(opcode), instruction, address, e)
-        # else:
-        #    print(f"\t{self}")
-        return instruction != 'BRK'
+            print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
 
-    def run(self, address=None):
+        else:
+            try:
+                #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+                getattr(self, instruction)(address)
+            except Exception as e:
+                print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
+            #else:
+                #print(f"\t{self}")
+
+    async def run(self, queue, address=None):
         """
         Run from address (or PC if not specified) until BRK
         :param address: address to start execution
@@ -84,6 +89,14 @@ class CPU:
             self.PC = address
         while not self.F['B']:
             self.step()
+            await asyncio.sleep(0)
+            if not queue.empty():
+                event = await queue.get()
+                if event == 'IRQ':
+                    self.irq()
+                elif event == 'NMI':
+                    pass
+        print (f"BRK encountered at ${self.PC:04X}")
 
     def sys(self, address):
         """
@@ -96,6 +109,13 @@ class CPU:
         while not sp == self.SP or not self.F['B']:
             self.step()
 
+    def irq(self):
+        if not self.F['I']:
+            # print(f"Serving IRQ - PC={self.PC:04X})")
+            self.push(self.PC >> 8)
+            self.push(self.PC & 0XFF)
+            self.push(self._pack_status_register(self.F))
+            self.PC = self._combine(self.memory[0xFFFE], self.memory[0xFFFF])
     # Utils
     def _setNZ(self, value):
         """
@@ -211,8 +231,7 @@ class CPU:
     def addressing_IND_Y(self):
         base = self.memory[self.PC]
         self.PC += 1
-        address = self._combine(self.memory[base], self.memory[base + 1]) + self.Y
-        return address
+        return  self._combine(self.memory[base], self.memory[base + 1]) + self.Y
 
     # Instructions
     def ADC(self, address):
@@ -236,7 +255,10 @@ class CPU:
         self.F['C'] = value >> 7
         result = (value << 1) & 0xFF
         self._setNZ(result)
-        self.A = result
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def BRK(self, address):
         self.F['B'] = 1
@@ -364,10 +386,13 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
+        self.F['C'] = value & 0x01
         result = value >> 1
         self._setNZ(result)
-        self.F['C'] = value & 0x01
-        self.A = result
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def NOP(self, address):
         pass
@@ -394,26 +419,34 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
+        _carrytemp =  value >> 7
         result = ((value << 1) | self.F['C']) & 0xFF
-        self.F['C'] = value >> 7
         self._setNZ(result)
-        self.A = result
+        self.F['C'] = _carrytemp
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def ROR(self, address):
         if address is None:
             value = self.A
         else:
             value = self.memory[address]
+        _carrytemp = value & 0x01
         result = ((value >> 1) | self.F['C'] << 7) & 0xFF
-        self.F['C'] = value & 0x01
         self._setNZ(result)
-        self.A = result
+        self.F['C'] = _carrytemp
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def RTI(self, Address):
         # TODO: untested
         self.F = self._unpack_status_register(self.pop())
         value = self.pop() + (self.pop() << 8)
-        self.PC = value + 1
+        self.PC = value
 
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
@@ -455,7 +488,7 @@ class CPU:
         self._setNZ(self.A)
 
     def TSX(self, adrress):
-        self.SP = self.X
+        self.X = self.SP
         self._setNZ(self.X)
 
     def TXA(self, address):
@@ -463,7 +496,7 @@ class CPU:
         self._setNZ(self.X)
 
     def TXS(self, address):
-        self.X = self.SP
+        self.SP = self.X
 
     def TYA(self, address):
         self.A = self.Y
