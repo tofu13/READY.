@@ -62,16 +62,21 @@ class CPU:
         pc = self.PC
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
-        #if instruction is None:
-        #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
-        address = getattr(self, f"addressing_{mode}")()
-        #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
-            getattr(self, instruction)(address)
+            #if instruction is None:
+            #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
+            address = getattr(self, f"addressing_{mode}")()
         except Exception as e:
-            print("ERROR:", hex(opcode), instruction, address, e)
-        #else:
-            #print(f"\t{self}")
+            print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
+
+        else:
+            try:
+                #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+                getattr(self, instruction)(address)
+            except Exception as e:
+                print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
+            #else:
+                #print(f"\t{self}")
 
     async def run(self, queue, address=None):
         """
@@ -91,6 +96,7 @@ class CPU:
                     self.irq()
                 elif event == 'NMI':
                     pass
+        print (f"BRK encountered at ${self.PC:04X}")
 
     def sys(self, address):
         """
