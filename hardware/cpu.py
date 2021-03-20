@@ -65,13 +65,13 @@ class CPU:
         #if instruction is None:
         #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
         address = getattr(self, f"addressing_{mode}")()
-        # print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+        #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
         try:
             getattr(self, instruction)(address)
         except Exception as e:
             print("ERROR:", hex(opcode), instruction, address, e)
-        # else:
-        #    print(f"\t{self}")
+        #else:
+            #print(f"\t{self}")
 
     async def run(self, queue, address=None):
         """
@@ -105,11 +105,11 @@ class CPU:
 
     def irq(self):
         if not self.F['I']:
-            #print(f"Serving IRQ - PC={self.PC:04X})")
+            print(f"Serving IRQ - PC={self.PC:04X})")
             self.push(self.PC >> 8)
             self.push(self.PC & 0XFF)
             self.push(self._pack_status_register(self.F))
-            self.JMP(self._combine(self.memory[0xFFFE], self.memory[0xFFFF]))
+            self.PC = self._combine(self.memory[0xFFFE], self.memory[0xFFFF])
     # Utils
     def _setNZ(self, value):
         """
@@ -249,7 +249,10 @@ class CPU:
         self.F['C'] = value >> 7
         result = (value << 1) & 0xFF
         self._setNZ(result)
-        self.A = result
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def BRK(self, address):
         self.F['B'] = 1
@@ -377,10 +380,13 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
+        self.F['C'] = value & 0x01
         result = value >> 1
         self._setNZ(result)
-        self.F['C'] = value & 0x01
-        self.A = result
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def NOP(self, address):
         pass
@@ -407,20 +413,26 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        result = ((value << 1) | self.F['C']) & 0xFF
         self.F['C'] = value >> 7
+        result = ((value << 1) | self.F['C']) & 0xFF
         self._setNZ(result)
-        self.A = result
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def ROR(self, address):
         if address is None:
             value = self.A
         else:
             value = self.memory[address]
-        result = ((value >> 1) | self.F['C'] << 7) & 0xFF
         self.F['C'] = value & 0x01
+        result = ((value >> 1) | self.F['C'] << 7) & 0xFF
         self._setNZ(result)
-        self.A = result
+        if address is None:
+            self.A = result
+        else:
+            self.memory[address] = result
 
     def RTI(self, Address):
         # TODO: untested
