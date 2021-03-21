@@ -26,7 +26,7 @@ Code is organized in modules corresponding to single hardware components.
 - CPU (working/testing)
 - Video (testing)
 - ROM (working)
-- Keyboard (TBD)
+- Keyboard (working/testing)
 - Storage (TBD)
 - Audio (TBD)
 
