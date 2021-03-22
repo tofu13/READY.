@@ -40,10 +40,6 @@ class Screen:
         self.font_cache = []
         self.cache_fonts()
 
-        # Clear screen
-        for _ in range(0x400, 0x7e8):
-            self.memory[_] = 32
-
     def cache_fonts(self):
         chargen = [self.memory[a] for a in range(0xD000, 0xE000)]  # Slow read... fix in memory.py
         for i in range(512):
@@ -63,7 +59,7 @@ class Screen:
         self.refresh(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
 
     def char_color(self, address, value):
-        self.refresh(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value)
+        self.refresh(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value & 0x0F)
 
     def refresh(self, address, value, color):
         char = self.font_cache[value][color]
