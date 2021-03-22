@@ -5,7 +5,6 @@ import asyncio
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
-    pipe = None
 
     def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.A = A
@@ -16,6 +15,8 @@ class CPU:
         self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
 
         self._indent = 0
+        self._debug = False
+        self._breakpoints = set()
 
         for addressing in ADDRESSING_METHODS:
             if not hasattr(self, f"addressing_{addressing}"):
@@ -71,12 +72,14 @@ class CPU:
 
         else:
             try:
-                #print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+                if self._debug:
+                    print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
                 getattr(self, instruction)(address)
             except Exception as e:
                 print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
-            #else:
-                #print(f"\t{self}")
+            else:
+                if self._debug:
+                    print(f"\t{self}")
 
     async def run(self, queue, address=None):
         """
@@ -87,7 +90,7 @@ class CPU:
         self.F['B'] = 0
         if address is not None:
             self.PC = address
-        while not self.F['B']:
+        while not self.F['B'] and not self.PC in self._breakpoints:
             self.step()
             await asyncio.sleep(0)
             if not queue.empty():
@@ -214,7 +217,8 @@ class CPU:
     def addressing_IND(self):
         # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the
         # opcode. 
-        l, h = self.memory[self.PC], self.memory[self.PC + 1]
+        # Note: replicate bug when address is on page boundary
+        l, h = self.memory[self.PC], (self.memory[self.PC + 1] if self.PC & 0xFF != 0xFF else self.memory[self.PC & 0xFF00])
         self.PC += 2
         address = self._combine(l, h)
         return self._combine(self.memory[address], self.memory[address + 1])
@@ -410,6 +414,7 @@ class CPU:
 
     def PLA(self, address):
         self.A = self.pop()
+        self._setNZ(self.A)
 
     def PLP(self, address):
         self.F = self._unpack_status_register(self.pop())
