@@ -22,7 +22,8 @@ class Screen:
     pipe = None
 
     def init(self):
-        self.memory.write_watchers.append((0x0400, 0x07FF, self.refresh))
+        self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
+        self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
@@ -47,20 +48,25 @@ class Screen:
         chargen = [self.memory[a] for a in range(0xD000, 0xE000)]  # Slow read... fix in memory.py
         for i in range(512):
             matrix = chargen[i * 8:(i + 1) * 8]
-            font = pygame.Surface((8, 8))
-            for r, row in enumerate(matrix):
-                for c, bit in enumerate(f"{row:08b}"):
-                    font.set_at((c, r), (255, 255, 255) if bit == "1" else (0, 0, 0))
-            font.set_colorkey((0, 0, 0))
-            self.font_cache.append(font)
+
+            char_colors = []
+            for color in PALETTE:
+                font = pygame.Surface((8, 8)).convert_alpha()
+                for r, row in enumerate(matrix):
+                    for c, bit in enumerate(f"{row:08b}"):
+                        font.set_at((c, r), (*color, 255) if bit == "1" else (*color, 0))
+                char_colors.append(font)
+            self.font_cache.append(char_colors)
         pass
 
-    def refresh(self, address, value):
-        # Out of screen: skip (but mapped anyway)
-        if address > 0x07e7:
-            return
+    def char_code(self, address, value):
+        self.refresh(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
 
-        char = self.font_cache[value]
+    def char_color(self, address, value):
+        self.refresh(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value)
+
+    def refresh(self, address, value, color):
+        char = self.font_cache[value][color]
         coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
         #pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
