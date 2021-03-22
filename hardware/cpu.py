@@ -16,6 +16,7 @@ class CPU:
 
         self._indent = 0
         self._debug = False
+        self._breakpoints = set()
 
         for addressing in ADDRESSING_METHODS:
             if not hasattr(self, f"addressing_{addressing}"):
@@ -89,7 +90,7 @@ class CPU:
         self.F['B'] = 0
         if address is not None:
             self.PC = address
-        while not self.F['B']:
+        while not self.F['B'] and not self.PC in self._breakpoints:
             self.step()
             await asyncio.sleep(0)
             if not queue.empty():
