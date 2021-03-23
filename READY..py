@@ -53,9 +53,10 @@ if __name__ == '__main__':
         hardware.cia.CIAA()
     )
 
-    if args.filename:
+    if args.filename and True:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.run(base)
 
     else:
         c64.run(0xFCE2)
+        c64.cpu._breakpoints.add(0xFFCF)

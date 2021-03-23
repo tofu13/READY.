@@ -1,6 +1,7 @@
 from .constants import *
 import asyncio
 
+
 # noinspection PyPep8Naming
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
@@ -64,7 +65,7 @@ class CPU:
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
         try:
-            #if instruction is None:
+            # if instruction is None:
             #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
             address = getattr(self, f"addressing_{mode}")()
         except Exception as e:
@@ -73,7 +74,8 @@ class CPU:
         else:
             try:
                 if self._debug:
-                    print('\t'*self._indent+ f"@${pc:04X} Executing {instruction}\t{mode}{' '*(4-len(mode))}", end="")
+                    print('\t' * self._indent + f"@${pc:04X} Executing {instruction}\t{mode}{' ' * (4 - len(mode))}",
+                          end="")
                 getattr(self, instruction)(address)
             except Exception as e:
                 print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
@@ -90,7 +92,7 @@ class CPU:
         self.F['B'] = 0
         if address is not None:
             self.PC = address
-        while not self.F['B'] and not self.PC in self._breakpoints:
+        while not self.F['B'] and self.PC not in self._breakpoints:
             self.step()
             await asyncio.sleep(0)
             if not queue.empty():
@@ -99,7 +101,7 @@ class CPU:
                     self.irq()
                 elif event == 'NMI':
                     pass
-        print (f"BRK encountered at ${self.PC:04X}")
+        print(f"BRK encountered at ${self.PC:04X}")
 
     def sys(self, address):
         """
@@ -119,6 +121,7 @@ class CPU:
             self.push(self.PC & 0XFF)
             self.push(self._pack_status_register(self.F))
             self.PC = self._combine(self.memory[0xFFFE], self.memory[0xFFFF])
+
     # Utils
     def _setNZ(self, value):
         """
@@ -218,7 +221,8 @@ class CPU:
         # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the
         # opcode. 
         # Note: replicate bug when address is on page boundary
-        l, h = self.memory[self.PC], (self.memory[self.PC + 1] if self.PC & 0xFF != 0xFF else self.memory[self.PC & 0xFF00])
+        l, h = self.memory[self.PC], (
+            self.memory[self.PC + 1] if self.PC & 0xFF != 0xFF else self.memory[self.PC & 0xFF00])
         self.PC += 2
         address = self._combine(l, h)
         return self._combine(self.memory[address], self.memory[address + 1])
@@ -235,7 +239,7 @@ class CPU:
     def addressing_IND_Y(self):
         base = self.memory[self.PC]
         self.PC += 1
-        return  self._combine(self.memory[base], self.memory[base + 1]) + self.Y
+        return self._combine(self.memory[base], self.memory[base + 1]) + self.Y
 
     # Instructions
     def ADC(self, address):
@@ -424,7 +428,7 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        _carrytemp =  value >> 7
+        _carrytemp = value >> 7
         result = ((value << 1) | self.F['C']) & 0xFF
         self._setNZ(result)
         self.F['C'] = _carrytemp
