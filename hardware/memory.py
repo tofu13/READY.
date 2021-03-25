@@ -4,7 +4,11 @@ class Memory:
     read_watchers = []
     write_watchers = []
     roms = {}
-    chargen, loram, hiram = True, True, True
+    chargen, loram, hiram = None, None, None
+
+    def init(self):
+        # Default processor port (HIRAM, LORAM, CHARGEN = 1)
+        self[1] = 7
 
     def __getitem__(self, address):
         # print(f"Memory read at {item}: {value}")
@@ -30,7 +34,7 @@ class Memory:
 
         # Hard coded processor port at $01
         if address == 1:
-            self.chargen, self.loram, self.hiram = map(int, f"{value & 0x7:03b}")
+            self.chargen, self.loram, self.hiram = map(bool,map(int, f"{value & 0x7:03b}"))
 
         for start, end, callback in self.write_watchers:
             if start <= address <= end:

@@ -1,6 +1,11 @@
 from multiprocessing import Process, Pipe, Value
 import pickle
 import asyncio
+from os import environ
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
+import pygame
+
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -11,9 +16,10 @@ class Machine:
         self.roms = roms
         self.ciaA = ciaA
 
-        self.cpu.memory = self.memory
-
         self.memory.roms = self.roms.contents
+        self.memory.init()
+
+        self.cpu.memory = self.memory
 
         self.screen.memory = self.memory
         self.screen.init()
@@ -21,20 +27,27 @@ class Machine:
         self.ciaA.memory = self.memory
         self.ciaA.init()
 
-        self.memory[1] = 0x07
-
     def run(self, address):
         loop = asyncio.get_event_loop()
         event_queue = asyncio.Queue()
-        ciaA_IRQ = asyncio.ensure_future(self.ciaA.loop(event_queue))
+        ciaA_IRQ = loop.create_task(self.ciaA.loop(event_queue))
 
         self.cpu.PC = address
         cpu_loop = loop.create_task(self.cpu.run(event_queue))
+        #machine_loop = loop.create_task(self.loop_a())
 
         loop.run_until_complete(cpu_loop)
 
         ciaA_IRQ.cancel()
         cpu_loop.cancel()
+        #machine_loop.cancel()
+
+    async def loop_a(self):
+        while True:
+            print ("machine loop")
+            for event in pygame.event.get():
+                print (event)
+            await asyncio.sleep(1)
 
     @classmethod
     def from_file(cls, filename):
