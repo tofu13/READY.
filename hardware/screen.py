@@ -41,7 +41,7 @@ class Screen:
         self.cache_fonts()
 
     def cache_fonts(self):
-        chargen = [self.memory[a] for a in range(0xD000, 0xE000)]  # Slow read... fix in memory.py
+        chargen = self.memory.get_chargen() # Dirty trick to speed up things
         for i in range(512):
             matrix = chargen[i * 8:(i + 1) * 8]
 
@@ -81,6 +81,7 @@ class Screen:
 
         if address == 0xD019:
             return 1  # Temporary, to be completed
+        return value
 
     def set_registers(self, address, value):
         if address == 0xD020:
