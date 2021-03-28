@@ -4,30 +4,38 @@ class Memory:
     read_watchers = []
     write_watchers = []
     roms = {}
+    chargen, loram, hiram = None, None, None
+
+    def init(self):
+        # Default processor port (HIRAM, LORAM, CHARGEN = 1)
+        self[1] = 7
 
     def __getitem__(self, address):
         # print(f"Memory read at {item}: {value}")
-        value = super().__getitem__(address)
-        chargen, loram, hiram = map(int, f"{super().__getitem__(1) & 0x7:03b}")
-
         if 0xA000 <= address <= 0xBFFF:
-            if hiram and loram:
+            if self.hiram and self.loram:
                 return self.roms['basic'][address - 0xA000]
         elif 0xE000 <= address <= 0xFFFF:
-            if hiram:
+            if self.hiram:
                 return self.roms['kernal'][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
-            if not chargen and (not hiram and not loram):
+            if not self.chargen and (not self.hiram and not self.loram):
                 return self.roms['chargen'][address - 0xD000]
-            elif chargen:
+            else:
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
-                        return callback(address, value)
-        return value
+                        return callback(address, super().__getitem__(address))
+
+        return super().__getitem__(address)
 
     def __setitem__(self, address, value):
         if value < 0 or value > 255:
             raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
+
+        # Hard coded processor port at $01
+        if address == 1:
+            self.chargen, self.loram, self.hiram = map(bool,map(int, f"{value & 0x7:03b}"))
+
         for start, end, callback in self.write_watchers:
             if start <= address <= end:
                 callback(address, value)
@@ -42,6 +50,8 @@ class Memory:
             [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i + 16))}" for i in range(start, end, 16)]
         )
 
+    def get_chargen(self):
+        return self.roms['chargen']
 
 class BytearrayMemory(Memory, bytearray):
     pass
