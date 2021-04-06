@@ -30,17 +30,18 @@ class Machine:
     def run(self, address):
         loop = asyncio.get_event_loop()
         event_queue = asyncio.Queue()
-        ciaA_IRQ = loop.create_task(self.ciaA.loop(event_queue))
+        ciaA_IRQ = loop.create_task(self.ciaA.loop(event_queue), name="cia-A")
 
         self.cpu.PC = address
-        cpu_loop = loop.create_task(self.cpu.run(event_queue))
+        cpu_loop = loop.create_task(self.cpu.run(event_queue), name="cpu")
         #machine_loop = loop.create_task(self.loop_a())
 
-        loop.run_until_complete(cpu_loop)
-
-        ciaA_IRQ.cancel()
-        cpu_loop.cancel()
-        #machine_loop.cancel()
+        try:
+            loop.run_until_complete(cpu_loop)
+        except KeyboardInterrupt:
+            ciaA_IRQ.cancel()
+            cpu_loop.cancel()
+            #machine_loop.cancel()
 
     async def loop_a(self):
         while True:
