@@ -68,7 +68,7 @@ def main():
         c64.run(0xFCE2)
 
 
-PROFILE = False
+PROFILE = True
 if __name__ == '__main__':
     if PROFILE:
         profiler = cProfile.Profile()
