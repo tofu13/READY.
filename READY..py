@@ -1,11 +1,13 @@
 import argparse
+import cProfile
+import pstats
 
 import hardware
 from hardware.constants import *
 
 from config import *
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(
         description="An educational C=64 emulator."
     )
@@ -65,3 +67,15 @@ if __name__ == '__main__':
         c64.cpu._breakpoints.add(0xFCFF)
         c64.run(0xFCE2)
 
+
+PROFILE = False
+if __name__ == '__main__':
+    if PROFILE:
+        profiler = cProfile.Profile()
+        profiler.enable()
+        main()
+        profiler.disable()
+        stats = pstats.Stats(profiler).sort_stats('tottime')
+        stats.print_stats()
+    else:
+        main()
