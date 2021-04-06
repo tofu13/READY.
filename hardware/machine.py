@@ -36,8 +36,8 @@ class Machine:
         try:
             loop.run_until_complete(cpu_loop)
         except KeyboardInterrupt:
-            ciaA_IRQ.cancel()
             cpu_loop.cancel()
+        ciaA_IRQ.cancel()
 
     @classmethod
     def from_file(cls, filename):

@@ -60,8 +60,8 @@ def main():
         c64.run(base)
         #c64.run(0xFCE2)
         #c64.save("state4")
-        c64.restore("state5")
-        c64.run(0xFCFF)
+        #c64.restore("state5")
+        #c64.run(0xFCFF)
 
     else:
         c64.cpu._breakpoints.add(0xFCFF)

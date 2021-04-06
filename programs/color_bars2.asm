@@ -37,7 +37,7 @@ nocarry
         LDA #$D8
         STA $FE
 
-        LDY #$FF
+        LDY #$1F
 loop3
         LDA ($FB),Y
         ADC #$01
