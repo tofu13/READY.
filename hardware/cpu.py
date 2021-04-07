@@ -84,44 +84,23 @@ class CPU:
                     print(f"\t{self}")
         return not self.F['B'] and self.PC not in self.breakpoints
 
-    async def run(self, queue, address=None):
-        """
-        Run from address (or PC if not specified) until BRK
-        :param address: address to start execution
-        :return: None
-        """
-        self.F['B'] = 0
-        if address is not None:
-            self.PC = address
-        while not self.F['B'] and self.PC not in self.breakpoints:
-            self.step()
-            await asyncio.sleep(0)
-            if not queue.empty():
-                event = await queue.get()
-                if event == 'IRQ':
-                    self.irq()
-                elif event == 'NMI':
-                    pass
-        print(f"BRK encountered at ${self.PC:04X}")
-
-    def sys(self, address):
-        """
-        Emulate SYS
-        :param address: addres to JSR to
-        :return: None
-        """
-        sp = self.SP
-        self.JSR(address)
-        while not sp == self.SP or not self.F['B']:
-            self.step()
 
     def irq(self):
+        """
+        Hanlde IRQ
+        """
         if not self.F['I']:
             # print(f"Serving IRQ - PC={self.PC:04X})")
-            self.push(self.PC >> 8)
-            self.push(self.PC & 0XFF)
-            self.push(self._pack_status_register(self.F))
+            self._save_state()
             self.PC = self._combine(self.memory[0xFFFE], self.memory[0xFFFF])
+
+    def nmi(self):
+        """
+        Hanlde NNI
+        """
+        # print(f"Serving NMI - PC={self.PC:04X})")
+        self._save_state()
+        self.PC = self._combine(self.memory[0xFFFA], self.memory[0xFFFB])
 
     # Utils
     def _setNZ(self, value):
@@ -158,6 +137,14 @@ class CPU:
 
     def _not_implemented(self, address):
         raise NotImplementedError
+
+    def _save_state(self):
+        """
+        Save processor status before IRQ or NMI
+        """
+        self.push(self.PC >> 8)
+        self.push(self.PC & 0XFF)
+        self.push(self._pack_status_register(self.F))
 
     # Addressing methods
     @staticmethod
