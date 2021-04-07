@@ -31,12 +31,23 @@ class Machine:
         self._irq_delay = 1000000 / IRQ_RATE
 
     def run(self, address):
+        """
+        Main process loop
+        :param address: address to run from
+        """
+
+        # Setup
         self.cpu.F['B'] = 0
         self.cpu.PC = address
         running = True
         t = datetime.datetime.now()
+
         while running:
             try:
+                # Execute current instruction
+                running = self.cpu.step()
+
+                # Handle CPU lines (IRQ, NMI, RESET)
                 if self._irq:
                     self.cpu.irq()
                     self._irq = False
@@ -47,12 +58,16 @@ class Machine:
                     pass
                     self._reset = False
 
-                running = self.cpu.step()
+                # Generate time IRQ # TODO: move to CIA
                 if(datetime.datetime.now() - t).microseconds >= self._irq_delay:
                     t = datetime.datetime.now()
                     self._irq = True
+
+            # Handle exit
             except KeyboardInterrupt:
                 running = False
+
+        print(f"BRK encountered at ${self.cpu.PC:04X}")
 
     @classmethod
     def from_file(cls, filename):
