@@ -36,21 +36,23 @@ class Machine:
         running = True
         t = datetime.datetime.now()
         while running:
-            if self._irq:
-                self.cpu.irq()
-                self._irq = False
-            if self._nmi:
-                pass
-                self._nmi = False
-            if self._reset:
-                pass
-                self._reset = False
+            try:
+                if self._irq:
+                    self.cpu.irq()
+                    self._irq = False
+                if self._nmi:
+                    pass
+                    self._nmi = False
+                if self._reset:
+                    pass
+                    self._reset = False
 
-            running = self.cpu.step()
-            if(datetime.datetime.now() - t).microseconds >= self._irq_delay:
-                t = datetime.datetime.now()
-                self._irq = True
-
+                running = self.cpu.step()
+                if(datetime.datetime.now() - t).microseconds >= self._irq_delay:
+                    t = datetime.datetime.now()
+                    self._irq = True
+            except KeyboardInterrupt:
+                running = False
 
     @classmethod
     def from_file(cls, filename):
