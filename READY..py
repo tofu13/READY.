@@ -47,26 +47,28 @@ def main():
     base = None
     # roms = None if args.no_roms else hardware.roms.ROMS(ROMS_FOLDER)
     roms = hardware.roms.ROMS(ROMS_FOLDER)
+    memory = hardware.memory.BytearrayMemory(65536, roms)
 
     c64 = hardware.machine.Machine(
-        hardware.memory.BytearrayMemory(65536),
-        hardware.cpu.CPU(),
-        hardware.screen.Screen(),
+        memory,
+        hardware.cpu.CPU(memory),
+        hardware.screen.Screen(memory),
         roms,
-        hardware.cia.CIAA()
+        hardware.cia.CIAA(memory)
     )
 
     if args.filename and not PROFILE:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.run(base)
         # c64.run(0xFCE2)
-        # c64.save("state5")
-        c64.restore("state5")
+        # c64.save("state6")
+        c64.restore("state7")
         c64.run(0xFCFF)
 
     else:
         c64.cpu.breakpoints.add(0xFCFF)
         c64.run(0xFCE2)
+        #c64.save("state7")
 
 PROFILE = False
 

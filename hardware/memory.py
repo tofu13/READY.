@@ -56,7 +56,10 @@ class Memory:
 
 
 class BytearrayMemory(Memory, bytearray):
-    pass
+    def __init__(self, size, roms=None):
+        super().__init__(size)
+        if roms is not None:
+            self.roms = roms.contents
 
 
 class CTypesMemory:

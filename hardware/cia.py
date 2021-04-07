@@ -6,16 +6,17 @@ import asyncio
 
 
 class CIAA:
-    memory = None
-    pipe = None
-    keyboard_row = 0
-    keyboard_col = 0
+    def __init__(self, memory):
+        self.memory = memory
+        self.pipe = None
+        self.keyboard_row = 0
+        self.keyboard_col = 0
 
-    def init(self):
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
         self.irq_delay = 1000000 / IRQ_RATE
         self.last_irq = datetime.now()
+
 
     def fake_keyboard(self):
         for event in pygame.event.get():

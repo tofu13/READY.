@@ -7,7 +7,9 @@ class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
 
-    def __init__(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+    def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+        self.memory = memory
+
         self.A = A
         self.X = X
         self.Y = Y
@@ -59,7 +61,7 @@ class CPU:
     def step(self):
         """
         Execute next instruction
-        :return: False if instruction is BRK, else True
+        :return: False if instruction is BRK or breakpoint hit, else True
         """
         pc = self.PC
         opcode = self.fetch()

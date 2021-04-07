@@ -1,8 +1,5 @@
 import pickle
 import datetime
-from collections import deque
-
-from .constants import *
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -15,14 +12,6 @@ class Machine:
 
         self.memory.roms = self.roms.contents
         self.memory.init()
-
-        self.cpu.memory = self.memory
-
-        self.screen.memory = self.memory
-        self.screen.init()
-
-        self.ciaA.memory = self.memory
-        self.ciaA.init()
 
         self._irq = False
         self._nmi = False
@@ -66,6 +55,7 @@ class Machine:
                 running = False
 
         print(f"BRK encountered at ${self.cpu.PC:04X}")
+
 
     @classmethod
     def from_file(cls, filename):

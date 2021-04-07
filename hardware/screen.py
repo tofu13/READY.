@@ -1,5 +1,4 @@
 from datetime import datetime
-import time
 
 from .constants import *
 
@@ -11,22 +10,19 @@ import pygame
 
 
 class Screen:
-    memory = None
-    display = None
-    buffer = None
-    font_cache = None
-    border_color = 14
-    background_color = 6
-    palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
-    buffer_pos = (80, 56)
-    buffer_size = (320, 200)
-    pipe = None
+    def __init__(self, memory):
+        self.memory = memory
 
-    def init(self):
         self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
         self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
+
+        self.border_color = 14
+        self.background_color = 6
+        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
+        self.buffer_pos = (80, 56)
+        self.buffer_size = (320, 200)
 
         pygame.init()
 
@@ -59,7 +55,6 @@ class Screen:
                         font.set_at((c, r), (*color, 255) if bit == "1" else (*color, 0))
                 char_colors.append(font)
             self.font_cache.append(char_colors)
-        pass
 
     def char_code(self, address, value):
         self.refresh(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
