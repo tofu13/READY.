@@ -1,8 +1,8 @@
 import pickle
-import asyncio
-from os import environ
-environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+import datetime
+from collections import deque
 
+from .constants import *
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -24,17 +24,33 @@ class Machine:
         self.ciaA.memory = self.memory
         self.ciaA.init()
 
-    def run(self, address):
-        loop = asyncio.get_event_loop()
-        event_queue = asyncio.Queue()
-        ciaA_IRQ = loop.create_task(self.ciaA.loop(event_queue), name="ciaA")
-        cpu_loop = loop.create_task(self.cpu.run(event_queue, address), name="cpu")
+        self._irq = False
+        self._nmi = False
+        self._reset = False
 
-        try:
-            loop.run_until_complete(cpu_loop)
-        except KeyboardInterrupt:
-            cpu_loop.cancel()
-        ciaA_IRQ.cancel()
+        self._irq_delay = 1000000 / IRQ_RATE
+
+    def run(self, address):
+        self.cpu.F['B'] = 0
+        self.cpu.PC = address
+        running = True
+        t = datetime.datetime.now()
+        while running:
+            if self._irq:
+                self.cpu.irq()
+                self._irq = False
+            if self._nmi:
+                pass
+                self._nmi = False
+            if self._reset:
+                pass
+                self._reset = False
+
+            running = self.cpu.step()
+            if(datetime.datetime.now() - t).microseconds >= self._irq_delay:
+                t = datetime.datetime.now()
+                self._irq = True
+
 
     @classmethod
     def from_file(cls, filename):
