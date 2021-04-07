@@ -1,5 +1,6 @@
 from multiprocessing import Array
 
+
 class Memory:
     read_watchers = []
     write_watchers = []
@@ -34,7 +35,7 @@ class Memory:
 
         # Hard coded processor port at $01
         if address == 1:
-            self.chargen, self.loram, self.hiram = map(bool,map(int, f"{value & 0x7:03b}"))
+            self.chargen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
 
         for start, end, callback in self.write_watchers:
             if start <= address <= end:
@@ -53,14 +54,16 @@ class Memory:
     def get_chargen(self):
         return self.roms['chargen']
 
+
 class BytearrayMemory(Memory, bytearray):
     pass
+
 
 class CTypesMemory:
     read_watchers = []
     write_watchers = []
     roms = {}
-    contents = Array('B',65536)
+    contents = Array('B', 65536)
 
     def __getitem__(self, address):
         # print(f"Memory read at {item}: {value}")
@@ -91,6 +94,7 @@ class CTypesMemory:
                 break
         # print(f"Memory write at {key}: {value}")
         self.contents[address] = value
+
 
 if __name__ == '__main__':
     m = BytearrayMemory(65536)

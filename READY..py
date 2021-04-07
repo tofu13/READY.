@@ -7,6 +7,7 @@ from hardware.constants import *
 
 from config import *
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="An educational C=64 emulator."
@@ -58,17 +59,17 @@ def main():
     if args.filename:
         base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
         c64.run(base)
-        #c64.run(0xFCE2)
-        #c64.save("state4")
-        #c64.restore("state5")
-        #c64.run(0xFCFF)
+        # c64.run(0xFCE2)
+        # c64.save("state5")
+        c64.restore("state5")
+        c64.run(0xFCFF)
 
     else:
-        c64.cpu._breakpoints.add(0xFCFF)
+        c64.cpu.breakpoints.add(0xFCFF)
         c64.run(0xFCE2)
 
 
-PROFILE = True
+PROFILE = False
 if __name__ == '__main__':
     if PROFILE:
         profiler = cProfile.Profile()

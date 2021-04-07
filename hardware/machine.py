@@ -1,10 +1,7 @@
-from multiprocessing import Process, Pipe, Value
 import pickle
 import asyncio
 from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-
-import pygame
 
 
 class Machine:
@@ -64,7 +61,6 @@ class Machine:
             self.cpu.memory = memory
             self.screen.memory = memory
             self.ciaA.memory = memory
-
 
     def save(self, filename):
         with open(filename, 'wb') as f:
