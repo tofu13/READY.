@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from .constants import *
 
 import asyncio
@@ -12,6 +14,8 @@ class CIAA:
     def init(self):
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
+        self.irq_delay = 1000000 / IRQ_RATE
+        self.last_irq = datetime.now()
 
     def fake_keyboard(self):
         for event in pygame.event.get():
@@ -44,12 +48,29 @@ class CIAA:
         #    elif event.type == pygame.KEYUP:
         #        self.memory[0xDC01] = 0xFF No key pressed
 
-    async def loop(self, queue):
-        delay = 1 / IRQ_RATE
-        while True:
-            await queue.put("IRQ")
-            await asyncio.sleep(delay)
             # self.fake_keyboard()
+
+    def step(self):
+        """
+        Execute CIA stuff
+        :return: raise IRQ:bool, raise NMI:bool
+        """
+        irq = False
+        nmi = False
+
+        # Generate time IRQ
+        if (datetime.now() - self.last_irq).microseconds >= self.irq_delay:
+            self.last_irq = datetime.now()
+            irq = True
+
+            # Scan RESTORE key for NMI
+            # Note: use the same timing as interrupts: not accurate but close to reality
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_PAGEUP:
+                        nmi = True
+
+        return irq, nmi
 
     def get_registers(self, address, value):
         if address == 0xDC01:

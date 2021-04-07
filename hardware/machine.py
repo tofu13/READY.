@@ -28,8 +28,6 @@ class Machine:
         self._nmi = False
         self._reset = False
 
-        self._irq_delay = 1000000 / IRQ_RATE
-
     def run(self, address):
         """
         Main process loop
@@ -48,20 +46,20 @@ class Machine:
                 running = self.cpu.step()
 
                 # Handle CPU lines (IRQ, NMI, RESET)
+                # Then clear line
                 if self._irq:
                     self.cpu.irq()
                     self._irq = False
                 if self._nmi:
-                    pass
+                    self.cpu.nmi()
                     self._nmi = False
                 if self._reset:
                     pass
                     self._reset = False
 
-                # Generate time IRQ # TODO: move to CIA
-                if(datetime.datetime.now() - t).microseconds >= self._irq_delay:
-                    t = datetime.datetime.now()
-                    self._irq = True
+                # Run CIA A, save interrupts
+                self._irq, self._nmi = self.ciaA.step()
+
 
             # Handle exit
             except KeyboardInterrupt:

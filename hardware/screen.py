@@ -29,6 +29,11 @@ class Screen:
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         pygame.init()
+
+        # Listen for keyboard events enly
+        pygame.event.set_blocked(None)
+        pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP])
+
         self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
         self.buffer = pygame.Surface(self.buffer_size)
 
