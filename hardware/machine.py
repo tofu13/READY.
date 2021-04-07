@@ -1,11 +1,5 @@
-from multiprocessing import Process, Pipe, Value
 import pickle
-import asyncio
-from os import environ
-environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-
-import pygame
-
+import datetime
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -19,35 +13,49 @@ class Machine:
         self.memory.roms = self.roms.contents
         self.memory.init()
 
-        self.cpu.memory = self.memory
-
-        self.screen.memory = self.memory
-        self.screen.init()
-
-        self.ciaA.memory = self.memory
-        self.ciaA.init()
+        self._irq = False
+        self._nmi = False
+        self._reset = False
 
     def run(self, address):
-        loop = asyncio.get_event_loop()
-        event_queue = asyncio.Queue()
-        ciaA_IRQ = loop.create_task(self.ciaA.loop(event_queue))
+        """
+        Main process loop
+        :param address: address to run from
+        """
 
+        # Setup
+        self.cpu.F['B'] = 0
         self.cpu.PC = address
-        cpu_loop = loop.create_task(self.cpu.run(event_queue))
-        #machine_loop = loop.create_task(self.loop_a())
+        running = True
+        t = datetime.datetime.now()
 
-        loop.run_until_complete(cpu_loop)
+        while running:
+            try:
+                # Execute current instruction
+                running = self.cpu.step()
 
-        ciaA_IRQ.cancel()
-        cpu_loop.cancel()
-        #machine_loop.cancel()
+                # Handle CPU lines (IRQ, NMI, RESET)
+                # Then clear line
+                if self._irq:
+                    self.cpu.irq()
+                    self._irq = False
+                if self._nmi:
+                    self.cpu.nmi()
+                    self._nmi = False
+                if self._reset:
+                    pass
+                    self._reset = False
 
-    async def loop_a(self):
-        while True:
-            print ("machine loop")
-            for event in pygame.event.get():
-                print (event)
-            await asyncio.sleep(1)
+                # Run CIA A, save interrupts
+                self._irq, self._nmi = self.ciaA.step()
+
+
+            # Handle exit
+            except KeyboardInterrupt:
+                running = False
+
+        print(f"BRK encountered at ${self.cpu.PC:04X}")
+
 
     @classmethod
     def from_file(cls, filename):
@@ -74,7 +82,6 @@ class Machine:
             self.cpu.memory = memory
             self.screen.memory = memory
             self.ciaA.memory = memory
-
 
     def save(self, filename):
         with open(filename, 'wb') as f:

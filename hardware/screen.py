@@ -1,33 +1,35 @@
 from datetime import datetime
-import time
+
+from .constants import *
 
 from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
 # noinspection PyUnresolvedReferences
-from .constants import *
 
 
 class Screen:
-    memory = None
-    display = None
-    buffer = None
-    font_cache = None
-    border_color = 14
-    background_color = 6
-    palette = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
-    buffer_pos = (80, 56)
-    buffer_size = (320,200)
-    pipe = None
+    def __init__(self, memory):
+        self.memory = memory
 
-    def init(self):
         self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
         self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
+        self.border_color = 14
+        self.background_color = 6
+        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
+        self.buffer_pos = (80, 56)
+        self.buffer_size = (320, 200)
+
         pygame.init()
+
+        # Listen for keyboard events enly
+        pygame.event.set_blocked(None)
+        pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP])
+
         self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
         self.buffer = pygame.Surface(self.buffer_size)
 
@@ -41,7 +43,7 @@ class Screen:
         self.cache_fonts()
 
     def cache_fonts(self):
-        chargen = self.memory.get_chargen() # Dirty trick to speed up things
+        chargen = self.memory.get_chargen()  # Dirty trick to speed up things
         for i in range(512):
             matrix = chargen[i * 8:(i + 1) * 8]
 
@@ -53,7 +55,6 @@ class Screen:
                         font.set_at((c, r), (*color, 255) if bit == "1" else (*color, 0))
                 char_colors.append(font)
             self.font_cache.append(char_colors)
-        pass
 
     def char_code(self, address, value):
         self.refresh(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
@@ -65,12 +66,12 @@ class Screen:
         char = self.font_cache[value][color]
         coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
-        #pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
+        # pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
         self.buffer.fill(PALETTE[self.background_color], char.get_rect().move(coords))
         self.buffer.blit(char, coords)
         self.display.blit(self.buffer, self.buffer_pos)
         pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
-        #pygame.display.flip()
+        # pygame.display.flip()
 
     def get_registers(self, address, value):
         if address == 0xD012:
@@ -90,14 +91,15 @@ class Screen:
             self.display.blit(self.buffer, self.buffer_pos)
             pygame.display.flip()
 
-
         elif address == 0xD021:
             self.background_color = value & 0x0F
             return
 
-            pygame.draw.rect(self.display, PALETTE[self.background_color], pygame.rect.Rect(self.buffer_pos, self.buffer_size))
+            pygame.draw.rect(self.display, PALETTE[self.background_color],
+                             pygame.rect.Rect(self.buffer_pos, self.buffer_size))
             self.display.blit(self.buffer, self.buffer_pos)
             pygame.display.update(self.buffer.get_rect())
+
 
 if __name__ == '__main__':
     s = Screen()
