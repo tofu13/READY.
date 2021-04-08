@@ -9,10 +9,6 @@ class Machine:
         self.screen = screen
         self.ciaA = ciaA
 
-        self._irq = False
-        self._nmi = False
-        self._reset = False
-
         # Default processor port (HIRAM, LORAM, CHARGEN = 1)
         self.memory[1] = 7
 
@@ -26,28 +22,25 @@ class Machine:
         self.cpu.F['B'] = 0
         self.cpu.PC = address
         running = True
-        t = datetime.datetime.now()
 
         while running:
             try:
                 # Execute current instruction
                 running = self.cpu.step()
 
-                # Handle CPU lines (IRQ, NMI, RESET)
-                # Then clear line
-                if self._irq:
-                    self.cpu.irq()
-                    self._irq = False
-                if self._nmi:
-                    self.cpu.nmi()
-                    self._nmi = False
-
                 # Run CIA A, save interrupts and special signals
-                self._irq, self._nmi, reset, quit = self.ciaA.step()
+                irq, nmi, reset, quit = self.ciaA.step()
+
                 if reset:
                     self.cpu.PC = 0xFCE2
+                if quit:
+                    raise KeyboardInterrupt()
 
-                running &= not quit
+                # Handle CPU lines IRQ and NMI
+                if irq:
+                    self.cpu.irq()
+                if nmi:
+                    self.cpu.nmi()
 
             # Handle exit
             except KeyboardInterrupt:
