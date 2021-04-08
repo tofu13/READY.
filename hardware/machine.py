@@ -7,15 +7,14 @@ class Machine:
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
-        self.roms = roms
         self.ciaA = ciaA
-
-        self.memory.roms = self.roms.contents
-        self.memory.init()
 
         self._irq = False
         self._nmi = False
         self._reset = False
+
+        # Default processor port (HIRAM, LORAM, CHARGEN = 1)
+        self.memory[1] = 7
 
     def run(self, address):
         """
@@ -42,13 +41,13 @@ class Machine:
                 if self._nmi:
                     self.cpu.nmi()
                     self._nmi = False
-                if self._reset:
-                    pass
-                    self._reset = False
 
-                # Run CIA A, save interrupts
-                self._irq, self._nmi = self.ciaA.step()
+                # Run CIA A, save interrupts and special signals
+                self._irq, self._nmi, reset, quit = self.ciaA.step()
+                if reset:
+                    self.cpu.PC = 0xFCE2
 
+                running &= not quit
 
             # Handle exit
             except KeyboardInterrupt:
