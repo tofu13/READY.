@@ -10,13 +10,6 @@ class CPU:
     def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.memory = memory
 
-        self.A = A
-        self.X = X
-        self.Y = Y
-        self.PC = PC
-        self.SP = SP
-        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
-
         self._indent = 0
         self._debug = False
         self.breakpoints = set()
@@ -25,9 +18,20 @@ class CPU:
             if not hasattr(self, f"addressing_{addressing}"):
                 setattr(self, f"addressing_{addressing}", self._not_implemented)
 
+        self.reset(A, X, Y, PC, SP)
+
     def __str__(self):
         st = "".join(f"{k}:{v} " for k, v in self.F.items())
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {st}"
+
+    def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+        self.A = A
+        self.X = X
+        self.Y = Y
+        self.PC = PC
+        self.SP = SP
+        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
+
 
     def push(self, value):
         """

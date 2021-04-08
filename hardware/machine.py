@@ -31,16 +31,15 @@ class Machine:
                 # Run CIA A, save interrupts and special signals
                 irq, nmi, reset, quit = self.ciaA.step()
 
-                if reset:
-                    self.cpu.PC = 0xFCE2
-                if quit:
-                    raise KeyboardInterrupt()
-
                 # Handle CPU lines IRQ and NMI
                 if irq:
                     self.cpu.irq()
                 if nmi:
                     self.cpu.nmi()
+                if reset:
+                    self.cpu.reset(PC=0xFCE2)
+                if quit:
+                    raise KeyboardInterrupt()
 
             # Handle exit
             except KeyboardInterrupt:
