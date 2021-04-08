@@ -7,10 +7,6 @@ class Memory:
     roms = {}
     chargen, loram, hiram = None, None, None
 
-    def init(self):
-        # Default processor port (HIRAM, LORAM, CHARGEN = 1)
-        self[1] = 7
-
     def __getitem__(self, address):
         # print(f"Memory read at {item}: {value}")
         if 0xA000 <= address <= 0xBFFF:
