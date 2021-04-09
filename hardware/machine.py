@@ -86,9 +86,9 @@ class Machine:
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
+            # First two bytes are base address for loading into memory (little endian)
+            l, h = f.read(2)
             if format_cbm:
-                # First two bytes are base address for loading into memory (cbm file format, little endian)
-                l, h = f.read(2)
                 base = h << 8 | l
             data = f.read()
         for i, b in enumerate(data):
