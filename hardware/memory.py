@@ -47,6 +47,21 @@ class Memory:
             [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i + 16))}" for i in range(start, end, 16)]
         )
 
+    def dump(self, start=None, end=None):
+        if start is None:
+            start = 0x0000
+            end = 0xFFFF
+        else:
+            if end is None:
+                end = start + 0x0100
+
+    def get_slice(self, start, end):
+        return bytearray([self[_] for _ in range(start, end)])
+
+    def set_slice(self, start, data):
+        for i, byte in enumerate(data):
+            self[start + i] = byte
+
     def get_chargen(self):
         return self.roms['chargen']
 
