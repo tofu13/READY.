@@ -71,7 +71,7 @@ class Machine:
             self.cpu.F = pickle.load(f)
 
             # Memory can not be loaded directly as it is referenced
-            self.memory.set_slice(pickle.load(f), 0)
+            self.memory.set_slice(0, pickle.load(f))
 
     def save(self, filename):
         with open(filename, 'wb') as f:
