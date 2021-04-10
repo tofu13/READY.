@@ -40,12 +40,8 @@ class Memory:
         # print(f"Memory write at {key}: {value}")
         super().__setitem__(address, value)
 
-    def __str__(self, start=0x100, end=None):
-        if end is None:
-            end = start + 0x0100
-        return "\n".join(
-            [f"{i:04X}: {super(__class__, self).__getitem__(slice(i, i + 16))}" for i in range(start, end, 16)]
-        )
+    def __str__(self):
+        return self.dump()
 
     def dump(self, start=None, end=None):
         if start is None:
