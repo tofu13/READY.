@@ -46,7 +46,7 @@ class Machine:
                 running = False
 
         print(f"BRK encountered at ${self.cpu.PC:04X}")
-
+        print(self.memory.dump(0x800, 0x900))
 
     @classmethod
     def from_file(cls, filename):
@@ -69,10 +69,9 @@ class Machine:
             self.cpu.PC = pickle.load(f)
             self.cpu.SP = pickle.load(f)
             self.cpu.F = pickle.load(f)
-            memory = pickle.load(f)
-            self.cpu.memory = memory
-            self.screen.memory = memory
-            self.ciaA.memory = memory
+
+            # Memory can not be loaded directly as it is referenced
+            self.memory.set_slice(pickle.load(f), 0)
 
     def save(self, filename):
         with open(filename, 'wb') as f:
