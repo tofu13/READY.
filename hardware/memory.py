@@ -55,6 +55,15 @@ class Memory:
             if end is None:
                 end = start + 0x0100
 
+        out = ""
+        for row in range(start, end, 0x10):
+            data = self.get_slice(row, row + 0x10)
+            data_hex = [f"{'' if i%4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
+            data_char = map(lambda x: chr(x) if 32 < x < 127 else '.', data)
+
+            out += f"${row:04X}: {''.join(data_hex)}  {''.join(data_char)}\n"
+        return out
+
     def get_slice(self, start, end):
         return bytearray([self[_] for _ in range(start, end)])
 
