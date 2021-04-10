@@ -23,14 +23,16 @@ class Screen:
         self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
         self.buffer_pos = (80, 56)
         self.buffer_size = (320, 200)
+        self.display_size = (480, 312)
 
         pygame.init()
+        pygame.display.set_caption("Commodore 64")
 
         # Listen for keyboard events enly
         pygame.event.set_blocked(None)
         pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
-        self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
+        self.display = pygame.display.set_mode(self.display_size)#, flags=pygame.SCALED)
         self.buffer = pygame.Surface(self.buffer_size)
 
         self.display.fill(PALETTE[self.border_color])
@@ -57,20 +59,21 @@ class Screen:
             self.font_cache.append(char_colors)
 
     def char_code(self, address, value):
-        self.refresh(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
+        self.set_char(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
 
     def char_color(self, address, value):
-        self.refresh(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value & 0x0F)
+        self.set_char(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value & 0x0F)
 
-    def refresh(self, address, value, color):
-        char = self.font_cache[value][color]
+    def set_char(self, address, value, color, screen_update=True):
+        char = self.font_cache[value][color & 0x0F]
         coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
         # pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
         self.buffer.fill(PALETTE[self.background_color], char.get_rect().move(coords))
         self.buffer.blit(char, coords)
         self.display.blit(self.buffer, self.buffer_pos)
-        pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
+        if screen_update:
+            pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
         # pygame.display.flip()
 
     def get_registers(self, address, value):
@@ -93,6 +96,11 @@ class Screen:
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
+            self.buffer.fill(PALETTE[self.background_color])
+            for i in range(0x0400,0x0727):
+                self.set_char(i, self.memory[i], self.memory[i + 0xD800 - 0x400], screen_update=False)
+            self.display.blit(self.buffer, self.buffer_pos)
+            pygame.display.flip()
             return
 
             pygame.draw.rect(self.display, PALETTE[self.background_color],
@@ -103,6 +111,5 @@ class Screen:
 
 if __name__ == '__main__':
     s = Screen()
-    s.memory = bytearray(65536)
-    s.init()
     pass
+
