@@ -7,15 +7,10 @@ class Machine:
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
-        self.roms = roms
         self.ciaA = ciaA
 
-        self.memory.roms = self.roms.contents
-        self.memory.init()
-
-        self._irq = False
-        self._nmi = False
-        self._reset = False
+        # Default processor port (HIRAM, LORAM, CHARGEN = 1)
+        self.memory[1] = 7
 
     def run(self, address):
         """
@@ -27,35 +22,31 @@ class Machine:
         self.cpu.F['B'] = 0
         self.cpu.PC = address
         running = True
-        t = datetime.datetime.now()
 
         while running:
             try:
                 # Execute current instruction
                 running = self.cpu.step()
 
-                # Handle CPU lines (IRQ, NMI, RESET)
-                # Then clear line
-                if self._irq:
+                # Run CIA A, save interrupts and special signals
+                irq, nmi, reset, quit = self.ciaA.step()
+
+                # Handle CPU lines IRQ and NMI
+                if irq:
                     self.cpu.irq()
-                    self._irq = False
-                if self._nmi:
+                if nmi:
                     self.cpu.nmi()
-                    self._nmi = False
-                if self._reset:
-                    pass
-                    self._reset = False
-
-                # Run CIA A, save interrupts
-                self._irq, self._nmi = self.ciaA.step()
-
+                if reset:
+                    self.cpu.reset(PC=0xFCE2)
+                if quit:
+                    raise KeyboardInterrupt()
 
             # Handle exit
             except KeyboardInterrupt:
                 running = False
 
         print(f"BRK encountered at ${self.cpu.PC:04X}")
-
+        print(self.memory.dump(0x800, 0x900))
 
     @classmethod
     def from_file(cls, filename):
@@ -78,10 +69,9 @@ class Machine:
             self.cpu.PC = pickle.load(f)
             self.cpu.SP = pickle.load(f)
             self.cpu.F = pickle.load(f)
-            memory = pickle.load(f)
-            self.cpu.memory = memory
-            self.screen.memory = memory
-            self.ciaA.memory = memory
+
+            # Memory can not be loaded directly as it is referenced
+            self.memory.set_slice(pickle.load(f), 0)
 
     def save(self, filename):
         with open(filename, 'wb') as f:
@@ -95,9 +85,9 @@ class Machine:
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
+            # First two bytes are base address for loading into memory (little endian)
+            l, h = f.read(2)
             if format_cbm:
-                # First two bytes are base address for loading into memory (cbm file format, little endian)
-                l, h = f.read(2)
                 base = h << 8 | l
             data = f.read()
         for i, b in enumerate(data):

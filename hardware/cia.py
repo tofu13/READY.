@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pygame
+
 from .constants import *
 
 import asyncio
@@ -54,10 +56,12 @@ class CIAA:
     def step(self):
         """
         Execute CIA stuff
-        :return: raise IRQ:bool, raise NMI:bool
+        :return: signals [irq, nmi, reset, quit]
         """
         irq = False
         nmi = False
+        quit = False
+        reset = False
 
         # Generate time IRQ
         if (datetime.now() - self.last_irq).microseconds >= self.irq_delay:
@@ -70,8 +74,12 @@ class CIAA:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_PAGEUP:
                         nmi = True
+                    # Also scan special keys
+                    if event.key == pygame.K_F12:
+                        reset = True
+                quit = event.type == pygame.QUIT
 
-        return irq, nmi
+        return irq, nmi, reset, quit
 
     def get_registers(self, address, value):
         if address == 0xDC01:
