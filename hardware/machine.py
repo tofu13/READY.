@@ -153,5 +153,8 @@ class Monitor:
             elif cmd == "q":
                 return False
 
+            elif cmd == "reset":
+                self.machine.cpu.reset(PC=0xFCE2)
+                return False
             else:
                 print(f"Unkwown command {cmd}")
