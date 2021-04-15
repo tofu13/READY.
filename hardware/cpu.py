@@ -88,7 +88,7 @@ class CPU:
             else:
                 if self._debug:
                     print(f"\t{self}")
-        return not self.F['B'] and self.PC not in self.breakpoints
+        return not self.F['B']
 
 
     def irq(self):

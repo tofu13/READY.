@@ -28,6 +28,10 @@ class Machine:
         running = True
 
         while running:
+            # Activate monitor on events
+            if self.monitor_active or self.cpu.PC in self.cpu.breakpoints:
+                self.monitor_active = self.monitor.run()
+
             try:
                 # Execute current instruction
                 running = self.cpu.step()
@@ -51,9 +55,6 @@ class Machine:
             # Handle exit
             except KeyboardInterrupt:
                 running = False
-
-            if self.monitor_active:
-                self.monitor_active = self.monitor.run()
 
         print(f"BRK encountered at ${self.cpu.PC:04X}")
 
@@ -131,6 +132,20 @@ class Monitor:
                 end = int(args[1], 16) if len(args) > 1 else start + 0x090
                 print(self.machine.memory.dump(start, end, as_chars=True))
                 self.current_address = end
+
+            elif cmd == "bk":
+                if len(args) > 1:
+                    print("breakpoint allows max 1 address argument")
+                if len(args) == 1:
+                    self.machine.cpu.breakpoints.add(int(args[0], 16))
+                print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
+
+            elif cmd == "del":
+                if len(args) == 1:
+                    self.machine.cpu.breakpoints.discard(int(args[0], 16))
+                    print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
+                else:
+                    print("delete breakpoint needs exactly 1 address argument")
 
             elif cmd == "s":
                 return True
