@@ -43,7 +43,7 @@ class Memory:
     def __str__(self):
         return self.dump()
 
-    def dump(self, start: int=None, end: int=None) -> str:
+    def dump(self, start: int=None, end: int=None, as_chars: bool=False) -> str:
         """
         Return a textual representiation of memory from start to end
         :param start:
@@ -56,14 +56,19 @@ class Memory:
         else:
             if end is None:
                 end = start + 0x0100
+        step = 0x20 if as_chars else 0x10
 
         out = ""
-        for row in range(start, end, 0x10):
-            data = self.get_slice(row, row + 0x10)
+        for row in range(start, end, step):
+            data = self.get_slice(row, row + step)
             data_hex = [f"{'' if i%4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
             data_char = map(lambda x: chr(x) if 32 < x < 127 else '.', data)
 
-            out += f"${row:04X}: {''.join(data_hex)}  {''.join(data_char)}\n"
+            out += f"${row:04X}: "
+            if as_chars:
+                out += f"{''.join(data_char)}\n"
+            else:
+                out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
         return out
 
     def get_slice(self, start: int, end: int):

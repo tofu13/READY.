@@ -40,11 +40,11 @@ class Machine:
                     self.cpu.irq()
                 if nmi:
                     self.cpu.nmi()
+
                 if event == "RESET":
                     self.cpu.reset(PC=0xFCE2)
                 elif event == "MONITOR":
                     self.monitor_active = True
-
                 elif event == "QUIT":
                     raise KeyboardInterrupt()
 
@@ -108,6 +108,7 @@ class Machine:
 class Monitor:
     def __init__(self, machine):
         self.machine = machine
+        self.current_address = None
 
     def run(self):
         self.current_address = self.machine.cpu.PC
@@ -125,9 +126,17 @@ class Monitor:
                 print(self.machine.memory.dump(start, end))
                 self.current_address = end
 
+            elif cmd == "i":
+                start = int(args[0], 16) if len(args) > 0 else self.current_address
+                end = int(args[1], 16) if len(args) > 1 else start + 0x090
+                print(self.machine.memory.dump(start, end, as_chars=True))
+                self.current_address = end
+
             elif cmd == "s":
                 return True
 
             elif cmd == "q":
                 return False
 
+            else:
+                print(f"Unkwown command {cmd}")

@@ -60,7 +60,6 @@ class CIAA:
         """
         irq = False
         nmi = False
-        quit = False
         signal = None
 
         # Generate time IRQ
