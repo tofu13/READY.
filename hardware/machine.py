@@ -1,5 +1,6 @@
 import pickle
 import datetime
+import argparse
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -8,6 +9,9 @@ class Machine:
         self.cpu = cpu
         self.screen = screen
         self.ciaA = ciaA
+
+        self.monitor = Monitor(self)
+        self.monitor_active = False
 
         # Default processor port (HIRAM, LORAM, CHARGEN = 1)
         self.memory[1] = 7
@@ -28,25 +32,30 @@ class Machine:
                 # Execute current instruction
                 running = self.cpu.step()
 
-                # Run CIA A, save interrupts and special signals
-                irq, nmi, reset, quit = self.ciaA.step()
+                # Run CIA A, save interrupts and special events
+                irq, nmi, event = self.ciaA.step()
 
                 # Handle CPU lines IRQ and NMI
                 if irq:
                     self.cpu.irq()
                 if nmi:
                     self.cpu.nmi()
-                if reset:
+                if event == "RESET":
                     self.cpu.reset(PC=0xFCE2)
-                if quit:
+                elif event == "MONITOR":
+                    self.monitor_active = True
+
+                elif event == "QUIT":
                     raise KeyboardInterrupt()
 
             # Handle exit
             except KeyboardInterrupt:
                 running = False
 
+            if self.monitor_active:
+                self.monitor_active = self.monitor.run()
+
         print(f"BRK encountered at ${self.cpu.PC:04X}")
-        print(self.memory.dump(0x800, 0x900))
 
     @classmethod
     def from_file(cls, filename):
@@ -94,3 +103,31 @@ class Machine:
             self.memory[base + i] = b
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
+
+
+class Monitor:
+    def __init__(self, machine):
+        self.machine = machine
+
+    def run(self):
+        self.current_address = self.machine.cpu.PC
+        print (self.machine.cpu)
+        loop = True
+        while loop:
+            args = input(f"${self.current_address:04x}> ").split()
+            if not args:
+                continue
+
+            cmd = args.pop(0)
+            if cmd == "m":
+                start = int(args[0], 16) if len(args) > 0 else self.current_address
+                end = int(args[1], 16) if len(args) > 1 else start + 0x090
+                print(self.machine.memory.dump(start, end))
+                self.current_address = end
+
+            elif cmd == "s":
+                return True
+
+            elif cmd == "q":
+                return False
+

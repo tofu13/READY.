@@ -61,7 +61,7 @@ class CIAA:
         irq = False
         nmi = False
         quit = False
-        reset = False
+        signal = None
 
         # Generate time IRQ
         if (datetime.now() - self.last_irq).microseconds >= self.irq_delay:
@@ -76,10 +76,14 @@ class CIAA:
                         nmi = True
                     # Also scan special keys
                     if event.key == pygame.K_F12:
-                        reset = True
-                quit = event.type == pygame.QUIT
+                        signal = "RESET"
+                    if event.key == pygame.K_F11:
+                        signal = "MONITOR"
 
-        return irq, nmi, reset, quit
+                if event.type == pygame.QUIT:
+                    signal = "QUIT"
+
+        return irq, nmi, signal
 
     def get_registers(self, address, value):
         if address == 0xDC01:
