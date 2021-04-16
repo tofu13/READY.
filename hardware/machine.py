@@ -29,8 +29,8 @@ class Machine:
 
         while running:
             # Activate monitor on events
-            if self.monitor_active or self.cpu.PC in self.cpu.breakpoints:
-                self.monitor_active = self.monitor.run()
+
+            self.monitor_active = self.cpu.PC in self.cpu.breakpoints
 
             try:
                 # Execute current instruction
@@ -55,6 +55,9 @@ class Machine:
             # Handle exit
             except KeyboardInterrupt:
                 running = False
+
+            if self.monitor_active:
+                self.monitor_active = self.monitor.run()
 
         print(f"BRK encountered at ${self.cpu.PC:04X}")
 
@@ -106,6 +109,16 @@ class Machine:
         return base
 
 
+MONITOR_HELP = """READY. monitor. Commands list:
+m|mem [start] [end] -- show memory as hex and text
+i [start] [end] -- show memory as text
+bk [addres] -- show breakpoints. If address specifies, set one at address 
+s|setp -- execute next instruction
+del [address] -- delete breakpoint at address
+q|quit -- exit monitor and resume
+reset -- reset machine
+"""
+
 class Monitor:
     def __init__(self, machine):
         self.machine = machine
@@ -120,7 +133,7 @@ class Monitor:
             if not args:
                 continue
 
-            cmd = args.pop(0)
+            cmd = args.pop(0).lower()
             if cmd == "m":
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
                 end = int(args[1], 16) if len(args) > 1 else start + 0x090
@@ -156,5 +169,9 @@ class Monitor:
             elif cmd == "reset":
                 self.machine.cpu.reset(PC=0xFCE2)
                 return False
+
+            elif cmd in ("?", "help"):
+                print (MONITOR_HELP)
+
             else:
                 print(f"Unkwown command {cmd}")
