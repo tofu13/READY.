@@ -30,7 +30,7 @@ class Machine:
         while running:
             # Activate monitor on events
 
-            self.monitor_active = self.cpu.PC in self.cpu.breakpoints
+            self.monitor_active |= self.cpu.PC in self.cpu.breakpoints
 
             try:
                 # Execute current instruction
@@ -134,17 +134,23 @@ class Monitor:
                 continue
 
             cmd = args.pop(0).lower()
-            if cmd == "m":
+            if cmd == "d":
+                start = int(args[0], 16) if len(args) > 0 else self.current_address
+                end = int(args[1], 16) if len(args) > 1 else start + 0x040
+                print(self.machine.memory.disassemble(start, end))
+                self.current_address = (end + 1) & 0xFFFF
+
+            elif cmd == "m":
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
                 end = int(args[1], 16) if len(args) > 1 else start + 0x090
                 print(self.machine.memory.dump(start, end))
-                self.current_address = end
+                self.current_address = end & 0xFFFF
 
             elif cmd == "i":
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
                 end = int(args[1], 16) if len(args) > 1 else start + 0x090
                 print(self.machine.memory.dump(start, end, as_chars=True))
-                self.current_address = end
+                self.current_address = end & 0xFFFF
 
             elif cmd == "bk":
                 if len(args) > 1:

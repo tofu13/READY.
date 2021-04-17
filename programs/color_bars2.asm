@@ -1,3 +1,6 @@
+        .word $0801
+        * = $0801
+
         LDA #$00
         STA $FB
         STA $FD
@@ -8,10 +11,10 @@
 
         LDX #$00
 loop2   LDY #$27
-loop1   LDA #$A0
-        STA ($FB),Y
-        TXA
+loop1   TXA
         STA ($FD),Y
+        LDA #$A0
+        STA ($FB),Y
         DEY
         BPL loop1
         CLC
