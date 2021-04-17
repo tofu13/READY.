@@ -1,11 +1,15 @@
 from .constants import *
-import asyncio
 
 
 # noinspection PyPep8Naming
 class CPU:
     # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
     memory = None
+    A = 0x00
+    X = 0x00
+    Y = 0x00
+    PC = 0x0000
+    SP = 0xFF
 
     def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.memory = memory

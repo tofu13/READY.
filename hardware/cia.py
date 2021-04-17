@@ -258,14 +258,11 @@ class CIAB:
         self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
         self.memory.write_watchers.append((0xDD00, 0xDDFF, self.set_registers))
 
-    def loop(self, memory):
-        while True:
-            asyncio.sleep(1)
+    def step(self):
+        pass
 
     def get_registers(self, address, value):
-        # print("read ciaA", address)
-        return value
+        pass
 
     def set_registers(self, address, value):
-        # print("write ciaA", address, value)
         pass

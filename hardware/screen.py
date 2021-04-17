@@ -122,10 +122,10 @@ class Screen:
     def set_registers(self, address, value):
         if address == 0xD011:
             self.vertical_raster_scroll = value & 0b00000111
-            self.full_screen_heigth = value & 0b00001000
+            self.full_screen_height = value & 0b00001000
             self.screen_on = value & 0b00010000
             self.bitmap_mode = value & 0b00100000
-            self.extended_background = value & 0b01000000
+            self.extended_background_mode = value & 0b01000000
             # Set bit 8 of irq_raster_line
             self.irq_raster_line = (value & 0b10000000) << 1 | self.irq_raster_line & 0xFF
 
@@ -153,11 +153,6 @@ class Screen:
             self.display.blit(self.buffer, self.buffer_pos)
             pygame.display.flip()
             return
-
-            pygame.draw.rect(self.display, PALETTE[self.background_color],
-                             pygame.rect.Rect(self.buffer_pos, self.buffer_size))
-            self.display.blit(self.buffer, self.buffer_pos)
-            pygame.display.update(self.buffer.get_rect())
 
 
 if __name__ == '__main__':

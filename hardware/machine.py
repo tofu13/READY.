@@ -2,7 +2,7 @@ import pickle
 
 
 class Machine:
-    def __init__(self, memory, cpu, screen, roms, ciaA):
+    def __init__(self, memory, cpu, screen, ciaA):
 
         self.memory = memory
         self.cpu = cpu

@@ -53,7 +53,6 @@ def main():
         memory,
         hardware.cpu.CPU(memory),
         hardware.screen.Screen(memory),
-        roms,
         hardware.cia.CIAA(memory)
     )
 
@@ -66,6 +65,8 @@ def main():
         c64.run(0xFCFF)
 
     else:
+        #base = c64.load(args.filename, base or DEFAULT_LOAD_ADDRESS, args.cbm_format)
+        #c64.run(base)
         c64.cpu.breakpoints.add(0xFCFF)
         c64.run(0xFCE2)
         #c64.save("state7")
