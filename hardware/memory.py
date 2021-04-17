@@ -26,9 +26,10 @@ class Memory:
 
         return super().__getitem__(address)
 
-    def __setitem__(self, address: int, value) -> None:
-        if value < 0 or value > 255:
-            raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
+    def __setitem__(self, address: int, value: int) -> None:
+        # Trust value is correct to speed up
+        # if value < 0 or value > 255:
+        #   raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
 
         # Hard coded processor port at $01
         if address == 1:
