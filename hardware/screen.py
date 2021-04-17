@@ -69,6 +69,12 @@ class Screen:
         self.font_cache = []
         self.cache_fonts()
 
+        # Prepare empty screen
+        default_char = 32 # Space
+        self.memory.set_slice(0x0400, [default_char] * 1000)
+        default_color = 15 # System default
+        self.memory.set_slice(0xD800, [default_color] * 1000)
+
     def cache_fonts(self):
         chargen = self.memory.get_chargen()  # Dirty trick to speed up things
         for i in range(512):
