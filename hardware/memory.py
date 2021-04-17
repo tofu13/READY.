@@ -1,4 +1,5 @@
 from multiprocessing import Array
+from hardware.constants import *
 
 
 class Memory:
@@ -43,9 +44,10 @@ class Memory:
     def __str__(self):
         return self.dump()
 
-    def dump(self, start: int=None, end: int=None) -> str:
+    def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
         """
         Return a textual representiation of memory from start to end
+        :param as_chars:
         :param start:
         :param end:
         :return:
@@ -56,15 +58,94 @@ class Memory:
         else:
             if end is None:
                 end = start + 0x0100
+        step = 0x20 if as_chars else 0x10
 
         out = ""
-        for row in range(start, end, 0x10):
-            data = self.get_slice(row, row + 0x10)
-            data_hex = [f"{'' if i%4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
+        for row in range(start, end, step):
+            data = self.get_slice(row, row + step)
+            data_hex = [f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
             data_char = map(lambda x: chr(x) if 32 < x < 127 else '.', data)
 
-            out += f"${row:04X}: {''.join(data_hex)}  {''.join(data_char)}\n"
+            out += f"${row:04X}: "
+            if as_chars:
+                out += f"{''.join(data_char)}\n"
+            else:
+                out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
         return out
+
+    def disassemble(self, start: int = None, end: int = None) -> str:
+        """
+        Return disassembled memory
+        :param start:
+        :param end:
+        :return:
+        """
+        output = ""
+        if start is None:
+            start = 0x0000
+            end = 0xFFFF
+        else:
+            if end is None:
+                end = start + 0x0100
+
+        start &= 0xFFFF
+        end &= 0xFFFF
+
+        address = start
+        # TODO: handle end > memory limit
+        while address < end:
+            instruction, mode = OPCODES[self[address]]
+
+            # Skip data bytes (or invalid opcodes)
+            instruction = instruction or "???"
+
+            if mode == "IMP":
+                arg = ""
+                step = 1
+            elif mode == "ABS":
+                arg = f"${self[address + 2]:02X}{self[address + 1]:02X}"
+                step = 3
+            elif mode == "ABS_X":
+                arg = f"${self[address + 2]:02X}{self[address + 1]:02X},X"
+                step = 3
+            elif mode == "ABS_Y":
+                arg = f"${self[address + 2]:02X}{self[address + 1]:02X},Y"
+                step = 3
+            elif mode == "REL":
+                delta = self[address + 1]
+                arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
+                step = 2
+            elif mode == "IMM":
+                arg = f"#${self[address + 1]:02X}"
+                step = 2
+            elif mode == "ZP":
+                arg = f"${self[address + 1]:02X}"
+                step = 2
+            elif mode == "ZP_X":
+                arg = f"${self[address + 1]:02X},X"
+                step = 2
+            elif mode == "ZP_Y":
+                arg = f"${self[address + 1]:02X},Y"
+                step = 2
+            elif mode == "IND":
+                arg = f"$({self[address + 2]:02X}{self[address + 1]:02X})"
+                step = 3
+            elif mode == "X_IND":
+                arg = f"$({self[address + 1]:02X},X)"
+                step = 3
+            elif mode == "IND_Y":
+                arg = f"$({self[address + 1]:02X}),Y"
+                step = 3
+            else:
+                # Skip invalid addressing mode
+                arg = ""
+                step = 1
+
+            # Compose line
+            output += f"${address:04X}  {' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
+                      f"{'   ' * (4 - step)}{instruction} {arg}\n"
+            address = (address + step) & 0xFFFF
+        return output
 
     def get_slice(self, start: int, end: int):
         """
@@ -97,6 +178,7 @@ class BytearrayMemory(Memory, bytearray):
     """
     A memory class where data is stored into a bytearray
     """
+
     def __init__(self, size: int, roms=None):
         super().__init__(size)
         if roms is not None:

@@ -18,19 +18,46 @@ class Screen:
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
+        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
+        self.buffer_pos = (41,  42)
+        self.buffer_size = (320, 200)
+        self.display_size = (403, 284)
+
+        # Registers
+        self.pointer_character_memory = 0x0000
+        self.pointer_bitmap_memory = 0x0000
+        self.pointer_screen_memory = 0x0000
+
+        self.horizontal_raster_scroll = 0
+        self.vertical_raster_scroll = 3
+        self.full_screen_width = 1
+        self.full_screen_height = 1
+        self.screen_on = 0
+        self.bitmap_mode = 0
+        self.multicolor_mode = 0
+        self.extended_background_mode = 0
+
+        self.irq_raster_line = 0
+        self.irq_raster_enabled = 1
+        self.irq_sprite_background_collision_enabled = 1
+        self.irq_sprite_sprite_collision_enabled = 1
+        self.irq_status_register = 0
+
         self.border_color = 14
         self.background_color = 6
-        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
-        self.buffer_pos = (80, 56)
-        self.buffer_size = (320, 200)
+        self.extra_background_color_1 = 0
+        self.extra_background_color_2 = 0
+        self.extra_background_color_3 = 0
+
 
         pygame.init()
+        pygame.display.set_caption("Commodore 64")
 
         # Listen for keyboard events enly
         pygame.event.set_blocked(None)
         pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
-        self.display = pygame.display.set_mode((480, 312))  # , flags=pygame.SCALED)
+        self.display = pygame.display.set_mode(self.display_size)#, flags=pygame.SCALED)
         self.buffer = pygame.Surface(self.buffer_size)
 
         self.display.fill(PALETTE[self.border_color])
@@ -57,20 +84,22 @@ class Screen:
             self.font_cache.append(char_colors)
 
     def char_code(self, address, value):
-        self.refresh(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
+        self.set_char(address, value, color=self.memory[address - 0x0400 + 0xD800] & 0x0F)
 
     def char_color(self, address, value):
-        self.refresh(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value & 0x0F)
+        self.set_char(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value & 0x0F)
 
-    def refresh(self, address, value, color):
-        char = self.font_cache[value][color]
+    def set_char(self, address, value, color, screen_update=True):
+        char = self.font_cache[value][color & 0x0F]
         coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
         # pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
-        self.buffer.fill(PALETTE[self.background_color], char.get_rect().move(coords))
+        char_rect = char.get_rect().move(coords)
+        self.buffer.fill(PALETTE[self.background_color], char_rect)
         self.buffer.blit(char, coords)
         self.display.blit(self.buffer, self.buffer_pos)
-        pygame.display.update(char.get_rect().move(coords).move(self.buffer_pos))
+        if screen_update:
+            pygame.display.update(char_rect.move(self.buffer_pos))
         # pygame.display.flip()
 
     def get_registers(self, address, value):
@@ -85,7 +114,26 @@ class Screen:
         return value
 
     def set_registers(self, address, value):
-        if address == 0xD020:
+        if address == 0xD011:
+            self.vertical_raster_scroll = value & 0b00000111
+            self.full_screen_heigth = value & 0b00001000
+            self.screen_on = value & 0b00010000
+            self.bitmap_mode = value & 0b00100000
+            self.extended_background = value & 0b01000000
+            # Set bit 8 of irq_raster_line
+            self.irq_raster_line = (value & 0b10000000) << 1 | self.irq_raster_line & 0xFF
+
+        elif address == 0xD016:
+            self.horizontal_raster_scroll = value & 0b00000111
+            self.full_screen_width = value & 0b00001000
+            self.multicolor_mode = value & 0b00010000
+
+        elif address == 0xD01A:
+            self.irq_raster_enabled = value & 0b0001
+            self.irq_sprite_background_collision_enabled = value & 0b0010
+            self.irq_sprite_sprite_collision_enabled = value & 0b0100
+
+        elif address == 0xD020:
             self.border_color = value & 0x0F
             self.display.fill(PALETTE[self.border_color])
             self.display.blit(self.buffer, self.buffer_pos)
@@ -93,6 +141,11 @@ class Screen:
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
+            self.buffer.fill(PALETTE[self.background_color])
+            for i in range(0x0400,0x07E8):
+                self.set_char(i, self.memory[i], self.memory[i + 0xD800 - 0x400], screen_update=False)
+            self.display.blit(self.buffer, self.buffer_pos)
+            pygame.display.flip()
             return
 
             pygame.draw.rect(self.display, PALETTE[self.background_color],
@@ -103,6 +156,5 @@ class Screen:
 
 if __name__ == '__main__':
     s = Screen()
-    s.memory = bytearray(65536)
-    s.init()
     pass
+

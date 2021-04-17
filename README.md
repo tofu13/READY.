@@ -26,9 +26,10 @@ Code is organized in modules corresponding to single hardware components.
 - CPU (working/testing)
 - Video (testing)
 - ROM (working)
-- Keyboard (working/testing)
+- Keyboard (working)
 - Storage (TBD)
 - Audio (TBD)
+
 
 ## Installation (on GNU/Linux)
 Python >= 3.7 is required.
@@ -48,9 +49,11 @@ pip install -r requirements.txt
 Then download basic, kernal and chargen into roms/ folder.
 
 ## Usage
+
+### Running the emulator
 ```python READY. [filename]```
 
-where ```[filename]``` is a binary object. It will be loaded at $0801 and run (no "cbm format" with address at first two bytes of binary file). Just omit it for a regular boot.
+where ```[filename]``` is a binary object ("cbm format" with address at first two bytes of binary file). It will be loaded at $0801 and run. Just omit it for a regular boot.
 
 Complete usage:
 ```
@@ -69,3 +72,22 @@ optional arguments:
 ```
 
 You can use [acme](https://github.com/meonwax/acme) or [xa](https://www.floodgap.com/retrotech/xa) to compile an assembler file, see the [programs](https://github.com/tofu13/READY./tree/master/programs) folder for some example.
+
+### Special keys
+- F11 enter monitor
+- F12 reset
+
+### Monitor
+The command line monitor understands the following commands:
+
+```
+READY. monitor. Commands list:
+d|disass [start] [end] -- disassemble
+m|mem [start] [end] -- show memory as hex and text
+i [start] [end] -- show memory as text
+bk [addres] -- show breakpoints. If address specifies, set one at address 
+s|setp -- execute next instruction
+del [address] -- delete breakpoint at address
+q|quit -- exit monitor and resume
+reset -- reset machine
+```
