@@ -1,6 +1,5 @@
 import pickle
-import datetime
-import argparse
+
 
 class Machine:
     def __init__(self, memory, cpu, screen, roms, ciaA):
@@ -110,6 +109,7 @@ class Machine:
 
 
 MONITOR_HELP = """READY. monitor. Commands list:
+d|disass [start] [end] -- disassemble
 m|mem [start] [end] -- show memory as hex and text
 i [start] [end] -- show memory as text
 bk [addres] -- show breakpoints. If address specifies, set one at address 
@@ -119,6 +119,7 @@ q|quit -- exit monitor and resume
 reset -- reset machine
 """
 
+
 class Monitor:
     def __init__(self, machine):
         self.machine = machine
@@ -126,7 +127,7 @@ class Monitor:
 
     def run(self):
         self.current_address = self.machine.cpu.PC
-        print (self.machine.cpu)
+        print(self.machine.cpu)
         loop = True
         while loop:
             args = input(f"${self.current_address:04x}> ").split()
@@ -134,13 +135,13 @@ class Monitor:
                 continue
 
             cmd = args.pop(0).lower()
-            if cmd == "d":
+            if cmd in ("d", "disass"):
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
                 end = int(args[1], 16) if len(args) > 1 else start + 0x040
                 print(self.machine.memory.disassemble(start, end))
                 self.current_address = (end + 1) & 0xFFFF
 
-            elif cmd == "m":
+            elif cmd in ("m", "mem"):
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
                 end = int(args[1], 16) if len(args) > 1 else start + 0x090
                 print(self.machine.memory.dump(start, end))
@@ -177,7 +178,7 @@ class Monitor:
                 return False
 
             elif cmd in ("?", "help"):
-                print (MONITOR_HELP)
+                print(MONITOR_HELP)
 
             else:
                 print(f"Unkwown command {cmd}")

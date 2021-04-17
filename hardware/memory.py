@@ -47,6 +47,7 @@ class Memory:
     def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
         """
         Return a textual representiation of memory from start to end
+        :param as_chars:
         :param start:
         :param end:
         :return:
@@ -73,6 +74,12 @@ class Memory:
         return out
 
     def disassemble(self, start: int = None, end: int = None) -> str:
+        """
+        Return disassembled memory
+        :param start:
+        :param end:
+        :return:
+        """
         output = ""
         if start is None:
             start = 0x0000
