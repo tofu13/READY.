@@ -21,6 +21,7 @@ class Screen:
         self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
         self.buffer_pos = (41,  42)
         self.buffer_size = (320, 200)
+
         self.display_size = (403, 284)
 
         # Registers
@@ -58,22 +59,28 @@ class Screen:
         pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
         self.display = pygame.display.set_mode(self.display_size)#, flags=pygame.SCALED)
+        self.background = pygame.Surface(self.buffer_size)
         self.buffer = pygame.Surface(self.buffer_size)
-
-        self.display.fill(PALETTE[self.border_color])
-
-        self.buffer.fill(PALETTE[self.background_color])
-        self.display.blit(self.buffer, self.buffer_pos)
-        pygame.display.flip()
 
         self.font_cache = []
         self.cache_fonts()
 
+        """
         # Prepare empty screen
-        default_char = 32 # Space
-        self.memory.set_slice(0x0400, [default_char] * 1000)
-        default_color = 15 # System default
+        default_color = 15  # System default
         self.memory.set_slice(0xD800, [default_color] * 1000)
+        default_char = 33  # Space
+        self.memory.set_slice(0x0400, [default_char] * 1000)
+        """
+        self.refresh()
+
+    def refresh(self):
+        self.display.fill(PALETTE[self.border_color])
+        self.background.fill(PALETTE[self.background_color])
+
+        self.background.blit(self.buffer, (0, 0))
+        self.display.blit(self.background, self.buffer_pos)
+        pygame.display.flip()
 
     def cache_fonts(self):
         chargen = self.memory.get_chargen()  # Dirty trick to speed up things
@@ -141,17 +148,14 @@ class Screen:
 
         elif address == 0xD020:
             self.border_color = value & 0x0F
-            self.display.fill(PALETTE[self.border_color])
-            self.display.blit(self.buffer, self.buffer_pos)
-            pygame.display.flip()
+            self.refresh()
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
-            self.buffer.fill(PALETTE[self.background_color])
+            self.background.fill(PALETTE[self.background_color])
             for i in range(0x0400,0x07E8):
                 self.set_char(i, self.memory[i], self.memory[i + 0xD800 - 0x400], screen_update=False)
-            self.display.blit(self.buffer, self.buffer_pos)
-            pygame.display.flip()
+            self.refresh()
             return
 
 
