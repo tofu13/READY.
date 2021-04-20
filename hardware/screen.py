@@ -19,7 +19,8 @@ class Screen:
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
-        self.buffer_pos = (41,  42)
+        self.background_pos = (41,  42)
+        self.buffer_pos = [0 ,0]
         self.buffer_size = (320, 200)
 
         self.display_size = (403, 284)
@@ -29,8 +30,8 @@ class Screen:
         self.pointer_bitmap_memory = 0x0000
         self.pointer_screen_memory = 0x0000
 
-        self.horizontal_raster_scroll = 0
-        self.vertical_raster_scroll = 3
+        self.raster_scroll = 0
+        self.vertical_raster_scroll = 0
         self.full_screen_width = 1
         self.full_screen_height = 1
         self.screen_on = 0
@@ -50,6 +51,7 @@ class Screen:
         self.extra_background_color_2 = 0
         self.extra_background_color_3 = 0
 
+        self.transparent_color = pygame.color.Color(1, 254, 0)
 
         pygame.init()
         pygame.display.set_caption("Commodore 64")
@@ -62,24 +64,25 @@ class Screen:
         self.background = pygame.Surface(self.buffer_size)
         self.buffer = pygame.Surface(self.buffer_size)
 
+        self.buffer.set_colorkey(self.transparent_color)
+
         self.font_cache = []
         self.cache_fonts()
 
-        """
         # Prepare empty screen
+        default_char = 32  # Space
+        self.memory.set_slice(0x0400, [default_char] * 1000)
         default_color = 15  # System default
         self.memory.set_slice(0xD800, [default_color] * 1000)
-        default_char = 33  # Space
-        self.memory.set_slice(0x0400, [default_char] * 1000)
-        """
+
         self.refresh()
 
     def refresh(self):
         self.display.fill(PALETTE[self.border_color])
         self.background.fill(PALETTE[self.background_color])
 
-        self.background.blit(self.buffer, (0, 0))
-        self.display.blit(self.background, self.buffer_pos)
+        self.background.blit(self.buffer, self.buffer_pos)
+        self.display.blit(self.background, self.background_pos)
         pygame.display.flip()
 
     def cache_fonts(self):
@@ -89,11 +92,13 @@ class Screen:
 
             char_colors = []
             for color in PALETTE:
-                font = pygame.Surface((8, 8)).convert_alpha()
+                font = pygame.Surface((8, 8))
                 for r, row in enumerate(matrix):
                     for c, bit in enumerate(f"{row:08b}"):
-                        font.set_at((c, r), (*color, 255) if bit == "1" else (*color, 0))
+                        font.set_at((c, r), color if bit == "1" else self.transparent_color)
                 char_colors.append(font)
+                font.set_colorkey(self.transparent_color)
+
             self.font_cache.append(char_colors)
 
     def char_code(self, address, value):
@@ -108,12 +113,15 @@ class Screen:
 
         # pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
         char_rect = char.get_rect().move(coords)
-        self.buffer.fill(PALETTE[self.background_color], char_rect)
+        self.buffer.fill(self.transparent_color, char_rect)
         self.buffer.blit(char, coords)
-        self.display.blit(self.buffer, self.buffer_pos)
         if screen_update:
-            pygame.display.update(char_rect.move(self.buffer_pos))
-        # pygame.display.flip()
+            self.refresh()
+
+        # TODO: enable quick update
+        #self.display.blit(self.buffer, self.buffer_pos)
+        #if screen_update:
+        #    pygame.display.update(char_rect.move(self.background_pos).move(self.buffer_pos))
 
     def get_registers(self, address, value):
         if address == 0xD012:
@@ -134,12 +142,14 @@ class Screen:
             self.bitmap_mode = value & 0b00100000
             self.extended_background_mode = value & 0b01000000
             # Set bit 8 of irq_raster_line
-            self.irq_raster_line = (value & 0b10000000) << 1 | self.irq_raster_line & 0xFF
+            self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
+            self.refresh()
 
         elif address == 0xD016:
             self.horizontal_raster_scroll = value & 0b00000111
             self.full_screen_width = value & 0b00001000
             self.multicolor_mode = value & 0b00010000
+            self.refresh()
 
         elif address == 0xD01A:
             self.irq_raster_enabled = value & 0b0001
@@ -152,9 +162,6 @@ class Screen:
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
-            self.background.fill(PALETTE[self.background_color])
-            for i in range(0x0400,0x07E8):
-                self.set_char(i, self.memory[i], self.memory[i + 0xD800 - 0x400], screen_update=False)
             self.refresh()
             return
 
