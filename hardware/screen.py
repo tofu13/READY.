@@ -125,14 +125,14 @@ class Screen:
         self.buffer.fill(PALETTE[self.background_color], char_rect)
         self.buffer.blit(char, coords)
         if screen_update:
-            self.background.blit(self.buffer, (0, 0))
+            self.background.blit(self.buffer, self.buffer_pos)
             self.display.blit(self.background, self.background_pos)
             pygame.display.update(char_rect.move(self.buffer_pos).move(self.background_pos))
 
     def refresh_buffer(self):
         self.buffer.fill(PALETTE[self.background_color])
         for i in range(0x0400, 0x7E8):
-            self.set_char(i, self.memory[i], self.memory[i -0x400 + 0xD800], screen_update=False)
+            self.set_char(i, self.memory[i], self.memory[i - 0x400 + 0xD800], screen_update=False)
         self.refresh()
 
     def get_registers(self, address, value):
@@ -155,12 +155,16 @@ class Screen:
             self.extended_background_mode = value & 0b01000000
             # Set bit 8 of irq_raster_line
             self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
+
+            self.buffer_pos[1] = self.vertical_raster_scroll
             self.refresh()
 
         elif address == 0xD016:
             self.horizontal_raster_scroll = value & 0b00000111
             self.full_screen_width = value & 0b00001000
             self.multicolor_mode = value & 0b00010000
+
+            self.buffer_pos[0] = self.horizontal_raster_scroll
             self.refresh()
 
         elif address == 0xD01A:
