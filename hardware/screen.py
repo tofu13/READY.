@@ -60,10 +60,14 @@ class Screen:
         pygame.event.set_blocked(None)
         pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
+        # Display is the entire window drawn - visible area
         self.display = pygame.display.set_mode(self.display_size)#, flags=pygame.SCALED)
-        self.background = pygame.Surface(self.buffer_size)
-        self.buffer = pygame.Surface(self.buffer_size)
 
+        # Background is where video memory is draw onto (sprites can be outside)
+        self.background = pygame.Surface(self.buffer_size)
+
+        # Buffer is the actual memory buffer
+        self.buffer = pygame.Surface(self.buffer_size)
         self.buffer.set_colorkey(self.transparent_color)
 
         self.font_cache = []
@@ -78,10 +82,15 @@ class Screen:
         self.refresh()
 
     def refresh(self):
-        self.display.fill(PALETTE[self.border_color])
-        self.background.fill(PALETTE[self.background_color])
+        # Refresh entire display. Relatively slow.
 
+        # Clear display
+        self.display.fill(PALETTE[self.border_color])
+        # Clear background (need to?)
+        self.background.fill(PALETTE[self.background_color])
+        # Draw video buffer onto background
         self.background.blit(self.buffer, self.buffer_pos)
+        # Draw centered background (with video buffer) centered on display
         self.display.blit(self.background, self.background_pos)
         pygame.display.flip()
 
@@ -113,15 +122,18 @@ class Screen:
 
         # pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
         char_rect = char.get_rect().move(coords)
-        self.buffer.fill(self.transparent_color, char_rect)
+        self.buffer.fill(PALETTE[self.background_color], char_rect)
         self.buffer.blit(char, coords)
         if screen_update:
-            self.refresh()
+            self.background.blit(self.buffer, (0, 0))
+            self.display.blit(self.background, self.background_pos)
+            pygame.display.update(char_rect.move(self.buffer_pos).move(self.background_pos))
 
-        # TODO: enable quick update
-        #self.display.blit(self.buffer, self.buffer_pos)
-        #if screen_update:
-        #    pygame.display.update(char_rect.move(self.background_pos).move(self.buffer_pos))
+    def refresh_buffer(self):
+        self.buffer.fill(PALETTE[self.background_color])
+        for i in range(0x0400, 0x7E8):
+            self.set_char(i, self.memory[i], self.memory[i -0x400 + 0xD800], screen_update=False)
+        self.refresh()
 
     def get_registers(self, address, value):
         if address == 0xD012:
@@ -162,7 +174,7 @@ class Screen:
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
-            self.refresh()
+            self.refresh_buffer()
             return
 
 
