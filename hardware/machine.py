@@ -1,5 +1,5 @@
 import pickle
-
+from hardware.constants import *
 
 class Machine:
     def __init__(self, memory, cpu, screen, ciaA):
@@ -14,6 +14,8 @@ class Machine:
 
         # Default processor port (HIRAM, LORAM, CHARGEN = 1)
         self.memory[1] = 7
+
+        self.input_buffer = ""
 
     def run(self, address):
         """
@@ -51,6 +53,12 @@ class Machine:
                 elif event == "QUIT":
                     raise KeyboardInterrupt()
 
+                if self.input_buffer:
+                    if self.memory[0xC6] == 0:
+                        char = self.input_buffer[0]
+                        self.memory[0x0277] = PETSCII.get(char.lower(), 64) # Temporary (64=@ for unknown char)
+                        self.memory[0xC6] = 1
+                        self.input_buffer = self.input_buffer[1:]
             # Handle exit
             except KeyboardInterrupt:
                 running = False
@@ -166,6 +174,10 @@ class Monitor:
                     print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
                 else:
                     print("delete breakpoint needs exactly 1 address argument")
+
+            elif cmd == "buf":
+                self.machine.input_buffer = " ".join(args)
+
 
             elif cmd == "s":
                 return True
