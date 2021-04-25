@@ -13,25 +13,19 @@ class Screen:
     def __init__(self, memory):
         self.memory = memory
 
+        # Watchers
         self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
         self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
-
-        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
-        self.background_pos = (41,  42)
-        self.buffer_pos = [0 ,0]
-        self.buffer_size = (320, 200)
-
-        self.display_size = (403, 284)
 
         # Registers
         self.pointer_character_memory = 0x0000
         self.pointer_bitmap_memory = 0x0000
         self.pointer_screen_memory = 0x0000
 
-        self.raster_scroll = 0
-        self.vertical_raster_scroll = 0
+        self.horizontal_raster_scroll = 0
+        self.vertical_raster_scroll = 3
         self.full_screen_width = 1
         self.full_screen_height = 1
         self.screen_on = 0
@@ -53,6 +47,15 @@ class Screen:
 
         self.transparent_color = pygame.color.Color(1, 254, 0)
 
+        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
+        self.background_pos_full = [41, 42]
+        self.background_pos_small = [46, 47]
+        self.extra_borders = (7, 4)
+
+        self.buffer_size = (320, 200)
+
+        self.display_size = (403, 284)
+
         pygame.init()
         pygame.display.set_caption("Commodore 64")
 
@@ -61,7 +64,7 @@ class Screen:
         pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
         # Display is the entire window drawn - visible area
-        self.display = pygame.display.set_mode(self.display_size)#, flags=pygame.SCALED)
+        self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
 
         # Background is where video memory is draw onto (sprites can be outside)
         self.background = pygame.Surface(self.buffer_size)
@@ -73,26 +76,52 @@ class Screen:
         self.font_cache = []
         self.cache_fonts()
 
-        # Prepare empty screen
-        default_char = 32  # Space
-        self.memory.set_slice(0x0400, [default_char] * 1000)
-        default_color = 15  # System default
-        self.memory.set_slice(0xD800, [default_color] * 1000)
-
         self.refresh()
 
-    def refresh(self):
-        # Refresh entire display. Relatively slow.
+
+    def refresh(self, area=None):
+        # Refresh entire display. Relatively slow unless update area is specified
+        # buffer -> background -> display
+
+        # Calc relative position of buffer on background. 3 pixel down by default (why?)
+        buffer_pos = (self.horizontal_raster_scroll, self.vertical_raster_scroll - 3)
+
+        background_pos = (
+            self.background_pos_full[0] if self.full_screen_width else self.background_pos_small[0],
+            self.background_pos_full[1] if self.full_screen_height else self.background_pos_small[1]
+        )
+
+        clipping_rect = (
+            0 if self.full_screen_width else self.extra_borders[0],
+            0 if self.full_screen_height else self.extra_borders[1],
+            self.buffer_size[0] - (0 if self.full_screen_width else self.extra_borders[0] * 2),
+            self.buffer_size[1] - (0 if self.full_screen_height else self.extra_borders[1] * 2),
+        )
 
         # Clear display
         self.display.fill(PALETTE[self.border_color])
         # Clear background (need to?)
         self.background.fill(PALETTE[self.background_color])
+
         # Draw video buffer onto background
-        self.background.blit(self.buffer, self.buffer_pos)
+        # pygame.draw.rect(self.buffer, (0, 255, 0), self.buffer.get_rect(), width=1)
+        self.background.blit(self.buffer, buffer_pos)
+
         # Draw centered background (with video buffer) centered on display
-        self.display.blit(self.background, self.background_pos)
-        pygame.display.flip()
+        # pygame.draw.rect(self.background, (0, 0, 255), self.background.get_rect(), width=1)
+        self.display.blit(self.background, background_pos, clipping_rect)
+
+        # Update
+        if area:
+            area.move_ip(buffer_pos)
+            area.move_ip(background_pos)
+            pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
+            pygame.display.update(area) # Updates full screen????
+            #pygame.display.flip()
+            #print(area)
+        else:
+            pygame.display.flip()
+            print("flip!")
 
     def cache_fonts(self):
         chargen = self.memory.get_chargen()  # Dirty trick to speed up things
@@ -125,9 +154,7 @@ class Screen:
         self.buffer.fill(PALETTE[self.background_color], char_rect)
         self.buffer.blit(char, coords)
         if screen_update:
-            self.background.blit(self.buffer, self.buffer_pos)
-            self.display.blit(self.background, self.background_pos)
-            pygame.display.update(char_rect.move(self.buffer_pos).move(self.background_pos))
+            self.refresh(char_rect)
 
     def refresh_buffer(self):
         self.buffer.fill(PALETTE[self.background_color])
@@ -156,7 +183,6 @@ class Screen:
             # Set bit 8 of irq_raster_line
             self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
 
-            self.buffer_pos[1] = self.vertical_raster_scroll
             self.refresh()
 
         elif address == 0xD016:
@@ -164,7 +190,6 @@ class Screen:
             self.full_screen_width = value & 0b00001000
             self.multicolor_mode = value & 0b00010000
 
-            self.buffer_pos[0] = self.horizontal_raster_scroll
             self.refresh()
 
         elif address == 0xD01A:
