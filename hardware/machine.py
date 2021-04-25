@@ -178,6 +178,12 @@ class Monitor:
             elif cmd == "buf":
                 self.machine.input_buffer = " ".join(args)
 
+            elif cmd == "buffile":
+                try:
+                    with open(args[0], 'r') as ifile:
+                        self.machine.input_buffer = ifile.read()
+                except FileNotFoundError as e:
+                    print(e)
 
             elif cmd == "s":
                 return True
