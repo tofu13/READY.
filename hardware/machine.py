@@ -146,8 +146,10 @@ class Monitor:
             if cmd in ("d", "disass"):
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
                 end = int(args[1], 16) if len(args) > 1 else start + 0x040
-                print(self.machine.memory.disassemble(start, end))
-                self.current_address = (end + 1) & 0xFFFF
+                while self.current_address < end:
+                    output, step = self.machine.memory.disassemble(self.current_address)
+                    print(output)
+                    self.current_address = (self.current_address + step) & 0xFFFF
 
             elif cmd in ("m", "mem"):
                 start = int(args[0], 16) if len(args) > 0 else self.current_address
@@ -186,6 +188,8 @@ class Monitor:
                     print(e)
 
             elif cmd == "s":
+                output, step = self.machine.memory.disassemble(self.machine.cpu.PC)
+                print(output)
                 return True
 
             elif cmd == "q":

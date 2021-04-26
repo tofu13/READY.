@@ -74,79 +74,66 @@ class Memory:
                 out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
         return out
 
-    def disassemble(self, start: int = None, end: int = None) -> str:
+    def disassemble(self, address) -> str:
         """
         Return disassembled memory
-        :param start:
-        :param end:
+        :param address:
         :return:
         """
         output = ""
-        if start is None:
-            start = 0x0000
-            end = 0xFFFF
+        instruction, mode = OPCODES[self[address]]
+
+        # Skip data bytes (or invalid opcodes)
+        instruction = instruction or "???"
+
+        if mode == "IMP":
+            arg = ""
+            step = 1
+        elif mode == "ABS":
+            arg = f"${self[address + 2]:02X}{self[address + 1]:02X}"
+            step = 3
+        elif mode == "ABS_X":
+            arg = f"${self[address + 2]:02X}{self[address + 1]:02X},X"
+            step = 3
+        elif mode == "ABS_Y":
+            arg = f"${self[address + 2]:02X}{self[address + 1]:02X},Y"
+            step = 3
+        elif mode == "REL":
+            delta = self[address + 1]
+            arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
+            step = 2
+        elif mode == "IMM":
+            arg = f"#${self[address + 1]:02X}"
+            step = 2
+        elif mode == "ZP":
+            arg = f"${self[address + 1]:02X}"
+            step = 2
+        elif mode == "ZP_X":
+            arg = f"${self[address + 1]:02X},X"
+            step = 2
+        elif mode == "ZP_Y":
+            arg = f"${self[address + 1]:02X},Y"
+            step = 2
+        elif mode == "IND":
+            arg = f"$({self[address + 2]:02X}{self[address + 1]:02X})"
+            step = 3
+        elif mode == "X_IND":
+            arg = f"$({self[address + 1]:02X},X)"
+            step = 3
+        elif mode == "IND_Y":
+            arg = f"$({self[address + 1]:02X}),Y"
+            step = 3
         else:
-            if end is None:
-                end = start + 0x0100
+            # Skip invalid addressing mode
+            arg = ""
+            step = 1
 
-        start &= 0xFFFF
-        end &= 0xFFFF
+        # Compose line
+        output += f"${address:04X}  {' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
+                  f"{'   ' * (4 - step)}{instruction} {arg}"
+        address = (address + step) & 0xFFFF
 
-        address = start
-        # TODO: handle end > memory limit
-        while address < end:
-            instruction, mode = OPCODES[self[address]]
-
-            # Skip data bytes (or invalid opcodes)
-            instruction = instruction or "???"
-
-            if mode == "IMP":
-                arg = ""
-                step = 1
-            elif mode == "ABS":
-                arg = f"${self[address + 2]:02X}{self[address + 1]:02X}"
-                step = 3
-            elif mode == "ABS_X":
-                arg = f"${self[address + 2]:02X}{self[address + 1]:02X},X"
-                step = 3
-            elif mode == "ABS_Y":
-                arg = f"${self[address + 2]:02X}{self[address + 1]:02X},Y"
-                step = 3
-            elif mode == "REL":
-                delta = self[address + 1]
-                arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
-                step = 2
-            elif mode == "IMM":
-                arg = f"#${self[address + 1]:02X}"
-                step = 2
-            elif mode == "ZP":
-                arg = f"${self[address + 1]:02X}"
-                step = 2
-            elif mode == "ZP_X":
-                arg = f"${self[address + 1]:02X},X"
-                step = 2
-            elif mode == "ZP_Y":
-                arg = f"${self[address + 1]:02X},Y"
-                step = 2
-            elif mode == "IND":
-                arg = f"$({self[address + 2]:02X}{self[address + 1]:02X})"
-                step = 3
-            elif mode == "X_IND":
-                arg = f"$({self[address + 1]:02X},X)"
-                step = 3
-            elif mode == "IND_Y":
-                arg = f"$({self[address + 1]:02X}),Y"
-                step = 3
-            else:
-                # Skip invalid addressing mode
-                arg = ""
-                step = 1
-
-            # Compose line
-            output += f"${address:04X}  {' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
-                      f"{'   ' * (4 - step)}{instruction} {arg}\n"
-            address = (address + step) & 0xFFFF
-        return output
+        return output, step
 
     def get_slice(self, start: int, end: int):
         """
