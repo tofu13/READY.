@@ -43,18 +43,19 @@ class Machine:
                 # Run CIA A, save interrupts and special events
                 irq, nmi, event = self.ciaA.step()
 
+                if event == "RESET":
+                    self.cpu.reset(PC=0xFCE2)
+                elif event == "MONITOR":
+                    self.monitor_active = True
+                    irq = False  # Clear IRQ when opening monitor
+                elif event == "QUIT":
+                    raise KeyboardInterrupt()
+
                 # Handle CPU lines IRQ and NMI
                 if irq:
                     self.cpu.irq()
                 if nmi:
                     self.cpu.nmi()
-
-                if event == "RESET":
-                    self.cpu.reset(PC=0xFCE2)
-                elif event == "MONITOR":
-                    self.monitor_active = True
-                elif event == "QUIT":
-                    raise KeyboardInterrupt()
 
                 if self.input_buffer:
                     if self.memory[0xC6] == 0:
