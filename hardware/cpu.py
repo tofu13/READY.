@@ -80,11 +80,13 @@ class CPU:
             address = getattr(self, f"addressing_{mode}")()
         except Exception as e:
             print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
+            return False
         else:
             try:
                 getattr(self, instruction)(address)
             except Exception as e:
                 print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
+                return False
         return not self.F['B']
 
     def irq(self):
