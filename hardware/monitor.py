@@ -73,7 +73,9 @@ class Monitor:
             elif cmd == "s":
                 output, step = self.machine.memory.disassemble(self.machine.cpu.PC)
                 print(output)
-                return True
+                self.machine.cpu.step()
+                self.current_address = self.machine.cpu.PC
+                print(self.machine.cpu)
 
             elif cmd == "q":
                 return False
