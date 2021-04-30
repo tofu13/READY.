@@ -56,12 +56,12 @@ class Screen:
 
         self.display_size = (403, 284)
 
-        pygame.init()
+        #pygame.init()
         pygame.display.set_caption("Commodore 64")
 
         # Listen for keyboard events enly
-        pygame.event.set_blocked(None)
-        pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
+        #pygame.event.set_blocked(None)
+        #pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
         # Display is the entire window drawn - visible area
         self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
@@ -78,6 +78,9 @@ class Screen:
 
         self.refresh()
 
+    @property
+    def current_raster_line(self):
+        return int((datetime.now().microsecond % 20000) / 20000 * 312)
 
     def refresh(self, area=None):
         # Refresh entire display. Relatively slow unless update area is specified
@@ -115,13 +118,18 @@ class Screen:
         if area:
             area.move_ip(buffer_pos)
             area.move_ip(background_pos)
-            pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
+            #pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
             pygame.display.update(area) # Updates full screen????
             #pygame.display.flip()
             #print(area)
         else:
             pygame.display.flip()
             print("flip!")
+
+    def dump(self):
+        for attr in dir(self):
+            if hasattr(self, attr):
+                print("obj.%s = %s" % (attr, getattr(self, attr)))
 
     def cache_fonts(self):
         chargen = self.memory.get_chargen()  # Dirty trick to speed up things
@@ -163,23 +171,56 @@ class Screen:
         self.refresh()
 
     def get_registers(self, address, value):
-        if address == 0xD012:
-            t = int((datetime.now().microsecond % 20000) / 20000 * 312)
-            return t & 0xFF
-        elif address == 0xD011:
-            return int(int((datetime.now().microsecond % 20000) / 20000 * 312) > 0xFF)
+        if address == 0xD011:
+            """
+            Bits #0-#2: Vertical raster scroll.
+            Bit #3: Screen height; 0 = 24 rows; 1 = 25 rows.
+            Bit #4: 0 = Screen off, complete screen is covered by border; 1 = Screen on, normal screen contents are visible.
+            Bit #5: 0 = Text mode; 1 = Bitmap mode.
+            Bit #6: 1 = Extended background mode on.
+            Bit #7: Read: Current raster line (bit #8).
+
+            Write: Raster line to generate interrupt at (bit #8).
+        
+            Default: $1B, %00011011.
+            """
+            return \
+                self.vertical_raster_scroll |\
+                self.full_screen_height << 3 |\
+                0 << 4 |\
+                0 << 5 |\
+                (self.current_raster_line > 0xFF) << 7
+
+        elif address == 0xD016:
+            """
+            Screen control register #2. Bits:
+            Bits #0-#2: Horizontal raster scroll.
+            Bit #3: Screen width; 0 = 38 columns; 1 = 40 columns.
+            Bit #4: 1 = Multicolor mode on.
+            Default: $C8, %11001000.
+            """
+            return \
+                self.horizontal_raster_scroll |\
+                self.full_screen_width << 3 |\
+                0 << 4 |\
+                0b11000000
+
+
+        elif address == 0xD012:
+            return self.current_raster_line & 0xFF
 
         if address == 0xD019:
             return 1  # Temporary, to be completed
         return value
 
     def set_registers(self, address, value):
+        print ("Set VIC register", address, value)
         if address == 0xD011:
             self.vertical_raster_scroll = value & 0b00000111
-            self.full_screen_height = value & 0b00001000
-            self.screen_on = value & 0b00010000
-            self.bitmap_mode = value & 0b00100000
-            self.extended_background_mode = value & 0b01000000
+            self.full_screen_height = (value & 0b00001000) >> 3
+            self.screen_on = (value & 0b00010000) >> 4
+            self.bitmap_mode = (value & 0b00100000) >> 5
+            self.extended_background_mode = (value & 0b01000000) >> 6
             # Set bit 8 of irq_raster_line
             self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
 
@@ -187,8 +228,8 @@ class Screen:
 
         elif address == 0xD016:
             self.horizontal_raster_scroll = value & 0b00000111
-            self.full_screen_width = value & 0b00001000
-            self.multicolor_mode = value & 0b00010000
+            self.full_screen_width = (value & 0b00001000) >> 3
+            self.multicolor_mode = (value & 0b00010000) >> 4
 
             self.refresh()
 
