@@ -16,7 +16,8 @@ class Machine:
         self.monitor_active = False
 
         # Default processor port (HIRAM, LORAM, CHARGEN = 1)
-        self.memory[1] = 7
+        self.memory[0] = 47
+        self.memory[1] = 55
 
         self.input_buffer = ""
 
@@ -63,6 +64,7 @@ class Machine:
                         self.memory[0x0277] = PETSCII.get(char.lower(), 64) # Temporary (64=@ for unknown char)
                         self.memory[0xC6] = 1
                         self.input_buffer = self.input_buffer[1:]
+                #self.screen.refresh # Tentative raster
             # Handle exit
             except KeyboardInterrupt:
                 running = False
