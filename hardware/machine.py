@@ -1,5 +1,8 @@
 import pickle
 
+from hardware.constants import *
+from hardware import monitor
+
 
 class Machine:
     def __init__(self, memory, cpu, screen, ciaA):
@@ -9,11 +12,14 @@ class Machine:
         self.screen = screen
         self.ciaA = ciaA
 
-        self.monitor = Monitor(self)
+        self.monitor = monitor.Monitor(self)
         self.monitor_active = False
 
         # Default processor port (HIRAM, LORAM, CHARGEN = 1)
-        self.memory[1] = 7
+        self.memory[0] = 47
+        self.memory[1] = 55
+
+        self.input_buffer = ""
 
     def run(self, address):
         """
@@ -38,19 +44,27 @@ class Machine:
                 # Run CIA A, save interrupts and special events
                 irq, nmi, event = self.ciaA.step()
 
+                if event == "RESET":
+                    self.cpu.reset(PC=0xFCE2)
+                elif event == "MONITOR":
+                    self.monitor_active = True
+                    irq = False  # Clear IRQ when opening monitor
+                elif event == "QUIT":
+                    raise KeyboardInterrupt()
+
                 # Handle CPU lines IRQ and NMI
                 if irq:
                     self.cpu.irq()
                 if nmi:
                     self.cpu.nmi()
 
-                if event == "RESET":
-                    self.cpu.reset(PC=0xFCE2)
-                elif event == "MONITOR":
-                    self.monitor_active = True
-                elif event == "QUIT":
-                    raise KeyboardInterrupt()
-
+                if self.input_buffer:
+                    if self.memory[0xC6] == 0:
+                        char = self.input_buffer[0]
+                        self.memory[0x0277] = PETSCII.get(char.lower(), 64) # Temporary (64=@ for unknown char)
+                        self.memory[0xC6] = 1
+                        self.input_buffer = self.input_buffer[1:]
+                #self.screen.refresh # Tentative raster
             # Handle exit
             except KeyboardInterrupt:
                 running = False
@@ -106,79 +120,3 @@ class Machine:
             self.memory[base + i] = b
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
-
-
-MONITOR_HELP = """READY. monitor. Commands list:
-d|disass [start] [end] -- disassemble
-m|mem [start] [end] -- show memory as hex and text
-i [start] [end] -- show memory as text
-bk [addres] -- show breakpoints. If address specifies, set one at address 
-s|setp -- execute next instruction
-del [address] -- delete breakpoint at address
-q|quit -- exit monitor and resume
-reset -- reset machine
-"""
-
-
-class Monitor:
-    def __init__(self, machine):
-        self.machine = machine
-        self.current_address = None
-
-    def run(self):
-        self.current_address = self.machine.cpu.PC
-        print(self.machine.cpu)
-        loop = True
-        while loop:
-            args = input(f"${self.current_address:04x}> ").split()
-            if not args:
-                continue
-
-            cmd = args.pop(0).lower()
-            if cmd in ("d", "disass"):
-                start = int(args[0], 16) if len(args) > 0 else self.current_address
-                end = int(args[1], 16) if len(args) > 1 else start + 0x040
-                print(self.machine.memory.disassemble(start, end))
-                self.current_address = (end + 1) & 0xFFFF
-
-            elif cmd in ("m", "mem"):
-                start = int(args[0], 16) if len(args) > 0 else self.current_address
-                end = int(args[1], 16) if len(args) > 1 else start + 0x090
-                print(self.machine.memory.dump(start, end))
-                self.current_address = end & 0xFFFF
-
-            elif cmd == "i":
-                start = int(args[0], 16) if len(args) > 0 else self.current_address
-                end = int(args[1], 16) if len(args) > 1 else start + 0x090
-                print(self.machine.memory.dump(start, end, as_chars=True))
-                self.current_address = end & 0xFFFF
-
-            elif cmd == "bk":
-                if len(args) > 1:
-                    print("breakpoint allows max 1 address argument")
-                if len(args) == 1:
-                    self.machine.cpu.breakpoints.add(int(args[0], 16))
-                print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
-
-            elif cmd == "del":
-                if len(args) == 1:
-                    self.machine.cpu.breakpoints.discard(int(args[0], 16))
-                    print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
-                else:
-                    print("delete breakpoint needs exactly 1 address argument")
-
-            elif cmd == "s":
-                return True
-
-            elif cmd == "q":
-                return False
-
-            elif cmd == "reset":
-                self.machine.cpu.reset(PC=0xFCE2)
-                return False
-
-            elif cmd in ("?", "help"):
-                print(MONITOR_HELP)
-
-            else:
-                print(f"Unkwown command {cmd}")
