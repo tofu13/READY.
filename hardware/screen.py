@@ -214,7 +214,7 @@ class Screen:
         return value
 
     def set_registers(self, address, value):
-        print ("Set VIC register", address, value)
+        #print ("Set VIC register", address, value)
         if address == 0xD011:
             self.vertical_raster_scroll = value & 0b00000111
             self.full_screen_height = (value & 0b00001000) >> 3
