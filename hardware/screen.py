@@ -73,12 +73,11 @@ class Screen:
 
         self.refresh()
 
-    def main(self):
-        while self.running:
-            for i in range(0, 1000):
-                self.set_char(1024+i, self.memory[1024 + i], self.memory[0xD800 + i])
-                self.memory[0xd012] = 10
-                self.memory[0xD012] = self.current_raster_line % 0xFF
+    def step(self):
+        for i in range(0, 1000):
+            self.set_char(1024+i, self.memory[1024 + i], self.memory[0xD800 + i])
+            self.memory[0xd012] = 10
+            self.memory[0xD012] = self.current_raster_line % 0xFF
 
     @property
     def current_raster_line(self):

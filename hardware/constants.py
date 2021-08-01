@@ -11,7 +11,7 @@ SYMBOLS = {
     'R6510': 0x0001,
 }
 
-IRQ_RATE = 50
+IRQ_RATE = 10
 
 ROMSLIST = [
     # (File)Name, begin address, end address, bit of bank switch register (R6510)
