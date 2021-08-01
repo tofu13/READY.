@@ -12,12 +12,7 @@ import pygame
 class Screen:
     def __init__(self, memory):
         self.memory = memory
-
-        # Watchers
-        self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
-        self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
-        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
-        self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
+        self.running = True
 
         # Registers
         self.pointer_character_memory = 0x0000
@@ -78,6 +73,13 @@ class Screen:
 
         self.refresh()
 
+    def main(self):
+        while self.running:
+            for i in range(0, 1000):
+                self.set_char(1024+i, self.memory[1024 + i], self.memory[0xD800 + i])
+                self.memory[0xd012] = 10
+                self.memory[0xD012] = self.current_raster_line % 0xFF
+
     @property
     def current_raster_line(self):
         return int((datetime.now().microsecond % 20000) / 20000 * 312)
@@ -132,7 +134,8 @@ class Screen:
                 print("obj.%s = %s" % (attr, getattr(self, attr)))
 
     def cache_fonts(self):
-        chargen = self.memory.get_chargen()  # Dirty trick to speed up things
+        #chargen = self.memory.get_chargen()  # Dirty trick to speed up things
+        chargen = self.memory[0xD000:0xDFFF]
         for i in range(512):
             matrix = chargen[i * 8:(i + 1) * 8]
 
@@ -246,6 +249,8 @@ class Screen:
             self.background_color = value & 0x0F
             self.refresh_buffer()
             return
+
+
 
 
 if __name__ == '__main__':
