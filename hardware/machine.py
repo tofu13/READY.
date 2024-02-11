@@ -61,10 +61,10 @@ class Machine:
                 if self.input_buffer:
                     if self.memory[0xC6] == 0:
                         char = self.input_buffer[0]
-                        self.memory[0x0277] = PETSCII.get(char.lower(), 64) # Temporary (64=@ for unknown char)
+                        self.memory[0x0277] = PETSCII.get(char.lower(), 64)  # Temporary (64=@ for unknown char)
                         self.memory[0xC6] = 1
                         self.input_buffer = self.input_buffer[1:]
-                #self.screen.refresh # Tentative raster
+                # self.screen.refresh # Tentative raster
             # Handle exit
             except KeyboardInterrupt:
                 running = False
@@ -120,3 +120,16 @@ class Machine:
             self.memory[base + i] = b
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
+
+
+def DefaultMachine()->Machine:
+    import hardware
+    from config import ROMS_FOLDER
+    roms = hardware.roms.ROMS(ROMS_FOLDER)
+    memory = hardware.memory.BytearrayMemory(65536, roms)
+    return Machine(
+        memory,
+        hardware.cpu.CPU(memory),
+        hardware.screen.Screen(memory),
+        hardware.cia.CIAA(memory)
+    )
