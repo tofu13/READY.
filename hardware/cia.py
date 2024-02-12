@@ -1,10 +1,5 @@
 from datetime import datetime
-
-import pygame
-
 from .constants import *
-
-import asyncio
 
 
 class CIAA:
@@ -18,7 +13,6 @@ class CIAA:
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
         self.irq_delay = 1000000 / IRQ_RATE
         self.last_irq = datetime.now()
-
 
     def fake_keyboard(self):
         for event in pygame.event.get():
@@ -51,7 +45,7 @@ class CIAA:
         #    elif event.type == pygame.KEYUP:
         #        self.memory[0xDC01] = 0xFF No key pressed
 
-            # self.fake_keyboard()
+        # self.fake_keyboard()
 
     def step(self):
         """

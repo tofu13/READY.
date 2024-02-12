@@ -34,4 +34,3 @@ def benchmark_cpu_BRK():
 for benchmark in [meth for meth_name, meth in inspect.currentframe().f_locals.items() if
                   meth_name.startswith("benchmark")]:
     benchmark()
-
