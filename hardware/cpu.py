@@ -77,7 +77,7 @@ class CPU:
         try:
             # if instruction is None:
             #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
-            address = self.addresing_methods[f"addressing_{mode}"]()
+            address = self.addresing_methods[mode]()
         except Exception as e:
             print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
             return False
@@ -150,7 +150,7 @@ class CPU:
         self.push(self.PC & 0XFF)
         self.push(self._pack_status_register(self.F))
 
-    # Addressing methods
+    # region Addressing methods
     @staticmethod
     def addressing_IMP():
         # The data is implied by the operation.
@@ -233,7 +233,9 @@ class CPU:
         self.PC += 1
         return self._combine(self.memory[base], self.memory[base + 1]) + self.Y
 
-    # Instructions
+    # endregion
+
+    # region Instructions
     def ADC(self, address):
         result = self.A + self.memory[address] + self.F['C']
         self._setNZ(result & 0xFF)
@@ -502,3 +504,5 @@ class CPU:
     def TYA(self, address):
         self.A = self.Y
         self._setNZ(self.Y)
+
+    # endregion
