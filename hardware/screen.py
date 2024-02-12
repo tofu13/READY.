@@ -248,7 +248,6 @@ class Screen:
             self.background_color = value & 0x0F
             self.background.fill(PALETTE[self.background_color])
             self.refresh_buffer()
-            return
 
 
 if __name__ == '__main__':
