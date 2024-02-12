@@ -18,10 +18,11 @@ class CPU:
         self._debug = False
         self.breakpoints = set()
 
-        for addressing in ADDRESSING_METHODS:
-            if not hasattr(self, f"addressing_{addressing}"):
-                setattr(self, f"addressing_{addressing}", self._not_implemented)
+        # for addressing in ADDRESSING_METHODS:
+        #    if not hasattr(self, f"addressing_{addressing}"):
+        #        setattr(self, f"addressing_{addressing}", self._not_implemented)
 
+        self.addresing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
         self.reset(A, X, Y, PC, SP)
 
     def __str__(self):
@@ -35,7 +36,6 @@ class CPU:
         self.PC = PC
         self.SP = SP
         self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
-
 
     def push(self, value):
         """
@@ -77,7 +77,7 @@ class CPU:
         try:
             # if instruction is None:
             #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
-            address = getattr(self, f"addressing_{mode}")()
+            address = self.addresing_methods[f"addressing_{mode}"]()
         except Exception as e:
             print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
             return False

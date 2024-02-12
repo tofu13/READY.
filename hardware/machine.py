@@ -72,7 +72,7 @@ class Machine:
             if self.monitor_active:
                 self.monitor_active = self.monitor.run()
 
-        print(f"BRK encountered at ${self.cpu.PC:04X}")
+        # BRK encountered, exit
 
     @classmethod
     def from_file(cls, filename):
