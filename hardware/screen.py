@@ -1,11 +1,15 @@
+from typing import Optional
 from datetime import datetime
 
 from .constants import *
 
 from os import environ
+
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
+
+
 # noinspection PyUnresolvedReferences
 
 
@@ -56,12 +60,12 @@ class Screen:
 
         self.display_size = (403, 284)
 
-        #pygame.init()
+        # pygame.init()
         pygame.display.set_caption("Commodore 64")
 
         # Listen for keyboard events enly
-        #pygame.event.set_blocked(None)
-        #pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
+        # pygame.event.set_blocked(None)
+        # pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
         # Display is the entire window drawn - visible area
         self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
@@ -82,7 +86,7 @@ class Screen:
     def current_raster_line(self):
         return int((datetime.now().microsecond % 20000) / 20000 * 312)
 
-    def refresh(self, area=None):
+    def refresh(self, area: pygame.Rect = None):
         # Refresh entire display. Relatively slow unless update area is specified
         # buffer -> background -> display
 
@@ -103,8 +107,6 @@ class Screen:
 
         # Clear display
         self.display.fill(PALETTE[self.border_color])
-        # Clear background (need to?)
-        self.background.fill(PALETTE[self.background_color])
 
         # Draw video buffer onto background
         # pygame.draw.rect(self.buffer, (0, 255, 0), self.buffer.get_rect(), width=1)
@@ -118,10 +120,10 @@ class Screen:
         if area:
             area.move_ip(buffer_pos)
             area.move_ip(background_pos)
-            #pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
-            pygame.display.update(area) # Updates full screen????
-            #pygame.display.flip()
-            #print(area)
+            # pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
+            pygame.display.update(area)  # Updates full screen????
+            # pygame.display.flip()
+            # print(area)
         else:
             pygame.display.flip()
             print("flip!")
@@ -185,11 +187,11 @@ class Screen:
             Default: $1B, %00011011.
             """
             return \
-                self.vertical_raster_scroll |\
-                self.full_screen_height << 3 |\
-                0 << 4 |\
-                0 << 5 |\
-                (self.current_raster_line > 0xFF) << 7
+                    self.vertical_raster_scroll | \
+                    self.full_screen_height << 3 | \
+                    0 << 4 | \
+                    0 << 5 | \
+                    (self.current_raster_line > 0xFF) << 7
 
         elif address == 0xD016:
             """
@@ -200,10 +202,10 @@ class Screen:
             Default: $C8, %11001000.
             """
             return \
-                self.horizontal_raster_scroll |\
-                self.full_screen_width << 3 |\
-                0 << 4 |\
-                0b11000000
+                    self.horizontal_raster_scroll | \
+                    self.full_screen_width << 3 | \
+                    0 << 4 | \
+                    0b11000000
 
 
         elif address == 0xD012:
@@ -214,7 +216,7 @@ class Screen:
         return value
 
     def set_registers(self, address, value):
-        #print ("Set VIC register", address, value)
+        # print ("Set VIC register", address, value)
         if address == 0xD011:
             self.vertical_raster_scroll = value & 0b00000111
             self.full_screen_height = (value & 0b00001000) >> 3
@@ -244,11 +246,10 @@ class Screen:
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
+            self.background.fill(PALETTE[self.background_color])
             self.refresh_buffer()
-            return
 
 
 if __name__ == '__main__':
     s = Screen()
     pass
-
