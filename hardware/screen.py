@@ -1,5 +1,6 @@
-from typing import Optional
 from datetime import datetime
+
+import numpy
 
 from .constants import *
 
@@ -68,14 +69,14 @@ class Screen:
         # pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
         # Display is the entire window drawn - visible area
-        self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
+        self.display = pygame.display.set_mode(self.display_size, depth=8)
 
         # Background is where video memory is draw onto (sprites can be outside)
-        self.background = pygame.Surface(self.buffer_size)
+        self.background = pygame.Surface(self.buffer_size, depth=8)
+        self.background.set_palette(PALETTE)
 
         # Buffer is the actual memory buffer
-        self.buffer = pygame.Surface(self.buffer_size)
-        self.buffer.set_colorkey(self.transparent_color)
+        self.buffer = numpy.zeros(self.buffer_size)
 
         self.font_cache = []
         self.cache_fonts()
@@ -109,11 +110,9 @@ class Screen:
         self.display.fill(PALETTE[self.border_color])
 
         # Draw video buffer onto background
-        # pygame.draw.rect(self.buffer, (0, 255, 0), self.buffer.get_rect(), width=1)
-        self.background.blit(self.buffer, buffer_pos)
+        pygame.surfarray.blit_array(self.background, self.buffer)
 
         # Draw centered background (with video buffer) centered on display
-        # pygame.draw.rect(self.background, (0, 0, 255), self.background.get_rect(), width=1)
         self.display.blit(self.background, background_pos, clipping_rect)
 
         # Update
@@ -122,8 +121,6 @@ class Screen:
             area.move_ip(background_pos)
             # pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
             pygame.display.update(area)  # Updates full screen????
-            # pygame.display.flip()
-            # print(area)
         else:
             pygame.display.flip()
             print("flip!")
@@ -139,13 +136,12 @@ class Screen:
             matrix = chargen[i * 8:(i + 1) * 8]
 
             char_colors = []
-            for color in PALETTE:
-                font = pygame.Surface((8, 8))
+            for color in range(len(PALETTE)):
+                font = numpy.zeros((8, 8))
                 for r, row in enumerate(matrix):
                     for c, bit in enumerate(f"{row:08b}"):
-                        font.set_at((c, r), color if bit == "1" else self.transparent_color)
+                        font[c][r] = color if bit == "1" else self.background_color
                 char_colors.append(font)
-                font.set_colorkey(self.transparent_color)
 
             self.font_cache.append(char_colors)
 
@@ -156,18 +152,18 @@ class Screen:
         self.set_char(address - 0xD800 + 0x400, self.memory[address - 0xD800 + 0x400], color=value & 0x0F)
 
     def set_char(self, address, value, color, screen_update=True):
-        char = self.font_cache[value][color & 0x0F]
-        coords = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
+        color &= 0x0F  # Clamp to 15, that's the colors we have
+        char = self.font_cache[value][color]
+        x, y = ((address - 0x400) % 40) * 8, int((address - 0x400) / 40) * 8
 
         # pygame.draw.rect(self.buffer, PALETTE[self.background_color], pygame.rect.Rect(coords, (8, 8)))
-        char_rect = char.get_rect().move(coords)
-        self.buffer.fill(PALETTE[self.background_color], char_rect)
-        self.buffer.blit(char, coords)
+        char_rect = pygame.rect.Rect(x, y, 8, 8)
+        self.buffer[x:x + 8, y:y + 8] = char
         if screen_update:
             self.refresh(char_rect)
 
     def refresh_buffer(self):
-        self.buffer.fill(PALETTE[self.background_color])
+        self.buffer.fill(self.background_color)
         for i in range(0x0400, 0x7E8):
             self.set_char(i, self.memory[i], self.memory[i - 0x400 + 0xD800], screen_update=False)
         self.refresh()
