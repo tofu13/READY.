@@ -69,7 +69,7 @@ class Screen:
         # pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
 
         # Display is the entire window drawn - visible area
-        self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
+        self.display = pygame.display.set_mode(self.display_size, depth=8)
 
         # Background is where video memory is draw onto (sprites can be outside)
         self.background = pygame.Surface(self.buffer_size, depth=8)
