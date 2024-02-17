@@ -83,10 +83,20 @@ class CIAA:
             pygame.event.get()
             keypressed = list(pygame.key.get_pressed())
             if not any(keypressed):
+                # Shortcut
                 return 0xFF
+            elif keypressed[pygame.KSCAN_UP]:
+                # Emulate SHIFT+DOWN
+                keypressed[pygame.KSCAN_RSHIFT] = True
+                keypressed[pygame.KSCAN_DOWN] = True
+            elif keypressed[pygame.KSCAN_LEFT]:
+                # Emulate SHIFT+RIGHT
+                keypressed[pygame.KSCAN_RSHIFT] = True
+                keypressed[pygame.KSCAN_RIGHT] = True
+
             col = 0xFF - self.memory[0xDC00]  # Invert bits
             k = 0x00
-            shift = False
+
             if col & 0b00000001:
                 if keypressed[pygame.KSCAN_DELETE] or keypressed[pygame.KSCAN_BACKSPACE]:
                     k |= 0x01
@@ -204,7 +214,7 @@ class CIAA:
                     k |= 0x04  # ;
                 if keypressed[pygame.KSCAN_HOME]:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_RSHIFT] or shift:
+                if keypressed[pygame.KSCAN_RSHIFT]:
                     k |= 0x10
                 if keypressed[pygame.KSCAN_BACKSLASH]:
                     k |= 0x20  # =
