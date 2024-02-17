@@ -1,5 +1,8 @@
 from datetime import datetime
-from .constants import *
+
+import pygame
+
+from .constants import IRQ_RATE
 
 
 class CIAA:
@@ -13,39 +16,6 @@ class CIAA:
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
         self.irq_delay = 1000000 / IRQ_RATE
         self.last_irq = datetime.now()
-
-    def fake_keyboard(self):
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.mod & pygame.KMOD_LSHIFT:
-                    selector = 1
-                elif event.mod & pygame.KMOD_LALT:
-                    selector = 2
-                else:
-                    selector = 0
-
-                key = KEYTABLE.get(event.key)
-                # print(event.unicode, selector, key)
-
-                if key:
-                    key = key[selector]
-                if key:
-                    # Inject char into keyboard buffer
-                    self.memory[0x277 + self.memory[0xC6]] = key
-                    # Update counter
-                    self.memory[0xC6] += 1
-                    # print (key)
-
-        # row, col = KEYSCAN.get(event.key, [8,8])
-        # self.keyboard_row = 0xFF - 2 ** row
-        # self.keyboard_col = 0xFF - 2 ** col
-
-        #            print ("READ K",self.keyboard_row, self.keyboard_col)
-
-        #    elif event.type == pygame.KEYUP:
-        #        self.memory[0xDC01] = 0xFF No key pressed
-
-        # self.fake_keyboard()
 
     def step(self):
         """
@@ -83,10 +53,20 @@ class CIAA:
             pygame.event.get()
             keypressed = list(pygame.key.get_pressed())
             if not any(keypressed):
+                # Shortcut
                 return 0xFF
+            elif keypressed[pygame.KSCAN_UP]:
+                # Emulate SHIFT+DOWN
+                keypressed[pygame.KSCAN_RSHIFT] = True
+                keypressed[pygame.KSCAN_DOWN] = True
+            elif keypressed[pygame.KSCAN_LEFT]:
+                # Emulate SHIFT+RIGHT
+                keypressed[pygame.KSCAN_RSHIFT] = True
+                keypressed[pygame.KSCAN_RIGHT] = True
+
             col = 0xFF - self.memory[0xDC00]  # Invert bits
             k = 0x00
-            shift = False
+
             if col & 0b00000001:
                 if keypressed[pygame.KSCAN_DELETE] or keypressed[pygame.KSCAN_BACKSPACE]:
                     k |= 0x01
@@ -204,12 +184,12 @@ class CIAA:
                     k |= 0x04  # ;
                 if keypressed[pygame.KSCAN_HOME]:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_RSHIFT] or shift:
+                if keypressed[pygame.KSCAN_RSHIFT]:
                     k |= 0x10
                 if keypressed[pygame.KSCAN_BACKSLASH]:
                     k |= 0x20  # =
-                if keypressed[pygame.KSCAN_NONUSBACKSLASH]:
-                    k |= 0x40  # Up arrow
+                if keypressed[pygame.KSCAN_END]:
+                    k |= 0x40  # Up arrow / pi
                 if keypressed[pygame.KSCAN_SLASH] or keypressed[pygame.KSCAN_KP_DIVIDE]:
                     k |= 0x80  # /
 
@@ -225,14 +205,11 @@ class CIAA:
                 if keypressed[pygame.KSCAN_SPACE]:
                     k |= 0x10
                 if keypressed[pygame.KSCAN_LALT]:
-                    k |= 0x20
+                    k |= 0x20  # C= KEY
                 if keypressed[pygame.KSCAN_Q]:
                     k |= 0x40
                 if keypressed[pygame.KSCAN_ESCAPE]:
-                    k |= 0x80
-
-            # print(hex(col),hex(k))
-            # print(f"Cia read {address:04X} {k:02X}")
+                    k |= 0x80  # RUN STOP
 
             return 255 - k
         elif address == 0xDC0D:
