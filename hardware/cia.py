@@ -188,8 +188,8 @@ class CIAA:
                     k |= 0x10
                 if keypressed[pygame.KSCAN_BACKSLASH]:
                     k |= 0x20  # =
-                if keypressed[pygame.KSCAN_NONUSBACKSLASH]:
-                    k |= 0x40  # Up arrow
+                if keypressed[pygame.KSCAN_END]:
+                    k |= 0x40  # Up arrow / pi
                 if keypressed[pygame.KSCAN_SLASH] or keypressed[pygame.KSCAN_KP_DIVIDE]:
                     k |= 0x80  # /
 
