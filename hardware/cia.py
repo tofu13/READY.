@@ -1,8 +1,9 @@
 from datetime import datetime
 
 import pygame
+import pyperclip
 
-from .constants import IRQ_RATE
+from .constants import IRQ_RATE, PETSCII
 
 
 class CIAA:
@@ -16,6 +17,8 @@ class CIAA:
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
         self.irq_delay = 1000000 / IRQ_RATE
         self.last_irq = datetime.now()
+
+        self.paste_buffer = []
 
     def step(self):
         """
@@ -42,9 +45,27 @@ class CIAA:
                         signal = "RESET"
                     if event.key == pygame.K_F11:
                         signal = "MONITOR"
-
+                    if event.key == pygame.K_F10:
+                        # F10 -> paste text
+                        try:
+                            self.paste_buffer = list(pyperclip.paste())
+                        except pyperclip.PyperclipException:
+                            print(
+                                "Can't paste: xsel or xclip system packages not found. "
+                                "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
                 if event.type == pygame.QUIT:
                     signal = "QUIT"
+
+        if self.paste_buffer and self.memory[0xC6] == 0:
+            # Inject char into empty keyboard buffer
+            char = self.paste_buffer.pop(0)
+            petscii_code = PETSCII.get(char.lower())
+            if not petscii_code:
+                print(f"WARNING: character {char} not in PETSCII")
+            else:
+                self.memory[0x277 + self.memory[0xC6]] = petscii_code
+                # Update buffer length
+                self.memory[0xC6] += 1
 
         return irq, nmi, signal
 
