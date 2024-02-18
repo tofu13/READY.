@@ -1,4 +1,4 @@
-from datetime import datetime
+from time import perf_counter
 
 import pygame
 import pyperclip
@@ -15,8 +15,8 @@ class CIAA:
 
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
-        self.irq_delay = 1000000 / IRQ_RATE
-        self.last_irq = datetime.now()
+        self.irq_delay = 1.0 / IRQ_RATE
+        self.last_irq = perf_counter()
 
         self.paste_buffer = []
 
@@ -30,8 +30,8 @@ class CIAA:
         signal = None
 
         # Generate time IRQ
-        if (datetime.now() - self.last_irq).microseconds >= self.irq_delay:
-            self.last_irq = datetime.now()
+        if (perf_counter() - self.last_irq) >= self.irq_delay:
+            self.last_irq = perf_counter()
             irq = True
 
             # Scan RESTORE key for NMI
