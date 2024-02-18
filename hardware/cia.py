@@ -47,8 +47,12 @@ class CIAA:
                         signal = "MONITOR"
                     if event.key == pygame.K_F10:
                         # F10 -> paste text
-                        self.paste_buffer = list(pyperclip.paste())
-
+                        try:
+                            self.paste_buffer = list(pyperclip.paste())
+                        except pyperclip.PyperclipException:
+                            print(
+                                "Can't paste: xsel or xclip system packages not found. "
+                                "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
                 if event.type == pygame.QUIT:
                     signal = "QUIT"
 

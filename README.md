@@ -1,19 +1,22 @@
 # READY.
+
 READY. is an educational Commodore 64 emulator written in python 3.
 
 Target is not perfect emulation, but rather learning how that computer works and rebuilding it after decades.
 
 A special thanks to the numberless sources of information found on the web.
 
-## Installation (on GNU/Linux)
-Python >= 3.7 is required.
+## Installation
+
+Python >= 3.8 is required.
+On GNU/Linux `xsel` or `xclip` packages are required in order to paste text.
 
 ```shell
 git clone https://github.com/tofu13/READY..git
 cd READY.
 ```
 
-For a standalone environment it is suggested to: 
+For a standalone environment it is suggested to:
 
 ```shell
 virtualenv venv -p python3
@@ -26,11 +29,14 @@ Then download basic, kernal and chargen into roms/ folder.
 ## Usage
 
 ### Running the emulator
+
 ```python READY. [filename]```
 
-where ```[filename]``` is a binary object ("cbm format" with address at first two bytes of binary file). It will be loaded at $0801 and run. Just omit it for a regular boot.
+where ```[filename]``` is a binary object ("cbm format" with address at first two bytes of binary file). It will be
+loaded at $0801 and run. Just omit it for a regular boot.
 
 Complete usage:
+
 ```
 usage: READY..py [-h] [-1] [-s LOAD_ADDRESS] [filename]
 
@@ -50,10 +56,12 @@ You can use [acme](https://github.com/meonwax/acme) or [xa](https://www.floodgap
 assembler file, see [programs](https://github.com/tofu13/READY./tree/master/programs) folder for some example.
 
 ### Special keys
+
 - F11 enter monitor
 - F12 reset
 
 ### Monitor
+
 The command line monitor understands the following commands:
 
 ```
