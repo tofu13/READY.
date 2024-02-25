@@ -53,6 +53,9 @@ class VIC_II:
 
         self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
 
+    def step(self):
+        pass
+
     def get_registers(self, address, value):
         if address == 0xD011:
             """
@@ -87,7 +90,6 @@ class VIC_II:
                     self.full_screen_width << 3 | \
                     0 << 4 | \
                     0b11000000
-
 
         elif address == 0xD012:
             return self.current_raster_line & 0xFF

@@ -38,6 +38,8 @@ class Machine:
             self.monitor_active |= self.cpu.PC in self.cpu.breakpoints
 
             try:
+                self.screen.step()
+
                 # Execute current instruction
                 running = self.cpu.step()
 
@@ -130,6 +132,6 @@ def DefaultMachine()->Machine:
     return Machine(
         memory,
         hardware.cpu.CPU(memory),
-        hardware.screen.Screen(memory),
+        hardware.screen.RasterScreen(memory),
         hardware.cia.CIAA(memory)
     )
