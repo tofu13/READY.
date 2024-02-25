@@ -1,6 +1,7 @@
 from typing import Optional
 from datetime import datetime
 
+import hardware.memory
 from .constants import *
 
 from os import environ
@@ -21,8 +22,8 @@ class VIC_II:
         self.memory = memory
 
         # Watchers
-        self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
-        self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
+        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
+        self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         # Registers
         self.pointer_character_memory = 0x0000
@@ -133,8 +134,8 @@ class Screen(VIC_II):
         super().__init__(memory)
 
         # Watchers
-        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
-        self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
+        self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
+        self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
 
         self.transparent_color = pygame.color.Color(1, 254, 0)
 
@@ -242,5 +243,7 @@ class Screen(VIC_II):
 
 
 if __name__ == '__main__':
+    mem = hardware.memory.BytearrayMemory(65536)
+    v = VIC_II()
     s = Screen()
     pass
