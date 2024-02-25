@@ -51,8 +51,6 @@ class VIC_II:
         self.extra_background_color_2 = 0
         self.extra_background_color_3 = 0
 
-        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
-
     def step(self):
         pass
 
@@ -75,7 +73,7 @@ class VIC_II:
                     self.full_screen_height << 3 | \
                     0 << 4 | \
                     0 << 5 | \
-                    (self.current_raster_line > 0xFF) << 7
+                    (self.raster_y > 0xFF) << 7
 
         elif address == 0xD016:
             """
@@ -92,7 +90,7 @@ class VIC_II:
                     0b11000000
 
         elif address == 0xD012:
-            return self.current_raster_line & 0xFF
+            return self.raster_y & 0xFF
 
         if address == 0xD019:
             return 1  # Temporary, to be completed
@@ -164,7 +162,7 @@ class Screen(VIC_II):
         self.refresh()
 
     @property
-    def current_raster_line(self):
+    def raster_y(self):
         return int((datetime.now().microsecond % 20000) / 20000 * 312)
 
     def refresh(self, area: pygame.Rect = None):
