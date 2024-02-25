@@ -12,12 +12,9 @@ import pygame
 
 # noinspection PyUnresolvedReferences
 
-
-class Screen:
+class VIC_II:
     """
-    Screen QAD meta-emulator
-    Just draws chars and their colors, background and borders
-    No raster, sprites or other fancy features
+    Abstraction of VIC-II and its registers
     """
 
     def __init__(self, memory):
@@ -26,8 +23,6 @@ class Screen:
         # Watchers
         self.memory.write_watchers.append((0x0400, 0x07E7, self.char_code))
         self.memory.write_watchers.append((0xD800, 0xDBE7, self.char_color))
-        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
-        self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         # Registers
         self.pointer_character_memory = 0x0000
@@ -55,15 +50,99 @@ class Screen:
         self.extra_background_color_2 = 0
         self.extra_background_color_3 = 0
 
+        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
+
+    def get_registers(self, address, value):
+        if address == 0xD011:
+            """
+            Bits #0-#2: Vertical raster scroll.
+            Bit #3: Screen height; 0 = 24 rows; 1 = 25 rows.
+            Bit #4: 0 = Screen off, complete screen is covered by border; 1 = Screen on, normal screen contents are visible.
+            Bit #5: 0 = Text mode; 1 = Bitmap mode.
+            Bit #6: 1 = Extended background mode on.
+            Bit #7: Read: Current raster line (bit #8).
+
+            Write: Raster line to generate interrupt at (bit #8).
+
+            Default: $1B, %00011011.
+            """
+            return \
+                    self.vertical_raster_scroll | \
+                    self.full_screen_height << 3 | \
+                    0 << 4 | \
+                    0 << 5 | \
+                    (self.current_raster_line > 0xFF) << 7
+
+        elif address == 0xD016:
+            """
+            Screen control register #2. Bits:
+            Bits #0-#2: Horizontal raster scroll.
+            Bit #3: Screen width; 0 = 38 columns; 1 = 40 columns.
+            Bit #4: 1 = Multicolor mode on.
+            Default: $C8, %11001000.
+            """
+            return \
+                    self.horizontal_raster_scroll | \
+                    self.full_screen_width << 3 | \
+                    0 << 4 | \
+                    0b11000000
+
+
+        elif address == 0xD012:
+            return self.current_raster_line & 0xFF
+
+        if address == 0xD019:
+            return 1  # Temporary, to be completed
+        return value
+
+    def set_registers(self, address, value):
+        if address == 0xD011:
+            self.vertical_raster_scroll = value & 0b00000111
+            self.full_screen_height = (value & 0b00001000) >> 3
+            self.screen_on = (value & 0b00010000) >> 4
+            self.bitmap_mode = (value & 0b00100000) >> 5
+            self.extended_background_mode = (value & 0b01000000) >> 6
+            # Set bit 8 of irq_raster_line
+            self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
+
+        elif address == 0xD016:
+            self.horizontal_raster_scroll = value & 0b00000111
+            self.full_screen_width = (value & 0b00001000) >> 3
+            self.multicolor_mode = (value & 0b00010000) >> 4
+
+        elif address == 0xD01A:
+            self.irq_raster_enabled = value & 0b0001
+            self.irq_sprite_background_collision_enabled = value & 0b0010
+            self.irq_sprite_sprite_collision_enabled = value & 0b0100
+
+        elif address == 0xD020:
+            self.border_color = value & 0x0F
+
+        elif address == 0xD021:
+            self.background_color = value & 0x0F
+
+
+class Screen(VIC_II):
+    """
+    Screen QAD meta-emulator
+    Just draws chars and their colors, background and borders
+    No raster, sprites or other fancy features
+    """
+
+    def __init__(self, memory):
+        super().__init__(memory)
+
+        # Watchers
+        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
+        self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
+
         self.transparent_color = pygame.color.Color(1, 254, 0)
 
-        self.palette = [[c >> 16, (c >> 8) & 0xFF, c & 0xFF] for c in COLORS]
         self.background_pos_full = [41, 42]
         self.background_pos_small = [46, 47]
         self.extra_borders = (7, 4)
 
         self.buffer_size = (320, 200)
-
         self.display_size = (403, 284)
 
         # pygame.init()
@@ -146,80 +225,18 @@ class Screen:
             self.set_char(i, self.memory[i], self.memory[i - 0x400 + 0xD800], screen_update=False)
         self.refresh()
 
-    def get_registers(self, address, value):
-        if address == 0xD011:
-            """
-            Bits #0-#2: Vertical raster scroll.
-            Bit #3: Screen height; 0 = 24 rows; 1 = 25 rows.
-            Bit #4: 0 = Screen off, complete screen is covered by border; 1 = Screen on, normal screen contents are visible.
-            Bit #5: 0 = Text mode; 1 = Bitmap mode.
-            Bit #6: 1 = Extended background mode on.
-            Bit #7: Read: Current raster line (bit #8).
-
-            Write: Raster line to generate interrupt at (bit #8).
-        
-            Default: $1B, %00011011.
-            """
-            return \
-                    self.vertical_raster_scroll | \
-                    self.full_screen_height << 3 | \
-                    0 << 4 | \
-                    0 << 5 | \
-                    (self.current_raster_line > 0xFF) << 7
-
-        elif address == 0xD016:
-            """
-            Screen control register #2. Bits:
-            Bits #0-#2: Horizontal raster scroll.
-            Bit #3: Screen width; 0 = 38 columns; 1 = 40 columns.
-            Bit #4: 1 = Multicolor mode on.
-            Default: $C8, %11001000.
-            """
-            return \
-                    self.horizontal_raster_scroll | \
-                    self.full_screen_width << 3 | \
-                    0 << 4 | \
-                    0b11000000
-
-
-        elif address == 0xD012:
-            return self.current_raster_line & 0xFF
-
-        if address == 0xD019:
-            return 1  # Temporary, to be completed
-        return value
-
     def set_registers(self, address, value):
-        # print ("Set VIC register", address, value)
+        super().set_registers(address, value)
         if address == 0xD011:
-            self.vertical_raster_scroll = value & 0b00000111
-            self.full_screen_height = (value & 0b00001000) >> 3
-            self.screen_on = (value & 0b00010000) >> 4
-            self.bitmap_mode = (value & 0b00100000) >> 5
-            self.extended_background_mode = (value & 0b01000000) >> 6
-            # Set bit 8 of irq_raster_line
-            self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
-
             self.refresh()
 
         elif address == 0xD016:
-            self.horizontal_raster_scroll = value & 0b00000111
-            self.full_screen_width = (value & 0b00001000) >> 3
-            self.multicolor_mode = (value & 0b00010000) >> 4
-
             self.refresh()
-
-        elif address == 0xD01A:
-            self.irq_raster_enabled = value & 0b0001
-            self.irq_sprite_background_collision_enabled = value & 0b0010
-            self.irq_sprite_sprite_collision_enabled = value & 0b0100
 
         elif address == 0xD020:
-            self.border_color = value & 0x0F
             self.refresh()
 
         elif address == 0xD021:
-            self.background_color = value & 0x0F
             self.buffer.fill(PALETTE[self.background_color])
             self.refresh_buffer()
 
