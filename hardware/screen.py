@@ -14,6 +14,12 @@ import pygame
 
 
 class Screen:
+    """
+    Screen QAD meta-emulator
+    Just draws chars and their colors, background and borders
+    No raster, sprites or other fancy features
+    """
+
     def __init__(self, memory):
         self.memory = memory
 
@@ -63,15 +69,8 @@ class Screen:
         # pygame.init()
         pygame.display.set_caption("Commodore 64")
 
-        # Listen for keyboard events enly
-        # pygame.event.set_blocked(None)
-        # pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP, pygame.QUIT])
-
         # Display is the entire window drawn - visible area
         self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
-
-        # Background is where video memory is draw onto (sprites can be outside)
-        self.background = pygame.Surface(self.buffer_size)
 
         # Buffer is the actual memory buffer
         self.buffer = pygame.Surface(self.buffer_size)
@@ -88,45 +87,20 @@ class Screen:
 
     def refresh(self, area: pygame.Rect = None):
         # Refresh entire display. Relatively slow unless update area is specified
-        # buffer -> background -> display
-
-        # Calc relative position of buffer on background. 3 pixel down by default (why?)
-        buffer_pos = (self.horizontal_raster_scroll, self.vertical_raster_scroll - 3)
-
-        background_pos = (
-            self.background_pos_full[0] if self.full_screen_width else self.background_pos_small[0],
-            self.background_pos_full[1] if self.full_screen_height else self.background_pos_small[1]
-        )
-
-        clipping_rect = (
-            0 if self.full_screen_width else self.extra_borders[0],
-            0 if self.full_screen_height else self.extra_borders[1],
-            self.buffer_size[0] - (0 if self.full_screen_width else self.extra_borders[0] * 2),
-            self.buffer_size[1] - (0 if self.full_screen_height else self.extra_borders[1] * 2),
-        )
 
         # Clear display
         self.display.fill(PALETTE[self.border_color])
 
-        # Draw video buffer onto background
-        # pygame.draw.rect(self.buffer, (0, 255, 0), self.buffer.get_rect(), width=1)
-        self.background.blit(self.buffer, buffer_pos)
-
         # Draw centered background (with video buffer) centered on display
-        # pygame.draw.rect(self.background, (0, 0, 255), self.background.get_rect(), width=1)
-        self.display.blit(self.background, background_pos, clipping_rect)
+        self.display.blit(self.buffer, self.background_pos_full, (0, 0, 320, 200))
 
         # Update
         if area:
-            area.move_ip(buffer_pos)
-            area.move_ip(background_pos)
+            area.move_ip(self.background_pos_full)
             # pygame.draw.rect(self.display, (255, 0, 0), area, width=1)
             pygame.display.update(area)  # Updates full screen????
-            # pygame.display.flip()
-            # print(area)
         else:
             pygame.display.flip()
-            print("flip!")
 
     def dump(self):
         for attr in dir(self):
@@ -246,7 +220,7 @@ class Screen:
 
         elif address == 0xD021:
             self.background_color = value & 0x0F
-            self.background.fill(PALETTE[self.background_color])
+            self.buffer.fill(PALETTE[self.background_color])
             self.refresh_buffer()
 
 
