@@ -1,8 +1,6 @@
-from typing import Optional
 from datetime import datetime
 
-import hardware.memory
-from .constants import *
+from .constants import BITRANGE, COLORS, PALETTE
 
 from os import environ
 
@@ -123,9 +121,92 @@ class VIC_II:
             self.background_color = value & 0x0F
 
 
-class Screen(VIC_II):
+class RasterScreen(VIC_II):
+    def __init__(self, memory):
+        super().__init__(memory)
+        pygame.display.set_caption("Commodore 64 (Raster)")
+
+        self.video_size = (502, 312)
+
+        self.raster_x = 0
+        self.raster_y = 0
+        self.char_buffer = [0] * 40
+        self.color_buffer = [0] * 40
+
+        self.V_VISIBLE_START = 15
+        self.V_FRAME_START = 51
+        self.V_FRAME_END = 250
+        self.V_VISIBLE_END = 299
+        self.V_LAST = self.video_size[1]
+
+        self.H_VISIBLE_START = 2
+        self.H_LINE_START = 48
+        self.H_LINE_END = 367
+        self.H_VISIBLE_END = 414
+        self.H_LAST = self.video_size[0]
+
+        self.display = pygame.display.set_mode(self.video_size, depth=16)
+        self.clock = pygame.time.Clock()
+        self._last_fps = 0
+
+    def step(self):
+        if (self.V_FRAME_START <= self.raster_y <= self.V_FRAME_END and
+                self.H_LINE_START <= self.raster_x <= self.H_LINE_END):
+            # Raster is in the drawable area
+
+            # Calc char cell and vertical offset
+            char_row = (self.raster_y - self.V_FRAME_START) // 8
+            char_col = (self.raster_x - self.H_LINE_START) // 8
+            raster_row_offset = (self.raster_y - self.V_FRAME_START) % 8
+
+            if not raster_row_offset:  # TODO: take account of v_scroll and maybe other parameters
+                # Fetch chars and colors from memory
+                # (the infamous bad line)
+                self.char_buffer = self.memory.get_slice(0x0400 + char_row * 40, 0x0400 + (char_row + 1) * 40)
+                self.color_buffer = self.memory.get_slice(0xD800 + char_row * 40, 0xD800 + (char_row + 1) * 40)
+
+            font_row = self.memory.get_chargen()[self.char_buffer[char_col] * 8 + raster_row_offset]
+
+            for i, bit in BITRANGE:
+                self.display.set_at((self.raster_x + i, self.raster_y),
+                                    COLORS[self.color_buffer[char_col] & 0x0F] if font_row & bit
+                                    else COLORS[self.background_color])
+
+        elif (self.V_VISIBLE_START <= self.raster_y <= self.V_VISIBLE_END and
+              self.H_VISIBLE_START <= self.raster_x <= self.H_VISIBLE_END):
+            # Raster is in the visible border
+            self.display.fill(PALETTE[self.border_color], (self.raster_x, self.raster_y, 8, 1))
+
+        # else:
+        # Raster is in the invisible area
+        # Do nothing
+        # self.display.fill((0,0,0), rect)
+
+        if self.raster_x > self.H_LAST:
+            # Line is complete
+            self.raster_x = 0
+            if self.raster_y > self.V_LAST:
+                # Frame is complete
+                self.raster_y = 0
+                # Display frame
+                pygame.display.flip()
+
+                # Get FPS
+                self.clock.tick(50)  # Max 50 FPS
+                if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
+                    print(f"{self.clock.get_fps():.3f}")
+                    self._last_fps = current_ticks
+            else:
+                # Advance next scanline
+                self.raster_y += 1
+        else:
+            # Advance next pixel pack
+            self.raster_x += 8
+
+
+class LazyScreen(VIC_II):
     """
-    Screen QAD meta-emulator
+    Screen Q&D meta-emulator
     Just draws chars and their colors, background and borders
     No raster, sprites or other fancy features
     """
@@ -240,10 +321,3 @@ class Screen(VIC_II):
         elif address == 0xD021:
             self.buffer.fill(PALETTE[self.background_color])
             self.refresh_buffer()
-
-
-if __name__ == '__main__':
-    mem = hardware.memory.BytearrayMemory(65536)
-    v = VIC_II()
-    s = Screen()
-    pass
