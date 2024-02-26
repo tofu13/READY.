@@ -57,6 +57,7 @@ assembler file, see [programs](https://github.com/tofu13/READY./tree/master/prog
 
 ### Special keys
 
+- F10 paste (text)
 - F11 enter monitor
 - F12 reset
 

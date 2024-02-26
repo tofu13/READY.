@@ -9,7 +9,7 @@ class Memory:
     chargen, loram, hiram = None, None, None
 
     def __getitem__(self, address: int):
-        # print(f"Memory read at {item}: {value}")
+        # print(f"Memory read at {address}: {value}")
         if 0xA000 <= address <= 0xBFFF:
             if self.hiram and self.loram:
                 return self.roms['basic'][address - 0xA000]
@@ -27,10 +27,6 @@ class Memory:
         return super().__getitem__(address)
 
     def __setitem__(self, address: int, value: int) -> None:
-        # Lazy update
-        if self[address] == value:
-            return
-
         # Hard coded processor port at $01
         if address == 1:
             self.chargen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
@@ -39,6 +35,7 @@ class Memory:
             if start <= address <= end:
                 callback(address, value)
                 break
+
         # print(f"Memory write at {key}: {value}")
         super().__setitem__(address, value)
 
@@ -138,11 +135,12 @@ class Memory:
     def get_slice(self, start: int, end: int):
         """
         Return memory from start to end in a bytearray
+        Warning: ignores ROMs masking, data are always read from (underlying) memory
         :param start:
         :param end:
         :return:
         """
-        return bytearray([self[i] for i in range(start, end)])
+        return super().__getitem__(slice(start, end))
 
     def set_slice(self, start: int, data) -> None:
         """
@@ -151,8 +149,7 @@ class Memory:
         :param data:
         :return:
         """
-        for i, byte in enumerate(data):
-            self[start + i] = byte
+        super().__setitem__(slice(start, start + len(data)), data)
 
     def get_chargen(self):
         """
