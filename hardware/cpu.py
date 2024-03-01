@@ -22,7 +22,7 @@ class CPU:
         #    if not hasattr(self, f"addressing_{addressing}"):
         #        setattr(self, f"addressing_{addressing}", self._not_implemented)
 
-        self.addresing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
+        self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
         self.reset(A, X, Y, PC, SP)
 
     def __str__(self):
@@ -77,7 +77,7 @@ class CPU:
         try:
             # if instruction is None:
             #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
-            address = self.addresing_methods[mode]()
+            address = self.addressing_methods[mode]()
         except Exception as e:
             print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
             return False
