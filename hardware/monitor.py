@@ -3,7 +3,7 @@ d|disass [start] [end] -- disassemble
 m|mem [start] [end] -- show memory as hex and text
 i [start] [end] -- show memory as text
 bk [addres] -- show breakpoints. If address specifies, set one at address 
-s|setp -- execute next instruction
+s|step -- execute next instruction
 del [address] -- delete breakpoint at address
 q|quit -- exit monitor and resume
 reset -- reset machine

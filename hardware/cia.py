@@ -6,7 +6,7 @@ import pyperclip
 from .constants import IRQ_RATE, PETSCII
 
 
-class CIAA:
+class CIA_A:
     def __init__(self, memory):
         self.memory = memory
         self.pipe = None
