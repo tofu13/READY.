@@ -124,7 +124,7 @@ class Machine:
         return base
 
 
-def DefaultMachine()->Machine:
+def DefaultMachine() -> Machine:
     import hardware
     from config import ROMS_FOLDER
     roms = hardware.roms.ROMS(ROMS_FOLDER)
@@ -133,5 +133,5 @@ def DefaultMachine()->Machine:
         memory,
         hardware.cpu.CPU(memory),
         hardware.screen.RasterScreen(memory),
-        hardware.cia.CIAA(memory)
+        hardware.cia.CIA_A(memory)
     )
