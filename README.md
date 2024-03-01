@@ -2,7 +2,8 @@
 
 READY. is an educational Commodore 64 emulator written in python 3.
 
-Target is not perfect emulation, but rather learning how that computer works and rebuilding it after decades.
+Target is not perfect emulation or performance, but rather learning how that computer works and rebuilding it after
+decades.
 
 A special thanks to the numberless sources of information found on the web.
 
@@ -30,32 +31,36 @@ Then download basic, kernal and chargen into roms/ folder.
 
 ### Running the emulator
 
-```python READY. [filename]```
+```shell
+python READY..py```
+```
 
-where ```[filename]``` is a binary object ("cbm format" with address at first two bytes of binary file). It will be
-loaded at $0801 and run. Just omit it for a regular boot.
+### Options
 
-Complete usage:
+```shell
+usage: READY..py [-h] [-s {raster,simple}]
+```
 
 ```
-usage: READY..py [-h] [-1] [-s LOAD_ADDRESS] [filename]
-
 An educational C=64 emulator.
 
-positional arguments:
-  filename              Binary object to be run. If missing boots normally.
-
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -1, --cbm-format      First two bytes of file are little endian load address (like in LOAD"*",8,1)
-  -s LOAD_ADDRESS, --load-address LOAD_ADDRESS
-                        Load binary file at address (if not specified: $0801). Use (escaped)$ or 0x for hex value.
+  -s {raster,simple}, --screen {raster,simple}
+                        Screen driver
 ```
 
-You can use [acme](https://github.com/meonwax/acme) or [xa](https://www.floodgap.com/retrotech/xa) to compile an
-assembler file, see [programs](https://github.com/tofu13/READY./tree/master/programs) folder for some example.
+### Keyboard mapping
 
-### Special keys
+- \ : <left arrow>
+- INS: £
+- ESC: <RUN/STOP>
+- CANC: <DEL>
+- HOME: <HOME>
+- PAGE_UP: <RESTORE>
+- LEFT_ALT: <C=>
+
+Numeric keypad is mapped
 
 - F10 paste (text)
 - F11 enter monitor
@@ -71,15 +76,8 @@ d|disass [start] [end] -- disassemble
 m|mem [start] [end] -- show memory as hex and text
 i [start] [end] -- show memory as text
 bk [addres] -- show breakpoints. If address specifies, set one at address 
-s|setp -- execute next instruction
+s|step -- execute next instruction
 del [address] -- delete breakpoint at address
 q|quit -- exit monitor and resume
 reset -- reset machine
 ```
-
-## Tools:
-
-- https://github.com/meonwax/acme
-- https://www.floodgap.com/retrotech/xa
-- https://github.com/ctyler/6502js
-
