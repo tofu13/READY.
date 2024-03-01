@@ -71,7 +71,6 @@ class CPU:
         Execute next instruction
         :return: False if instruction is BRK or breakpoint hit, else True
         """
-        pc = self.PC
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
         try:
