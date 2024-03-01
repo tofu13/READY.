@@ -122,9 +122,10 @@ class VIC_II:
 
 
 class RasterScreen(VIC_II):
+    CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
+
     def __init__(self, memory):
         super().__init__(memory)
-        pygame.display.set_caption("Commodore 64 (Raster)")
 
         self.video_size = (502, 312)
 
@@ -146,6 +147,7 @@ class RasterScreen(VIC_II):
         self.H_LAST = self.video_size[0]
 
         self.display = pygame.display.set_mode(self.video_size, depth=16)
+        pygame.display.set_caption(self.CAPTION)
         self.clock = pygame.time.Clock()
         self._last_fps = 0
 
@@ -194,7 +196,7 @@ class RasterScreen(VIC_II):
                 # Get FPS
                 self.clock.tick(50)  # Max 50 FPS
                 if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
-                    print(f"{self.clock.get_fps():.3f}")
+                    pygame.display.set_caption(self.CAPTION.format(self.clock.get_fps()))
                     self._last_fps = current_ticks
             else:
                 # Advance next scanline
@@ -210,6 +212,7 @@ class LazyScreen(VIC_II):
     Just draws chars and their colors, background and borders
     No raster, sprites or other fancy features
     """
+    CAPTION = "Commodore 64 (Simple screen)"
 
     def __init__(self, memory):
         super().__init__(memory)
@@ -228,7 +231,7 @@ class LazyScreen(VIC_II):
         self.display_size = (403, 284)
 
         # pygame.init()
-        pygame.display.set_caption("Commodore 64")
+        pygame.display.set_caption(self.CAPTION)
 
         # Display is the entire window drawn - visible area
         self.display = pygame.display.set_mode(self.display_size, flags=pygame.DOUBLEBUF)
