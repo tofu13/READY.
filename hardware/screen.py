@@ -127,7 +127,7 @@ class RasterScreen(VIC_II):
     def __init__(self, memory):
         super().__init__(memory)
 
-        self.video_size = (502, 312)
+        self.video_size = (504, 312)
 
         self.raster_x = 0
         self.raster_y = 0
