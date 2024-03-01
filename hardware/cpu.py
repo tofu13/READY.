@@ -10,6 +10,7 @@ class CPU:
     Y = 0x00
     PC = 0x0000
     SP = 0xFF
+    F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
 
     def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.memory = memory
@@ -22,20 +23,21 @@ class CPU:
         #    if not hasattr(self, f"addressing_{addressing}"):
         #        setattr(self, f"addressing_{addressing}", self._not_implemented)
 
-        self.addresing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
+        self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
         self.reset(A, X, Y, PC, SP)
 
     def __str__(self):
         st = "".join(f"{k}:{v} " for k, v in self.F.items())
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {st}"
 
-    def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+    def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF,
+              F={'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}):
         self.A = A
         self.X = X
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
+        self.F = F
 
     def push(self, value):
         """
@@ -71,13 +73,12 @@ class CPU:
         Execute next instruction
         :return: False if instruction is BRK or breakpoint hit, else True
         """
-        pc = self.PC
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]
         try:
             # if instruction is None:
             #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
-            address = self.addresing_methods[mode]()
+            address = self.addressing_methods[mode]()
         except Exception as e:
             print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
             return False
