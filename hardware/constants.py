@@ -39,6 +39,7 @@ COLORS = [0x000000,
           ]
 
 PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
+BITRANGE = [(7 - k, 2 ** k) for k in range(8)]
 
 OPCODES = {
     0x00: ("BRK", "addressing_IMP"),
