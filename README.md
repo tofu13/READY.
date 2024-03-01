@@ -38,10 +38,12 @@ python READY..py```
 ### Options
 
 ```shell
-usage: READY..py [-h] [-s {raster,simple}]
+python READY..py --help
 ```
 
 ```
+usage: READY..py [-h] [-s {raster,simple}]
+
 An educational C=64 emulator.
 
 options:
