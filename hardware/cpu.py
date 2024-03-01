@@ -10,6 +10,7 @@ class CPU:
     Y = 0x00
     PC = 0x0000
     SP = 0xFF
+    F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
 
     def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.memory = memory
@@ -29,13 +30,14 @@ class CPU:
         st = "".join(f"{k}:{v} " for k, v in self.F.items())
         return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {st}"
 
-    def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+    def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF,
+              F={'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}):
         self.A = A
         self.X = X
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = {'N': 0, 'V': 0, '-': 1, 'B': 0, 'D': 0, 'I': 1, 'Z': 0, 'C': 0}
+        self.F = F
 
     def push(self, value):
         """
