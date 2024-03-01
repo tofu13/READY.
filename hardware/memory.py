@@ -10,12 +10,10 @@ class Memory:
 
     def __getitem__(self, address: int):
         # print(f"Memory read at {address}: {value}")
-        if 0xA000 <= address <= 0xBFFF:
-            if self.hiram and self.loram:
-                return self.roms['basic'][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF:
-            if self.hiram:
-                return self.roms['kernal'][address - 0xE000]
+        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+            return self.roms['basic'][address - 0xA000]
+        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+            return self.roms['kernal'][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
             if not self.chargen and (not self.hiram and not self.loram):
                 return self.roms['chargen'][address - 0xD000]
