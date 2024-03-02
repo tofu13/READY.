@@ -69,7 +69,7 @@ class VIC_II:
             return \
                     self.vertical_raster_scroll | \
                     self.full_screen_height << 3 | \
-                    0 << 4 | \
+                    self.screen_on << 4 | \
                     0 << 5 | \
                     (self.raster_y > 0xFF) << 7
 
@@ -146,6 +146,8 @@ class RasterScreen(VIC_II):
         self.H_VISIBLE_END = 414
         self.H_LAST = self.video_size[0]
 
+        self._frame_on = True
+
         self.display = pygame.display.set_mode(self.video_size, depth=16)
         pygame.display.set_caption(self.CAPTION)
         self.clock = pygame.time.Clock()
@@ -153,7 +155,8 @@ class RasterScreen(VIC_II):
 
     def step(self):
         if (self.V_FRAME_START <= self.raster_y <= self.V_FRAME_END and
-                self.H_LINE_START <= self.raster_x <= self.H_LINE_END):
+                self.H_LINE_START <= self.raster_x <= self.H_LINE_END and
+                self._frame_on):
             # Raster is in the drawable area
 
             # Calc char cell and vertical offset
@@ -190,6 +193,10 @@ class RasterScreen(VIC_II):
             if self.raster_y > self.V_LAST:
                 # Frame is complete
                 self.raster_y = 0
+                # Check if the next frame is blank
+                # This is checked once a frame
+                self._frame_on = self.screen_on
+
                 # Display frame
                 pygame.display.flip()
 
