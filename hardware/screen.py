@@ -171,8 +171,21 @@ class RasterScreen(VIC_II):
             # Get pixel data
             char_col = (self.raster_x - self.H_LINE_START) // 8
             if self.raster_y <= 0xF7 + self.vertical_raster_scroll:  # Note: counting 200 row would be better
-                font_row = self.memory.get_chargen()[
-                    self.char_buffer[char_col] * 8 + (self.raster_y - self.vertical_raster_scroll) % 8]
+                chargen = self.memory.get_chargen()
+                vertical_scroll_pointer = (self.raster_y - self.vertical_raster_scroll) % 8
+
+                # Get pixel data for two characters
+                if char_col > 0:
+                    font_row_left = chargen[self.char_buffer[char_col - 1] * 8 + vertical_scroll_pointer]
+                else:
+                    # Left column empty
+                    font_row_left = 0
+
+                font_row_right = chargen[self.char_buffer[char_col] * 8 + vertical_scroll_pointer]
+
+                # Combine 2 byte of pixel data into 1 scrolled byte
+                font_row = (font_row_left << (8 - self.horizontal_raster_scroll) |
+                            font_row_right >> self.horizontal_raster_scroll)
             else:
                 # Empty bottom partial row
                 font_row = 0
