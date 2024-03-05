@@ -135,8 +135,8 @@ class RasterScreen(VIC_II):
         self.color_buffer = bytearray([0] * 40)
 
         self.V_VISIBLE_START = 15
-        self.V_FRAME_START = 51
-        self.V_FRAME_END = 250
+        self.V_FRAME_START = [55, 51]
+        self.V_FRAME_END = [246, 250]
         self.V_VISIBLE_END = 299
         self.V_LAST = self.video_size[1]
 
@@ -165,7 +165,8 @@ class RasterScreen(VIC_II):
                 self.char_buffer = self.memory.get_slice(char_pointer, char_pointer + 40)
                 self.color_buffer = self.memory.get_slice(color_pointer, color_pointer + 40)
 
-        if (self.V_FRAME_START <= self.raster_y <= self.V_FRAME_END and
+        if (self.V_FRAME_START[self.full_screen_height] <= self.raster_y <= self.V_FRAME_END[
+            self.full_screen_height] and
                 self.H_LINE_START <= self.raster_x <= self.H_LINE_END and
                 self._frame_on):
             # Get pixel data
