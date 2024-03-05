@@ -141,8 +141,8 @@ class RasterScreen(VIC_II):
         self.V_LAST = self.video_size[1]
 
         self.H_VISIBLE_START = 2
-        self.H_LINE_START = 48
-        self.H_LINE_END = 367
+        self.H_LINE_START = [31, 24]
+        self.H_LINE_END = [334, 343]
         self.H_VISIBLE_END = 414
         self.H_LAST = self.video_size[0]
 
@@ -165,13 +165,14 @@ class RasterScreen(VIC_II):
                 self.char_buffer = self.memory.get_slice(char_pointer, char_pointer + 40)
                 self.color_buffer = self.memory.get_slice(color_pointer, color_pointer + 40)
 
-        if (self.V_FRAME_START[self.full_screen_height] <= self.raster_y <= self.V_FRAME_END[
-            self.full_screen_height] and
-                self.H_LINE_START <= self.raster_x <= self.H_LINE_END and
-                self._frame_on):
+        if (self.V_FRAME_START[self.full_screen_height] <= self.raster_y <= self.V_FRAME_END[self.full_screen_height]
+                and
+                self.H_LINE_START[self.full_screen_width] <= self.raster_x <= self.H_LINE_END[self.full_screen_width]
+                and self._frame_on):
+            # Raster is in the pixelated area
             # Get pixel data
-            char_col = (self.raster_x - self.H_LINE_START) // 8
-            if self.raster_y <= 0xF7 + self.vertical_raster_scroll:  # Note: counting 200 row would be better
+            char_col = (self.raster_x - 24) // 8
+            if self.raster_y <= 0xF7 + self.vertical_raster_scroll:  # Note: counting 200 lines would be better
                 chargen = self.memory.get_chargen()
                 vertical_scroll_pointer = (self.raster_y - self.vertical_raster_scroll) % 8
 
@@ -185,8 +186,8 @@ class RasterScreen(VIC_II):
                 font_row_right = chargen[self.char_buffer[char_col] * 8 + vertical_scroll_pointer]
 
                 # Combine 2 byte of pixel data into 1 scrolled byte
-                font_row = (font_row_left << (8 - self.horizontal_raster_scroll) |
-                            font_row_right >> self.horizontal_raster_scroll)
+                font_row = (font_row_left << (7 - self.horizontal_raster_scroll) |
+                            font_row_right >> 1 + self.horizontal_raster_scroll)
             else:
                 # Empty bottom partial row
                 font_row = 0
