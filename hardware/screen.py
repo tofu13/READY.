@@ -359,3 +359,72 @@ class LazyScreen(VIC_II):
         elif address == 0xD021:
             self.buffer.fill(PALETTE[self.background_color])
             self.refresh_buffer()
+
+
+class TextScreen(VIC_II):
+    """
+    Text only screen driver, just text
+    """
+    VIDEO_SIZE = (504, 312)
+    CAPTION = "Commodore 64 (Text) {:.1f} FPS"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.display = pygame.display.set_mode(self.VIDEO_SIZE, depth=16, flags=pygame.SCALED)
+        pygame.display.set_caption(self.CAPTION)
+        self.clock = pygame.time.Clock()
+        self._last_fps = 0
+
+        self.transparent_color = pygame.color.Color(1, 254, 0)
+        self.display.set_colorkey(self.transparent_color)
+
+        self.visible_rect = pygame.rect.Rect(2, 15, 403, 299)
+        self.window_rect = pygame.rect.Rect(24, 51, 320, 200)
+
+        self.clock_counter = 0
+        self.font_cache = self.cache_fonts()
+
+    @property
+    def raster_y(self):
+        return int((datetime.now().microsecond % 20000) / 20000 * 312)
+
+    def cache_fonts(self):
+        cache = []
+        chargen = self.memory.get_chargen()
+        for i in range(512):
+            matrix = chargen[i * 8:(i + 1) * 8]
+
+            char_colors = []
+            for color in PALETTE:
+                font = pygame.Surface((8, 8))
+                for r, row in enumerate(matrix):
+                    for c, bit in enumerate(f"{row:08b}"):
+                        font.set_at((c, r), color if bit == "1" else self.transparent_color)
+                char_colors.append(font)
+                font.set_colorkey(self.transparent_color)
+
+            cache.append(char_colors)
+        return cache
+
+    def step(self):
+        if self.clock_counter > 18656:  # Screen on - no sprites
+            self.clock_counter = 0
+            self.display.fill((0, 0, 0))
+            pygame.draw.rect(self.display, PALETTE[self.border_color], self.visible_rect)
+            if self.DEN:
+                # Display is enabled
+                pygame.draw.rect(self.display, PALETTE[self.background_color], self.window_rect)
+                for col in range(40):
+                    for row in range(25):
+                        pos = row * 40 + col
+                        charcode = self.memory[0x0400 + pos]
+                        color = self.memory[0xD800 + pos]
+                        self.display.blit(self.font_cache[charcode][color], (col * 8 + 24, row * 8 + 51))
+            pygame.display.flip()
+
+            # Get FPS
+            self.clock.tick(50)  # Max 50 FPS
+            if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
+                pygame.display.set_caption(self.CAPTION.format(self.clock.get_fps()))
+                self._last_fps = current_ticks
+        self.clock_counter += 1

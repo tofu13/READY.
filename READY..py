@@ -9,7 +9,7 @@ def main():
         description="An educational C=64 emulator."
     )
     parser.add_argument("-s", "--screen", action='store',
-                        help="Screen driver", default=config.SCREEN, choices=["raster", "simple"])
+                        help="Screen driver", default=config.SCREEN, choices=["raster", "simple", "text"])
     args = parser.parse_args()
 
     roms = hardware.roms.ROMS(config.ROMS_FOLDER)
@@ -19,6 +19,8 @@ def main():
         screen = hardware.screen.RasterScreen(memory)
     elif args.screen == "simple":
         screen = hardware.screen.LazyScreen(memory)
+    elif args.screen == "text":
+        screen = hardware.screen.TextScreen(memory)
     else:
         raise argparse.ArgumentError(f"Invalid screen driver {args.screen}")
     cia_a = hardware.cia.CIA_A(memory)
