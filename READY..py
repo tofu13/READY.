@@ -31,7 +31,13 @@ def main():
     )
 
     # Entry point
+    # c64.cpu.breakpoints.add(0xFCFF)
+    # c64.run(0xFCE2)
+    # c64.save("state8")
+
     c64.run(0xFCE2)
+    # c64.restore("state8")
+    #c64.run(0xFCFF)
 
 
 if __name__ == '__main__':

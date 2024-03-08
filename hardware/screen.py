@@ -28,11 +28,11 @@ class VIC_II:
         self.pointer_bitmap_memory = 0x0000
         self.pointer_screen_memory = 0x0000
 
-        self.horizontal_raster_scroll = 0
-        self.vertical_raster_scroll = 3
-        self.full_screen_width = 1
-        self.full_screen_height = 1
-        self.screen_on = 0
+        self.XSCROLL = 0  # Horizontal scroll
+        self.YSCROLL = 3  # Vertical scroll
+        self.CSEL = 1  # Columns selector
+        self.RSEL = 1  # Rows selector
+        self.DEN = True  # Display enable
         self.bitmap_mode = 0
         self.multicolor_mode = 0
         self.extended_background_mode = 0
@@ -67,9 +67,9 @@ class VIC_II:
             Default: $1B, %00011011.
             """
             return \
-                    self.vertical_raster_scroll | \
-                    self.full_screen_height << 3 | \
-                    0 << 4 | \
+                    self.YSCROLL | \
+                    self.RSEL << 3 | \
+                    self.DEN << 4 | \
                     0 << 5 | \
                     (self.raster_y > 0xFF) << 7
 
@@ -82,8 +82,8 @@ class VIC_II:
             Default: $C8, %11001000.
             """
             return \
-                    self.horizontal_raster_scroll | \
-                    self.full_screen_width << 3 | \
+                    self.XSCROLL | \
+                    self.CSEL << 3 | \
                     0 << 4 | \
                     0b11000000
 
@@ -96,17 +96,17 @@ class VIC_II:
 
     def set_registers(self, address, value):
         if address == 0xD011:
-            self.vertical_raster_scroll = value & 0b00000111
-            self.full_screen_height = (value & 0b00001000) >> 3
-            self.screen_on = (value & 0b00010000) >> 4
+            self.YSCROLL = value & 0b00000111
+            self.RSEL = (value & 0b00001000) >> 3
+            self.DEN = (value & 0b00010000) >> 4
             self.bitmap_mode = (value & 0b00100000) >> 5
             self.extended_background_mode = (value & 0b01000000) >> 6
             # Set bit 8 of irq_raster_line
             self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
 
         elif address == 0xD016:
-            self.horizontal_raster_scroll = value & 0b00000111
-            self.full_screen_width = (value & 0b00001000) >> 3
+            self.XSCROLL = value & 0b00000111
+            self.CSEL = (value & 0b00001000) >> 3
             self.multicolor_mode = (value & 0b00010000) >> 4
 
         elif address == 0xD01A:
@@ -124,72 +124,106 @@ class VIC_II:
 class RasterScreen(VIC_II):
     CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
 
+    VIDEO_SIZE = (504, 312)
+
+    DISPLAY_START = 0x30
+    DISPLAY_END = 0xF7
+
+    H_VISIBLE_START = 0
+    FIRST_COLUMN = [31, 24]
+    LAST_COLUMN = [334, 343]
+    H_VISIBLE_END = 414
+    H_LAST = VIDEO_SIZE[0]
+
+    V_VISIBLE_START = 15
+    FIRST_LINE = [55, 51]
+    LAST_LINE = [246, 250]
+    V_VISIBLE_END = 299
+    V_LAST = VIDEO_SIZE[1]
+
     def __init__(self, memory):
         super().__init__(memory)
 
-        self.video_size = (502, 312)
-
         self.raster_x = 0
         self.raster_y = 0
-        self.char_buffer = [0] * 40
-        self.color_buffer = [0] * 40
+        self.char_buffer = bytearray([32] * 40)
+        self.color_buffer = bytearray([0] * 40)
 
-        self.V_VISIBLE_START = 15
-        self.V_FRAME_START = 51
-        self.V_FRAME_END = 250
-        self.V_VISIBLE_END = 299
-        self.V_LAST = self.video_size[1]
+        self._frame_on = True
 
-        self.H_VISIBLE_START = 2
-        self.H_LINE_START = 48
-        self.H_LINE_END = 367
-        self.H_VISIBLE_END = 414
-        self.H_LAST = self.video_size[0]
-
-        self.display = pygame.display.set_mode(self.video_size, depth=16)
+        self.display = pygame.display.set_mode(self.VIDEO_SIZE, depth=16, flags=pygame.SCALED)
         pygame.display.set_caption(self.CAPTION)
         self.clock = pygame.time.Clock()
         self._last_fps = 0
 
     def step(self):
-        if (self.V_FRAME_START <= self.raster_y <= self.V_FRAME_END and
-                self.H_LINE_START <= self.raster_x <= self.H_LINE_END):
-            # Raster is in the drawable area
-
-            # Calc char cell and vertical offset
-            char_row = (self.raster_y - self.V_FRAME_START) // 8
-            char_col = (self.raster_x - self.H_LINE_START) // 8
-            raster_row_offset = (self.raster_y - self.V_FRAME_START) % 8
-
-            if not raster_row_offset:  # TODO: take account of v_scroll and maybe other parameters
+        if self.raster_x == 0 and self.DISPLAY_START <= self.raster_y <= self.DISPLAY_END and self._frame_on:
+            if self.raster_y % 8 == self.YSCROLL:
                 # Fetch chars and colors from memory
                 # (the infamous bad line)
-                self.char_buffer = self.memory.get_slice(0x0400 + char_row * 40, 0x0400 + (char_row + 1) * 40)
-                self.color_buffer = self.memory.get_slice(0xD800 + char_row * 40, 0xD800 + (char_row + 1) * 40)
+                # TODO: make base pointer parametric (char only, color is fixed)
+                char_pointer = 0X0400 + (self.raster_y - self.DISPLAY_START) // 8 * 40
+                color_pointer = 0XD800 + (self.raster_y - self.DISPLAY_START) // 8 * 40
 
-            font_row = self.memory.get_chargen()[self.char_buffer[char_col] * 8 + raster_row_offset]
+                self.char_buffer = self.memory.get_slice(char_pointer, char_pointer + 40)
+                self.color_buffer = self.memory.get_slice(color_pointer, color_pointer + 40)
 
+        if (self.FIRST_LINE[self.RSEL] <= self.raster_y <= self.LAST_LINE[self.RSEL]
+                and
+                self.FIRST_COLUMN[self.CSEL] <= self.raster_x <= self.LAST_COLUMN[self.CSEL]
+                and self._frame_on):
+            # Raster is in the pixelated area
+            # Get pixel data
+            char_col = (self.raster_x - self.FIRST_COLUMN[1]) // 8  # 24 is always the first column for char data
+            if self.raster_y <= self.DISPLAY_END + self.YSCROLL:  # Note: counting 200 lines would be better
+                chargen = self.memory.get_chargen()
+                vertical_scroll_pointer = (self.raster_y - self.YSCROLL) % 8
+
+                # Get pixel data for two characters
+                if char_col > 0:
+                    byte_left = chargen[self.char_buffer[char_col - 1] * 8 + vertical_scroll_pointer]
+                else:
+                    # Left column empty
+                    byte_left = 0
+
+                byte_right = chargen[self.char_buffer[char_col] * 8 + vertical_scroll_pointer]
+
+                # Combine 2 byte of pixel data into 1 scrolled byte
+                pixels = (byte_left << (8 - self.XSCROLL) | byte_right >> self.XSCROLL)
+            else:
+                # Empty bottom partial row
+                pixels = 0
+
+            # Draw pixels
             for i, bit in BITRANGE:
                 self.display.set_at((self.raster_x + i, self.raster_y),
-                                    COLORS[self.color_buffer[char_col] & 0x0F] if font_row & bit
+                                    COLORS[self.color_buffer[char_col] & 0x0F] if pixels & bit
                                     else COLORS[self.background_color])
 
-        elif (self.V_VISIBLE_START <= self.raster_y <= self.V_VISIBLE_END and
-              self.H_VISIBLE_START <= self.raster_x <= self.H_VISIBLE_END):
+        elif (self.H_VISIBLE_START <= self.raster_x <= self.H_VISIBLE_END and
+              self.V_VISIBLE_START <= self.raster_y <= self.V_VISIBLE_END):
             # Raster is in the visible border
             self.display.fill(PALETTE[self.border_color], (self.raster_x, self.raster_y, 8, 1))
+            # TODO: use pixel-perfect borders with fine column check (and flip-flop), not raw byte advance
 
         # else:
         # Raster is in the invisible area
         # Do nothing
         # self.display.fill((0,0,0), rect)
 
-        if self.raster_x > self.H_LAST:
+        if self.raster_x >= self.H_LAST:
             # Line is complete
             self.raster_x = 0
-            if self.raster_y > self.V_LAST:
+            if self.raster_y >= self.V_LAST:
                 # Frame is complete
                 self.raster_y = 0
+                # Check if the next frame is blank
+                # This is checked once a frame
+                self._frame_on = self.DEN
+                # Clear line buffers
+                self.char_buffer = bytearray([32] * 40)
+                self.color_buffer = bytearray([0] * 40)
+
                 # Display frame
                 pygame.display.flip()
 
@@ -201,6 +235,7 @@ class RasterScreen(VIC_II):
             else:
                 # Advance next scanline
                 self.raster_y += 1
+
         else:
             # Advance next pixel pack
             self.raster_x += 8
