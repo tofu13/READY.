@@ -18,6 +18,7 @@ class VIC_II:
 
     def __init__(self, memory):
         self.memory = memory
+        self.memory[0xD020] = 0x0E  # Default border color
 
         # Watchers
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
@@ -28,26 +29,15 @@ class VIC_II:
         self.pointer_bitmap_memory = 0x0000
         self.pointer_screen_memory = 0x0000
 
-        self.XSCROLL = 0  # Horizontal scroll
-        self.YSCROLL = 3  # Vertical scroll
-        self.CSEL = 1  # Columns selector
-        self.RSEL = 1  # Rows selector
-        self.DEN = True  # Display enable
-        self.bitmap_mode = 0
-        self.multicolor_mode = 0
-        self.extended_background_mode = 0
+        self.irq_raster_enabled = 0
+        self.irq_sprite_background_collision_enabled = 0
+        self.irq_sprite_sprite_collision_enabled = 0
 
         self.irq_raster_line = 0
         self.irq_raster_enabled = 1
         self.irq_sprite_background_collision_enabled = 1
         self.irq_sprite_sprite_collision_enabled = 1
         self.irq_status_register = 0
-
-        self.border_color = 14
-        self.background_color = 6
-        self.extra_background_color_1 = 0
-        self.extra_background_color_2 = 0
-        self.extra_background_color_3 = 0
 
     def step(self):
         pass
@@ -66,59 +56,102 @@ class VIC_II:
 
             Default: $1B, %00011011.
             """
-            return \
-                    self.YSCROLL | \
-                    self.RSEL << 3 | \
-                    self.DEN << 4 | \
-                    0 << 5 | \
-                    (self.raster_y > 0xFF) << 7
-
-        elif address == 0xD016:
-            """
-            Screen control register #2. Bits:
-            Bits #0-#2: Horizontal raster scroll.
-            Bit #3: Screen width; 0 = 38 columns; 1 = 40 columns.
-            Bit #4: 1 = Multicolor mode on.
-            Default: $C8, %11001000.
-            """
-            return \
-                    self.XSCROLL | \
-                    self.CSEL << 3 | \
-                    0 << 4 | \
-                    0b11000000
+            return self.memory.read(0XD011) & 0b0111111 + ((self.raster_y > 0xFF) << 7)
 
         elif address == 0xD012:
             return self.raster_y & 0xFF
 
-        if address == 0xD019:
+        elif address == 0xD019:
             return 1  # Temporary, to be completed
         return value
 
     def set_registers(self, address, value):
-        if address == 0xD011:
-            self.YSCROLL = value & 0b00000111
-            self.RSEL = (value & 0b00001000) >> 3
-            self.DEN = (value & 0b00010000) >> 4
-            self.bitmap_mode = (value & 0b00100000) >> 5
-            self.extended_background_mode = (value & 0b01000000) >> 6
+        if address == 0xD011 and False:
             # Set bit 8 of irq_raster_line
             self.irq_raster_line = (value & 0b10000000) << 1 | (self.irq_raster_line & 0xFF)
 
-        elif address == 0xD016:
-            self.XSCROLL = value & 0b00000111
-            self.CSEL = (value & 0b00001000) >> 3
-            self.multicolor_mode = (value & 0b00010000) >> 4
+        elif address == 0xD018:
+            # self.video_matrix_base_address = (value & 0b11110000) >> 4
+            self.font_data_base_address = (value & 0b00001110) >> 1
+            self.VMCSN_unused = value & 1
 
         elif address == 0xD01A:
             self.irq_raster_enabled = value & 0b0001
             self.irq_sprite_background_collision_enabled = value & 0b0010
             self.irq_sprite_sprite_collision_enabled = value & 0b0100
 
-        elif address == 0xD020:
-            self.border_color = value & 0x0F
+    @property
+    def memory_bank(self):
+        # Bits in the VIC bank register are inverted
+        return (3 - self.memory[0xDD00] & 0b11) << 14
 
-        elif address == 0xD021:
-            self.background_color = value & 0x0F
+    @property
+    def video_matrix_base_address(self):
+        return self.memory_bank + (self.memory[0xD018] & 0b11110000) << 6
+
+    @property
+    def character_generator_base_address(self):
+        return self.memory_bank + (self.memory[0xD018] & 0b00001110) << 10
+
+    @property
+    def Y_SCROLL(self):
+        # 0XD011 bits #0-2
+        return self.memory[0xD011] & 0x07
+
+    @property
+    def RSEL(self):
+        # 0XD011 bit #3
+        return bool(self.memory[0xD011] & 0xb1000)
+
+    @property
+    def DEN(self):
+        # 0XD011 bit #4
+        return bool(self.memory[0xD011] & 0b00010000)
+
+    @property
+    def bitmap_mode(self):
+        # 0XD011 bit #5
+        return bool(self.memory[0XD011] & 0b10000)
+
+    @property
+    def extended_background(self):
+        # 0XD011 bit #6
+        return bool(self.memory[0XD011] & 0b100000)
+
+    @property
+    def X_SCROLL(self):
+        # 0XD016 bits #0-2
+        return self.memory[0xD016] & 0x07
+
+    @property
+    def CSEL(self):
+        # 0XD016 bit #3
+        return bool(self.memory[0xD016] & 0b1000)
+
+    @property
+    def multicolor_mode(self):
+        # 0XD016 bit #3
+        return bool(self.memory[0xD016] & 0b10000)
+
+    @property
+    def border_color(self):
+        return self.memory[0xD020] & 0x0F
+
+    @property
+    def background_color(self):
+        return self.memory[0xD021] & 0x0F
+
+    @property
+    def background_color_1(self):
+        return self.memory[0xD022] & 0x0F
+
+    @property
+    def background_color_2(self):
+        return self.memory[0xD023] & 0x0F
+
+    @property
+    def background_color_3(self):
+        return self.memory[0xD024] & 0x0F
 
 
 class RasterScreen(VIC_II):
@@ -158,7 +191,7 @@ class RasterScreen(VIC_II):
 
     def step(self):
         if self.raster_x == 0 and self.DISPLAY_START <= self.raster_y <= self.DISPLAY_END and self._frame_on:
-            if self.raster_y % 8 == self.YSCROLL:
+            if self.raster_y % 8 == self.Y_SCROLL:
                 # Fetch chars and colors from memory
                 # (the infamous bad line)
                 # TODO: make base pointer parametric (char only, color is fixed)
@@ -175,9 +208,9 @@ class RasterScreen(VIC_II):
             # Raster is in the pixelated area
             # Get pixel data
             char_col = (self.raster_x - self.FIRST_COLUMN[1]) // 8  # 24 is always the first column for char data
-            if self.raster_y <= self.DISPLAY_END + self.YSCROLL:  # Note: counting 200 lines would be better
+            if self.raster_y <= self.DISPLAY_END + self.Y_SCROLL:  # Note: counting 200 lines would be better
                 chargen = self.memory.get_chargen()
-                vertical_scroll_pointer = (self.raster_y - self.YSCROLL) % 8
+                vertical_scroll_pointer = (self.raster_y - self.Y_SCROLL) % 8
 
                 # Get pixel data for two characters
                 if char_col > 0:
@@ -189,7 +222,7 @@ class RasterScreen(VIC_II):
                 byte_right = chargen[self.char_buffer[char_col] * 8 + vertical_scroll_pointer]
 
                 # Combine 2 byte of pixel data into 1 scrolled byte
-                pixels = (byte_left << (8 - self.XSCROLL) | byte_right >> self.XSCROLL)
+                pixels = (byte_left << (8 - self.X_SCROLL) | byte_right >> self.X_SCROLL)
             else:
                 # Empty bottom partial row
                 pixels = 0
@@ -409,6 +442,7 @@ class TextScreen(VIC_II):
     def step(self):
         if self.clock_counter > 18656:  # Screen on - no sprites
             self.clock_counter = 0
+            char_base = self.video_matrix_base_address
             self.display.fill((0, 0, 0))
             pygame.draw.rect(self.display, PALETTE[self.border_color], self.visible_rect)
             if self.DEN:
@@ -417,7 +451,7 @@ class TextScreen(VIC_II):
                 for col in range(40):
                     for row in range(25):
                         pos = row * 40 + col
-                        charcode = self.memory[0x0400 + pos]
+                        charcode = self.memory[char_base + pos]
                         color = self.memory[0xD800 + pos]
                         self.display.blit(self.font_cache[charcode][color], (col * 8 + 24, row * 8 + 51))
             pygame.display.flip()
