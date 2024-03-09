@@ -1,5 +1,5 @@
 from multiprocessing import Array
-from hardware.constants import *
+from hardware.constants import OPCODES
 
 
 class Memory:
@@ -8,7 +8,7 @@ class Memory:
     roms = {}
     chargen, loram, hiram = None, None, None
 
-    def __getitem__(self, address: int):
+    def __getitem__(self, address: int) -> int:
         # print(f"Memory read at {address}: {value}")
         if 0xA000 <= address <= 0xBFFF and self.HIRAM and self.LORAM:
             return self.roms['basic'][address - 0xA000]
@@ -37,15 +37,15 @@ class Memory:
         return self.dump()
 
     @property
-    def LORAM(self):
+    def LORAM(self) -> bool:
         return bool(super().__getitem__(1) & 0b1)
 
     @property
-    def HIRAM(self):
+    def HIRAM(self) -> bool:
         return bool(super().__getitem__(1) & 0b10)
 
     @property
-    def CHAREN(self):
+    def CHAREN(self) -> bool:
         return bool(super().__getitem__(1) & 0b100)
 
     def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
@@ -138,19 +138,19 @@ class Memory:
 
         return output, step
 
-    def read(self, address):
+    def read(self, address) -> int:
         """
         Direct read from memory, no masking
         """
         return super().__getitem__(address)
 
-    def write(self, address, value):
+    def write(self, address, value) -> None:
         """
-        Direct write from memory, no masking
+        Direct write to memory, no masking
         """
         super().__setitem__(address, value)
 
-    def get_slice(self, start: int, end: int):
+    def get_slice(self, start: int, end: int) -> bytearray:
         """
         Return memory from start to end in a bytearray
         Warning: ignores ROMs masking, data are always read from (underlying) memory
@@ -169,7 +169,7 @@ class Memory:
         """
         super().__setitem__(slice(start, start + len(data)), data)
 
-    def get_chargen(self):
+    def get_chargen(self) -> bytearray:
         """
         Quick returns chargen rom
         :return:
