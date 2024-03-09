@@ -138,6 +138,18 @@ class Memory:
 
         return output, step
 
+    def read(self, address):
+        """
+        Direct read from memory, no masking
+        """
+        return super().__getitem__(address)
+
+    def write(self, address, value):
+        """
+        Direct write from memory, no masking
+        """
+        super().__setitem__(address, value)
+
     def get_slice(self, start: int, end: int):
         """
         Return memory from start to end in a bytearray
