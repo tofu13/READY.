@@ -1,2 +1,2 @@
 ROMS_FOLDER = "roms"
-SCREEN = "raster"
+SCREEN = "text"

@@ -42,13 +42,13 @@ python READY..py --help
 ```
 
 ```
-usage: READY..py [-h] [-s {raster,simple}]
+usage: READY..py [-h] [-s {raster,simple,text}]
 
 An educational C=64 emulator.
 
 options:
   -h, --help            show this help message and exit
-  -s {raster,simple}, --screen {raster,simple}
+  -s {raster,simple,text}, --screen {raster,simple,text}
                         Screen driver
 ```
 
