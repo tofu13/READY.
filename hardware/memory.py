@@ -1,5 +1,5 @@
 from multiprocessing import Array
-from hardware.constants import *
+from hardware.constants import OPCODES
 
 
 class Memory:
@@ -8,14 +8,14 @@ class Memory:
     roms = {}
     chargen, loram, hiram = None, None, None
 
-    def __getitem__(self, address: int):
+    def __getitem__(self, address: int) -> int:
         # print(f"Memory read at {address}: {value}")
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+        if 0xA000 <= address <= 0xBFFF and self.HIRAM and self.LORAM:
             return self.roms['basic'][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+        elif 0xE000 <= address <= 0xFFFF and self.HIRAM:
             return self.roms['kernal'][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
-            if not self.chargen and (not self.hiram and not self.loram):
+            if not self.CHAREN and (not self.HIRAM and not self.LORAM):
                 return self.roms['chargen'][address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
@@ -25,10 +25,6 @@ class Memory:
         return super().__getitem__(address)
 
     def __setitem__(self, address: int, value: int) -> None:
-        # Hard coded processor port at $01
-        if address == 1:
-            self.chargen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
-
         for start, end, callback in self.write_watchers:
             if start <= address <= end:
                 callback(address, value)
@@ -39,6 +35,18 @@ class Memory:
 
     def __str__(self):
         return self.dump()
+
+    @property
+    def LORAM(self) -> bool:
+        return bool(super().__getitem__(1) & 0b1)
+
+    @property
+    def HIRAM(self) -> bool:
+        return bool(super().__getitem__(1) & 0b10)
+
+    @property
+    def CHAREN(self) -> bool:
+        return bool(super().__getitem__(1) & 0b100)
 
     def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
         """
@@ -130,7 +138,19 @@ class Memory:
 
         return output, step
 
-    def get_slice(self, start: int, end: int):
+    def read(self, address) -> int:
+        """
+        Direct read from memory, no masking
+        """
+        return super().__getitem__(address)
+
+    def write(self, address, value) -> None:
+        """
+        Direct write to memory, no masking
+        """
+        super().__setitem__(address, value)
+
+    def get_slice(self, start: int, end: int) -> bytearray:
         """
         Return memory from start to end in a bytearray
         Warning: ignores ROMs masking, data are always read from (underlying) memory
@@ -149,7 +169,7 @@ class Memory:
         """
         super().__setitem__(slice(start, start + len(data)), data)
 
-    def get_chargen(self):
+    def get_chargen(self) -> bytearray:
         """
         Quick returns chargen rom
         :return:
