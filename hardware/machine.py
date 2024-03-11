@@ -1,6 +1,9 @@
 import pickle
 
-from hardware.constants import *
+import pygame.event
+import pyperclip
+
+from hardware.constants import PETSCII, TRANSPARENT_COLOR, VIDEO_SIZE
 from hardware import monitor
 
 
@@ -20,6 +23,26 @@ class Machine:
         self.memory[1] = 55
 
         self.input_buffer = ""
+        self._clock_counter = 0
+
+        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=16, flags=pygame.SCALED)
+        pygame.event.set_blocked(None)
+        pygame.event.set_allowed([
+            pygame.QUIT,
+            pygame.WINDOWCLOSE,
+            pygame.KEYDOWN,
+            pygame.KEYUP,
+        ])
+
+        self.display.set_colorkey(TRANSPARENT_COLOR)
+        self.CAPTION = "Commodore 64 (Text) {:.1f} FPS"
+
+        # pygame.display.set_caption(self.CAPTION)
+
+        self.clock = pygame.time.Clock()
+        self._last_fps = 0
+
+        self.paste_buffer = []
 
     def run(self, address):
         """
@@ -30,51 +53,96 @@ class Machine:
         # Setup
         self.cpu.F['B'] = 0
         self.cpu.PC = address
-        running = True
 
-        while running:
-            # Activate monitor on events
+        signal = None
+        nmi = False
 
-            self.monitor_active |= self.cpu.PC in self.cpu.breakpoints
-
-            try:
-                self.screen.step()
-
-                # Execute current instruction
-                running = self.cpu.step()
-
-                # Run CIA A, save interrupts and special events
-                irq, nmi, event = self.ciaA.step()
-
-                if event == "RESET":
-                    self.cpu.reset(PC=0xFCE2)
-                elif event == "MONITOR":
-                    self.monitor_active = True
-                    irq = False  # Clear IRQ when opening monitor
-                elif event == "QUIT":
-                    raise KeyboardInterrupt()
-
-                # Handle CPU lines IRQ and NMI
-                if irq:
-                    self.cpu.irq()
-                if nmi:
-                    self.cpu.nmi()
-
-                if self.input_buffer:
-                    if self.memory[0xC6] == 0:
-                        char = self.input_buffer[0]
-                        self.memory[0x0277] = PETSCII.get(char.lower(), 64)  # Temporary (64=@ for unknown char)
-                        self.memory[0xC6] = 1
-                        self.input_buffer = self.input_buffer[1:]
-                # self.screen.refresh # Tentative raster
-            # Handle exit
-            except KeyboardInterrupt:
-                running = False
-
+        while True:
+            # Activate monitor on breakpoints
+            if self.cpu.breakpoints:
+                self.monitor_active |= self.cpu.PC in self.cpu.breakpoints
             if self.monitor_active:
                 self.monitor_active = self.monitor.run()
+                self.monitor_active = False
+
+            # Run VIC-II cycle
+            frame = self.screen.step()
+
+            # Display complete frame
+            if frame is not None:
+                self.display.blit(frame, (0, 0))
+                pygame.display.flip()
+                # Get FPS
+                self.clock.tick()  # Max 50 FPS
+                if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
+                    pygame.display.set_caption(self.CAPTION.format(self.clock.get_fps()))
+                    self._last_fps = current_ticks
+
+            # Paste text
+            if self.paste_buffer and self.memory[0xC6] == 0:
+                # Inject char into empty keyboard buffer
+                char = self.paste_buffer.pop(0)
+                petscii_code = PETSCII.get(char.lower())
+                if not petscii_code:  # TODO: is None
+                    print(f"WARNING: character {char} not in PETSCII")
+                else:
+                    self.memory[0x277 + self.memory[0xC6]] = petscii_code
+                    # Update buffer length
+                    self.memory[0xC6] += 1
+
+            # Execute current instruction
+            self.cpu.step()
+
+            # Run CIA A, handle interrupt if any
+            if self.ciaA.step():
+                self.cpu.irq()
+
+            self._clock_counter += 1
+            if self._clock_counter % 100000 == 0:
+                signal, nmi = self.manage_events()
+
+            if nmi:
+                self.cpu.nmi()
+                nmi = False
+
+            if signal == "RESET":
+                self.cpu.reset(PC=0xFCE2)
+                signal = None
+            elif signal == "MONITOR":
+                self.monitor_active = True
+                signal = None
 
         # BRK encountered, exit
+
+    def manage_events(self):
+        """
+        Manage system events
+        """
+        signal = None
+        nmi = False
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                # Scan RESTORE key
+                if event.key == pygame.K_PAGEUP:
+                    nmi = True
+                # Also scan special keys
+                elif event.key == pygame.K_F12:
+                    signal = "RESET"
+                elif event.key == pygame.K_F11:
+                    signal = "MONITOR"
+                elif event.key == pygame.K_F10:
+                    # F10 -> paste text
+                    try:
+                        self.paste_buffer = list(pyperclip.paste())
+                    except pyperclip.PyperclipException:
+                        print(
+                            "Can't paste: xsel or xclip system packages not found. "
+                            "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
+
+            elif event.type == pygame.WINDOWCLOSE:
+                pygame.quit()
+
+        return signal, nmi
 
     @classmethod
     def from_file(cls, filename):

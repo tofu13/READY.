@@ -1,7 +1,6 @@
 from time import perf_counter
 
 import pygame
-import pyperclip
 
 from .constants import IRQ_RATE, PETSCII
 
@@ -18,16 +17,12 @@ class CIA_A:
         self.irq_delay = 1.0 / IRQ_RATE
         self.last_irq = perf_counter()
 
-        self.paste_buffer = []
-
     def step(self):
         """
         Execute CIA stuff
         :return: signals [irq, nmi, reset, quit]
         """
         irq = False
-        nmi = False
-        signal = None
 
         # Generate time IRQ
         if (perf_counter() - self.last_irq) >= self.irq_delay:
@@ -36,45 +31,19 @@ class CIA_A:
 
             # Scan RESTORE key for NMI
             # Note: use the same timing as interrupts: not accurate but close to reality
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_PAGEUP:
-                        nmi = True
-                    # Also scan special keys
-                    if event.key == pygame.K_F12:
-                        signal = "RESET"
-                    if event.key == pygame.K_F11:
-                        signal = "MONITOR"
-                    if event.key == pygame.K_F10:
-                        # F10 -> paste text
-                        try:
-                            self.paste_buffer = list(pyperclip.paste())
-                        except pyperclip.PyperclipException:
-                            print(
-                                "Can't paste: xsel or xclip system packages not found. "
-                                "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
-                if event.type == pygame.QUIT:
-                    signal = "QUIT"
 
-        if self.paste_buffer and self.memory[0xC6] == 0:
-            # Inject char into empty keyboard buffer
-            char = self.paste_buffer.pop(0)
-            petscii_code = PETSCII.get(char.lower())
-            if not petscii_code:
-                print(f"WARNING: character {char} not in PETSCII")
-            else:
-                self.memory[0x277 + self.memory[0xC6]] = petscii_code
-                # Update buffer length
-                self.memory[0xC6] += 1
-
-        return irq, nmi, signal
+        return irq
 
     def get_registers(self, address, value):
         if address == 0xDC01:
-            pygame.event.get()
+            # pygame.event.get()  # Unused?
+            pygame.event.pump()
             keypressed = list(pygame.key.get_pressed())
             if not any(keypressed):
                 # Shortcut
+                return 0xFF
+            elif keypressed[pygame.KSCAN_RALT]:
+                # Ignore keyboard commands via RALT
                 return 0xFF
             elif keypressed[pygame.KSCAN_UP]:
                 # Emulate SHIFT+DOWN

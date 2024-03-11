@@ -20,6 +20,8 @@ ROMSLIST = [
     ("kernal", 0xE000, 0xFFFF, 2),
 ]
 
+VIDEO_SIZE = (504, 312)
+
 COLORS = [0x000000,
           0xFFFFFF,
           0x93493E,
@@ -38,7 +40,10 @@ COLORS = [0x000000,
           0xB5B5B5
           ]
 
+TRANSPARENT_COLOR = pygame.color.Color(1, 254, 0)
+
 PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
+
 BITRANGE = [(7 - k, 2 ** k) for k in range(8)]
 
 OPCODES = {
@@ -450,6 +455,7 @@ KEYTABLE = {
     # pygame.K_POWER       :[        ,
     # pygame.K_EURO        :[        ,
 }
+
 KEYSCAN = {
     pygame.K_BACKSPACE: [0, 0],
     # pygame.K_TAB         :[\t      ,
