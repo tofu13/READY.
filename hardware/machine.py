@@ -18,14 +18,17 @@ class Machine:
         self.monitor = monitor.Monitor(self)
         self.monitor_active = False
 
-        # Default processor port (HIRAM, LORAM, CHARGEN = 1)
+        # Default processor I/O
         self.memory[0] = 47
+        # Default processor ports  (HIRAM, LORAM, CHARGEN = 1)
         self.memory[1] = 55
+        # Assert datassette stopped
+        self.set_datassette_button_status(False)
 
         self.input_buffer = ""
         self._clock_counter = 0
 
-        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=16, flags=pygame.SCALED)
+        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=16)  # , flags=pygame.SCALED)
         pygame.event.set_blocked(None)
         pygame.event.set_allowed([
             pygame.QUIT,
@@ -125,6 +128,7 @@ class Machine:
                 # Scan RESTORE key
                 if event.key == pygame.K_PAGEUP:
                     nmi = True
+
                 # Also scan special keys
                 elif event.key == pygame.K_F12:
                     signal = "RESET"
@@ -138,6 +142,14 @@ class Machine:
                         print(
                             "Can't paste: xsel or xclip system packages not found. "
                             "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
+
+                # Hardware events
+                elif event.key == pygame.K_p and event.mod & pygame.KMOD_RALT:
+                    # PLAY|REC|FFWD|REW is pressed on datassette
+                    self.set_datassette_button_status(True)
+                elif event.key == pygame.K_s and event.mod & pygame.KMOD_RALT:
+                    # STOP is pressed on datassette
+                    self.set_datassette_button_status(False)
 
             elif event.type == pygame.WINDOWCLOSE:
                 pygame.quit()
@@ -191,6 +203,17 @@ class Machine:
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
 
+    def set_datassette_button_status(self, status: bool):
+        """
+        Set bit #5 of address $01
+        status True (PLAY|REC|FFWD|REW is pressed) -> clear bit
+        status False (STOP has been pressed) -> set bit
+        """
+        # Bypass normal memory write, this is hardwired
+        if status:
+            self.memory.write(0x01, self.memory[0x01] & 0b11101111)
+        else:
+            self.memory.write(0x01, self.memory[0x01] | 0b00010000)
 
 def DefaultMachine() -> Machine:
     import hardware
