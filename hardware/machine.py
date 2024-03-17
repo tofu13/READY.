@@ -47,6 +47,25 @@ class Machine:
 
         self.paste_buffer = []
 
+        # self.cpu.breakpoints.add(0xF4C4)
+
+        self.outfile = open("OUTFILE", "wb")
+
+        self.patches = {
+            0xF4C4: self.patch_IECIN,
+            # 0xEDB9: self.patch_LSTNSA,
+            0xF3D5: self.patch_OPEN,
+            # 0xED0C: self.patch_LISTEN,
+            0xEEA9: self.patch_CLKDATA,
+            0xED40: self.patch_SNDBYT,
+            0xEE13: self.patch_RDBYTE,
+            0xFDF9: self.patch_SETNAM,
+            0xFE99: self.patch_SETLFS,
+        }
+
+        self.serial_device_number = None
+
+
     def run(self, address):
         """
         Main process loop
@@ -67,6 +86,9 @@ class Machine:
             if self.monitor_active:
                 self.monitor_active = self.monitor.run()
                 self.monitor_active = False
+
+            if (patch := self.patches.get(self.cpu.PC)) is not None:
+                patch()
 
             # Run VIC-II cycle
             frame = self.screen.step()
@@ -155,6 +177,56 @@ class Machine:
                 pygame.quit()
 
         return signal, nmi
+
+    def patch_IECIN(self):
+        print("Serial patch IECIN")
+        print(self.cpu.A)  # self.cpu.A = 0x42
+        # self.cpu.PC = 0xEE84
+
+    def patch_LSTNSA(self):
+        print(f"KERNAL patch LSTNSA: A={self.cpu.A}")
+
+    def patch_OPEN(self):
+        print(f"Serial patch openfile: A={self.cpu.A}, Y={self.cpu.Y}")
+
+        self.byteprovider = (byte for byte in self.diskdrive.read(self.filename))
+
+    def patch_LISTEN(self):
+        print(f"KERNAL patch LISTEN: A={self.cpu.A}")
+        self.serial_device_number = self.cpu.A
+
+    def patch_CLKDATA(self):  # Fix name
+        # print(f"KERNAL patch Read CLOCK IN and DATA IN.: A={self.cpu.A}")
+        self.cpu.PC = 0xEEB2  # Skip to RTS
+
+    def patch_SNDBYT(self):  # fix name
+        data = self.memory[0x95]
+        print(f"Write byte to serial bus: data={bytes([data])} {chr(data)}")
+        self.outfile.write(bytes([data]))
+        self.cpu.PC = 0xEDAC  # Jump to RTS
+        # SAQ: ok salva. Ora distingui l'apertura del file dai dati
+
+    def patch_RDBYTE(self):  # fix name
+        try:
+            self.cpu.A = next(self.byteprovider)
+        except StopIteration:
+            self.memory[0x90] |= 0x40
+        else:
+            self.memory[0x90] &= 0xBF
+        print(f"Read byte from serial bus {chr(self.cpu.A)}")
+        self.cpu.PC = 0xEE84
+
+    def patch_SETNAM(self):
+        address = self.cpu._combine(self.cpu.X, self.cpu.Y)
+        length = self.cpu.A
+        self.filename = self.memory.get_slice(address, address + length)
+        print(f"set filename to: {self.filename}")
+
+    def patch_SETLFS(self):
+        self.logical_file_number = self.cpu.A
+        self.serial_device_number = self.cpu.X
+        self.secondary_address = self.cpu.Y
+
 
     @classmethod
     def from_file(cls, filename):
