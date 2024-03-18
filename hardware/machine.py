@@ -3,17 +3,25 @@ import pickle
 import pygame.event
 import pyperclip
 
+import hardware.memory
 from hardware.constants import PETSCII, TRANSPARENT_COLOR, VIDEO_SIZE
 from hardware import monitor
 
 
 class Machine:
-    def __init__(self, memory, cpu, screen, ciaA):
+    def __init__(self,
+                 memory: hardware.memory.Memory,
+                 cpu: hardware.cpu.CPU,
+                 screen: hardware.screen.VIC_II,
+                 ciaA,
+                 diskdrive=None
+                 ):
 
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
         self.ciaA = ciaA
+        self.diskdrive = diskdrive
 
         self.monitor = monitor.Monitor(self)
         self.monitor_active = False
@@ -286,6 +294,7 @@ class Machine:
             self.memory.write(0x01, self.memory[0x01] & 0b11101111)
         else:
             self.memory.write(0x01, self.memory[0x01] | 0b00010000)
+
 
 def DefaultMachine() -> Machine:
     import hardware

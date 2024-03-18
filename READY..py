@@ -24,12 +24,16 @@ def main():
     else:
         raise argparse.ArgumentError(f"Invalid screen driver {args.screen}")
     cia_a = hardware.cia.CIA_A(memory)
+    diskdrive = hardware.disk_drive.Drive()
+    # diskdrive.set_filename("disks/smtpe-v0.5.d64")
+    diskdrive.set_imagefile("disks/An_Introduction_to_basic_Part_1_1983_Commodore_Side_1.d64")
 
     c64 = hardware.machine.Machine(
         memory=memory,
         cpu=cpu,
         screen=screen,
         ciaA=cia_a,
+        diskdrive=diskdrive,
     )
 
     # Entry point
