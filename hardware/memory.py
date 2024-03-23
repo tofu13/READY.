@@ -28,6 +28,9 @@ class Memory:
         # Hard coded processor port at $01
         if address == 1:
             self.chargen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
+            # Set only writable bits in the processor port
+            value &= self[0x00]
+            value |= self[0x01] & (255 - self[0])
 
         for start, end, callback in self.write_watchers:
             if start <= address <= end:

@@ -5,7 +5,7 @@ from hardware.machine import DefaultMachine
 machine = DefaultMachine()
 
 
-def _benchmark_cpu():
+def benchmark_cpu():
     """
             LDX #$0F
     loop:   STX $C000
@@ -20,7 +20,7 @@ def _benchmark_cpu():
     print(t)
 
 
-def _benchmark_cpu_BRK():
+def benchmark_cpu_BRK():
     """
             BRK
     """
@@ -41,11 +41,11 @@ def benchmark_color_bars():
                               0x00]
                              )
     with timing() as t:
-        t.repeat(4, machine.run, 0x0800)
+        t.repeat(1, machine.run, 0x0800)
     print(t)
 
 
-def _benchmark_color_bars_2():
+def benchmark_color_bars_2():
     machine.memory.set_slice(0x0800,
                              [0x01, 0x08, 0xa9, 0x00, 0x85, 0xfb, 0x85, 0xfd,
                               0xa9, 0x04, 0x85, 0xfc, 0xa9, 0xd8, 0x85, 0xfe,
@@ -64,7 +64,38 @@ def _benchmark_color_bars_2():
     print(t)
 
 
+def _benchmark_border():
+    machine.memory.set_slice(0x0800,
+                             [0xa2, 0x00, 0x8e, 0x20, 0xd0, 0xe8, 0x8e, 0x20,
+                              0xd0, 0xca, 0xf0, 0xf6])
+    with timing() as t:
+        t.repeat(1, machine.run, 0x0800)
+    print(t)
+
+
+def _benchmark_basic_char_scroll():
+    """
+10 PRINT CHR$(RND(TI)*64+64);
+20 GOTO 10
+RUN
+    """
+    pass
+
 # Run all benchmarks* a la pytest
 for benchmark in [meth for meth_name, meth in inspect.currentframe().f_locals.items() if
                   meth_name.startswith("benchmark")]:
     benchmark()
+"""
+3.013s
+1.330s
+5.720s
+
+Simplescreen
+2.487s
+0.041s
+1.180s
+5.543s
+
+fps max 
+3.713
+"""
