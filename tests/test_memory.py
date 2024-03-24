@@ -1,11 +1,22 @@
 import pytest
 
+import config
 from hardware.memory import BytearrayMemory
+from hardware import roms
 
 
 @pytest.fixture
 def memory():
     return BytearrayMemory(65536)
+
+
+@pytest.fixture()
+def memory_with_roms():
+    memory = BytearrayMemory(65536, roms=roms.ROMS("../" + config.ROMS_FOLDER))
+    memory.hiram = True
+    memory.loram = True
+    memory.chargen = True
+    return memory
 
 
 def test_instance(memory):
@@ -47,3 +58,11 @@ def test_write_direct(memory):
     memory.write(0xDF00, 24)
     assert memory[0xDF00] == 0
     assert memory.read(0xDF00) == 24
+
+
+def test_read_read_word(memory_with_roms):
+    memory_with_roms[0xC000] = 0xCD
+    memory_with_roms[0xC001] = 0xAB
+
+    assert memory_with_roms.read_address(0xC000) == 0xABCD
+    assert memory_with_roms.read_address(0xFFFC) == 0xFCE2

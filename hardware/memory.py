@@ -139,6 +139,19 @@ class Memory:
         """
         return super().__getitem__(address)
 
+    def read_address(self, address: int) -> int:
+        """
+        Optimized consecutive reads
+        Return big endian word (16-bit address)
+        """
+        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+            lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
+        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+            lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
+        else:
+            lo, hi = super().__getitem__(slice(address, address + 2))
+        return hi * 256 + lo
+
     def write(self, address, value) -> None:
         """
         Direct write to memory, no masking
