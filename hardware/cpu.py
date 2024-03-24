@@ -97,7 +97,7 @@ class CPU:
         if not self.F['I']:
             # print(f"Serving IRQ - PC={self.PC:04X})")
             self._save_state()
-            self.PC = self._combine(self.memory[0xFFFE], self.memory[0xFFFF])
+            self.PC = self.memory.read_address(0xFFFE)
 
     def nmi(self):
         """
@@ -105,7 +105,7 @@ class CPU:
         """
         # print(f"Serving NMI - PC={self.PC:04X})")
         self._save_state()
-        self.PC = self._combine(self.memory[0xFFFA], self.memory[0xFFFB])
+        self.PC = self.memory.read_address(0xFFFA)
 
     # Utils
     def _setNZ(self, value):
@@ -172,7 +172,7 @@ class CPU:
 
     def addressing_ABS(self):
         # Data is accessed using 16-bit address specified as a constant.
-        address = self.memory.read_word(self.PC)
+        address = self.memory.read_address(self.PC)
         self.PC += 2
         return address
 
@@ -185,16 +185,16 @@ class CPU:
     def addressing_ABS_X(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is 
         # added (with carry). 
-        l, h = self.memory[self.PC], self.memory[self.PC + 1]
+        address = self.memory.read_address(self.PC)
         self.PC += 2
-        return self._combine(l, h) + self.X
+        return address + self.X
 
     def addressing_ABS_Y(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is 
         # added (with carry). 
-        l, h = self.memory[self.PC], self.memory[self.PC + 1]
+        address = self.memory.read_address(self.PC)
         self.PC += 2
-        return self._combine(l, h) + self.Y
+        return address + self.Y
 
     def addressing_ZP_X(self):
         # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, 
@@ -218,7 +218,7 @@ class CPU:
             self.memory[self.PC + 1] if self.PC & 0xFF != 0xFF else self.memory[self.PC & 0xFF00])
         self.PC += 2
         address = self._combine(l, h)
-        return self._combine(self.memory[address], self.memory[address + 1])
+        return self.memory.read_address(address)
 
     def addressing_X_IND(self):
         # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, 
@@ -226,13 +226,12 @@ class CPU:
         # accessed. 
         base = self.memory[self.PC] + self.X
         self.PC += 1
-        address = self._combine(self.memory[base], self.memory[base + 1])
-        return address
+        return self.memory.read_address(self.memory[base])
 
     def addressing_IND_Y(self):
         base = self.memory[self.PC]
         self.PC += 1
-        return self._combine(self.memory[base], self.memory[base + 1]) + self.Y
+        return self.memory.read_address(base) + self.Y
 
     # endregion
 
