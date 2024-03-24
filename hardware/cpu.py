@@ -114,7 +114,7 @@ class CPU:
         :param value:
         :return: None
         """
-        self.F['N'] = bool(value & 0b10000000)
+        self.F['N'] = value >= 0x80
         self.F['Z'] = not bool(value)
 
     @staticmethod
@@ -254,7 +254,7 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        self.F['C'] = bool(value & 0b10000000)
+        self.F['C'] = value > 0x80
         result = (value << 1) & 0xFF
         self._setNZ(result)
         if address is None:
@@ -300,7 +300,7 @@ class CPU:
     def BIT(self, address):
         value = self.memory[address]
         self._setNZ(value & self.A)
-        self.F['N'] = bool(value & 0b10000000)
+        self.F['N'] = value >= 0x80
         self.F['V'] = (value & 0x40) >> 6
 
     def CLC(self, address):
@@ -422,7 +422,7 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        _carrytemp = bool(value & 0b10000000)
+        _carrytemp = value >= 0x80
         result = ((value << 1) | self.F['C']) & 0xFF
         self._setNZ(result)
         self.F['C'] = _carrytemp
