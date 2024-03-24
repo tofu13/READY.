@@ -172,9 +172,9 @@ class CPU:
 
     def addressing_ABS(self):
         # Data is accessed using 16-bit address specified as a constant.
-        l, h = self.memory[self.PC], self.memory[self.PC + 1]
+        address = self.memory.read_word(self.PC)
         self.PC += 2
-        return self._combine(l, h)
+        return address
 
     def addressing_ZP(self):
         # An 8-bit address is provided within the zero page.
