@@ -213,7 +213,7 @@ class Machine:
 
     def patch_SNDBYT(self):  # fix name
         data = self.memory[0x95]
-        print(f"Write byte to serial bus: data={bytes([data])} {chr(data)}")
+        # print(f"Write byte to serial bus: data={bytes([data])} {chr(data)}")
         self.outfile.write(bytes([data]))
         self.cpu.PC = 0xEDAC  # Jump to RTS
         # SAQ: ok salva. Ora distingui l'apertura del file dai dati
@@ -225,7 +225,7 @@ class Machine:
             self.memory[0x90] |= 0x40
         else:
             self.memory[0x90] &= 0xBF
-        print(f"Read byte from serial bus {chr(self.cpu.A)}")
+        #print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
