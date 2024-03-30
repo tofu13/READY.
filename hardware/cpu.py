@@ -241,7 +241,7 @@ class CPU:
         self._setNZ(result & 0xFF)
         self.F['C'] = result > 0xFF
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = ((self.A ^ result) & (self.memory[address] ^ result) & 0x80)
+        self.F['V'] = bool((self.A ^ result) & (self.memory[address] ^ result) & 0x80)
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -301,7 +301,7 @@ class CPU:
         value = self.memory[address]
         self._setNZ(value & self.A)
         self.F['N'] = value >= 0x80
-        self.F['V'] = (value & 0x40) >> 6
+        self.F['V'] = bool(value & 0x40)
 
     def CLC(self, address):
         self.F['C'] = 0
@@ -461,7 +461,7 @@ class CPU:
         self._setNZ(result & 0xFF)
         self.F['C'] = result >= 0x00
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = ((self.A ^ result) & ((0xFF - self.memory[address]) ^ result) & 0x80)
+        self.F['V'] = bool((self.A ^ result) & ((0xFF - self.memory[address]) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def SEC(self, address):
