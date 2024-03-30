@@ -83,7 +83,7 @@ class VIC_II:
     @property
     def memory_bank(self):
         # Bits in the VIC bank register are inverted
-        return (3 - self.memory[0xDD00] & 0b11) << 14
+        return (3 - self.memory[0xDD00] & 0b11) << 6
 
     @property
     def video_matrix_base_address(self):
