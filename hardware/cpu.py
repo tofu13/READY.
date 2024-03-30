@@ -304,16 +304,16 @@ class CPU:
         self.F['V'] = bool(value & 0x40)
 
     def CLC(self, address):
-        self.F['C'] = 0
+        self.F['C'] = False
 
     def CLD(self, address):
-        self.F['D'] = 0
+        self.F['D'] = False
 
     def CLI(self, address):
-        self.F['I'] = 0
+        self.F['I'] = False
 
     def CLV(self, address):
-        self.F['V'] = 0
+        self.F['V'] = False
 
     def CMP(self, address):
         result = self.A - self.memory[address]
