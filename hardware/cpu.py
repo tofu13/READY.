@@ -115,7 +115,7 @@ class CPU:
         :return: None
         """
         self.F['N'] = value >= 0x80
-        self.F['Z'] = not bool(value)
+        self.F['Z'] = value == 0
 
     @staticmethod
     def _combine(low, high):
@@ -131,13 +131,13 @@ class CPU:
     def _pack_status_register(value):
         result = 0
         for i, flag in enumerate(value.values()):
-            result |= 2 ** (7 - i) * flag
+            result += BITRANGE[i][1] * flag
         return result
 
     def _unpack_status_register(self, value):
         result = dict()
         for i, flag in enumerate(self.F.keys()):
-            result[flag] = (value & 2 ** (7 - i)) >> (7 - i)
+            result[flag] = bool(value & BITRANGE[i][1])
         return result
 
     def _not_implemented(self, address):
