@@ -115,7 +115,7 @@ class CPU:
         :return: None
         """
         self.F['N'] = value >= 0x80
-        self.F['Z'] = not bool(value)
+        self.F['Z'] = value == 0
 
     @staticmethod
     def _combine(low, high):
@@ -131,13 +131,13 @@ class CPU:
     def _pack_status_register(value):
         result = 0
         for i, flag in enumerate(value.values()):
-            result |= 2 ** (7 - i) * flag
+            result += BITRANGE[i][1] * flag
         return result
 
     def _unpack_status_register(self, value):
         result = dict()
         for i, flag in enumerate(self.F.keys()):
-            result[flag] = (value & 2 ** (7 - i)) >> (7 - i)
+            result[flag] = bool(value & BITRANGE[i][1])
         return result
 
     def _not_implemented(self, address):
@@ -241,7 +241,7 @@ class CPU:
         self._setNZ(result & 0xFF)
         self.F['C'] = result > 0xFF
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = ((self.A ^ result) & (self.memory[address] ^ result) & 0x80)
+        self.F['V'] = bool((self.A ^ result) & (self.memory[address] ^ result) & 0x80)
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -301,19 +301,19 @@ class CPU:
         value = self.memory[address]
         self._setNZ(value & self.A)
         self.F['N'] = value >= 0x80
-        self.F['V'] = (value & 0x40) >> 6
+        self.F['V'] = bool(value & 0x40)
 
     def CLC(self, address):
-        self.F['C'] = 0
+        self.F['C'] = False
 
     def CLD(self, address):
-        self.F['D'] = 0
+        self.F['D'] = False
 
     def CLI(self, address):
-        self.F['I'] = 0
+        self.F['I'] = False
 
     def CLV(self, address):
-        self.F['V'] = 0
+        self.F['V'] = False
 
     def CMP(self, address):
         result = self.A - self.memory[address]
@@ -461,7 +461,7 @@ class CPU:
         self._setNZ(result & 0xFF)
         self.F['C'] = result >= 0x00
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = ((self.A ^ result) & ((0xFF - self.memory[address]) ^ result) & 0x80)
+        self.F['V'] = bool((self.A ^ result) & ((0xFF - self.memory[address]) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def SEC(self, address):
