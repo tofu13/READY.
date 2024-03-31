@@ -44,6 +44,7 @@ TRANSPARENT_COLOR = pygame.color.Color(1, 254, 0)
 
 PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 
+BITVALUES = [k ** 2 for k in range(8)]
 BITRANGE = [(7 - k, 2 ** k) for k in range(8)]
 
 OPCODES = {
