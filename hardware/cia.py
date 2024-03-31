@@ -2,12 +2,65 @@ from time import perf_counter
 
 import pygame
 
-from .constants import IRQ_RATE, PETSCII
+from .constants import IRQ_RATE, PETSCII, BITVALUES
 
 
-class CIA_A:
+class CIA:
     def __init__(self, memory):
         self.memory = memory
+        self.timer_A = 0x0000
+        self.timer_B = 0x0000
+
+        self.timer_A_latch = 0x0000
+        self.timer_B_latch = 0x0000
+
+        self.timer_A_start: bool = False
+        self.timer_B_start: bool = False
+
+        self.timer_A_underflow: bool = False
+        self.timer_A_restart_after_underflow: bool = False
+
+        self.timer_B_underflow: bool = False
+        self.timer_B_restart_after_underflow: bool = False
+
+    def step(self):
+        if self.timer_A_start:
+            self.timer_A -= 1
+            if self.timer_A < 0:
+                self.timer_A_underflow = True
+                if self.timer_A_restart_after_underflow:
+                    self.timer_A_load()
+                else:
+                    self.timer_A_start = False
+
+    def timer_A_load(self):
+        # self.timer_A_underflow = False
+        self.timer_A = self.timer_A_latch
+
+    @property
+    def timer_A_lo(self):
+        return self.timer_A % 256
+
+    @property
+    def timer_A_hi(self):
+        return self.timer_A // 256
+
+    @property
+    def timer_B_lo(self):
+        return self.timer_B % 256
+
+    @property
+    def timer_B_hi(self):
+        return self.timer_B // 256
+
+    @property
+    def irq_occured(self) -> bool:
+        return self.timer_A_underflow or self.timer_B_underflow  # TODO
+
+
+class CIA_A(CIA):
+    def __init__(self, memory):
+        super().__init__(memory)
         self.pipe = None
         self.keyboard_row = 0
         self.keyboard_col = 0
@@ -22,17 +75,8 @@ class CIA_A:
         Execute CIA stuff
         :return: signals [irq, nmi, reset, quit]
         """
-        irq = False
-
-        # Generate time IRQ
-        if (perf_counter() - self.last_irq) >= self.irq_delay:
-            self.last_irq = perf_counter()
-            irq = True
-
-            # Scan RESTORE key for NMI
-            # Note: use the same timing as interrupts: not accurate but close to reality
-
-        return irq
+        super().step()
+        return self.irq_occured
 
     def get_registers(self, address, value):
         if address == 0xDC01:
@@ -212,7 +256,8 @@ class CIA_A:
         pass
 
 
-class CIAB:
+
+class CIA_B(CIA):
     memory = None
 
     def init(self):
