@@ -296,8 +296,8 @@ class CIA_A(CIA):
             # Bit 5..6: always 0
             # Bit 7: 1 = IRQ An interrupt occured, so at least one bit of INT MASK and INT DATA is set in both registers.
             result = sum(
-                bit * weigth
-                for bit, weigth in zip(
+                bit * weight
+                for bit, weight in zip(
                     (
                         self.timer_A_underflow,
                         self.timer_B_underflow,
