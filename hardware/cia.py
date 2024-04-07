@@ -2,7 +2,7 @@ from time import perf_counter
 
 import pygame
 
-from .constants import IRQ_RATE, PETSCII, BITVALUES
+from .constants import IRQ_RATE, BITVALUES
 
 
 class CIA:
@@ -25,7 +25,7 @@ class CIA:
 
         self.tod_zero = perf_counter()
 
-    def step(self):
+    def step(self, *args):
         if self.timer_A_start:
             self.timer_A -= 1
             if self.timer_A < 0:
@@ -86,179 +86,234 @@ class CIA_A(CIA):
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
         self.irq_delay = 1.0 / IRQ_RATE
 
-    def step(self):
+        self.keys_pressed = set()
+
+    def step(self, keys_pressed: set):
         """
         Execute CIA stuff
         :return: signals [irq, nmi, reset, quit]
         """
+        self.keys_pressed = keys_pressed.copy()
         super().step()
         return self.irq_occured
 
     def get_registers(self, address, value):
         if address == 0xDC01:
             # pygame.event.get()  # Unused?
-            pygame.event.pump()
-            keypressed = list(pygame.key.get_pressed())
-            if not any(keypressed):
+            # pygame.event.pump()
+            # keypressed = self.keys_pressed
+            if not self.keys_pressed:
                 # Shortcut
                 return 0xFF
-            elif keypressed[pygame.KSCAN_RALT]:
-                # Ignore keyboard commands via RALT
+            elif pygame.K_RCTRL in self.keys_pressed:
+                # Ignore keyboard commands via RCTRL
                 return 0xFF
-            elif keypressed[pygame.KSCAN_UP]:
+            elif pygame.K_UP in self.keys_pressed:
                 # Emulate SHIFT+DOWN
-                keypressed[pygame.KSCAN_RSHIFT] = True
-                keypressed[pygame.KSCAN_DOWN] = True
-            elif keypressed[pygame.KSCAN_LEFT]:
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_DOWN})
+            elif pygame.K_LEFT in self.keys_pressed:
                 # Emulate SHIFT+RIGHT
-                keypressed[pygame.KSCAN_RSHIFT] = True
-                keypressed[pygame.KSCAN_RIGHT] = True
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_RIGHT})
+            elif pygame.K_INSERT in self.keys_pressed:
+                # Emulate INS (bonus)
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_DELETE})
+            elif {pygame.K_LSHIFT, pygame.K_LESS}.issubset(self.keys_pressed):
+                # Emulate >
+                # Keep shift
+                self.keys_pressed.update({pygame.K_PERIOD})
+            elif pygame.K_LESS in self.keys_pressed:
+                # Emulate <
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_COMMA})
+            elif {pygame.K_RALT, 242}.issubset(self.keys_pressed):
+                # Emulate @
+                self.keys_pressed.difference_update({pygame.K_RALT, 242})
+                self.keys_pressed.update({pygame.K_AT})
+            elif {pygame.K_RALT, 224}.issubset(self.keys_pressed):
+                # Emulate #
+                self.keys_pressed.difference_update({pygame.K_RALT, 224})
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_3})
+            elif {pygame.K_RALT, 232}.issubset(self.keys_pressed):
+                # Emulate [
+                self.keys_pressed.difference_update({pygame.K_RALT, 232})
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_COLON})
+            elif {pygame.K_RALT, pygame.K_PLUS}.issubset(self.keys_pressed):
+                # Emulate ]
+                self.keys_pressed.difference_update({pygame.K_RALT, pygame.K_PLUS})
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_SEMICOLON})
+
+            elif {pygame.K_LSHIFT, pygame.K_QUOTE}.issubset(self.keys_pressed):
+                # Emulate ?
+                # Keep shift
+                self.keys_pressed.update({pygame.K_SLASH})
+            elif {pygame.K_LSHIFT, pygame.K_0}.issubset(self.keys_pressed):
+                # Emulate =
+                # Keep shift
+                self.keys_pressed.update({pygame.K_EQUALS})
+            elif {pygame.K_LSHIFT, pygame.K_3}.issubset(self.keys_pressed):
+                # Emulate £ through pygame.CURRENCYUNIT
+                self.keys_pressed.remove(pygame.K_LSHIFT)
+                self.keys_pressed.update({pygame.K_CURRENCYUNIT})
+            elif pygame.K_QUOTE in self.keys_pressed:
+                # Emulate '
+                self.keys_pressed.update({pygame.K_LSHIFT, pygame.K_7})
+            elif {pygame.K_LSHIFT, pygame.K_COMMA}.issubset(self.keys_pressed):
+                # Emulate ;
+                self.keys_pressed.remove(pygame.K_LSHIFT)
+                self.keys_pressed.update({pygame.K_SEMICOLON})
+            elif {pygame.K_LSHIFT, pygame.K_PERIOD}.issubset(self.keys_pressed):
+                # Emulate :
+                self.keys_pressed.remove(pygame.K_LSHIFT)
+                self.keys_pressed.update({pygame.K_COLON})
+            elif {pygame.K_LSHIFT, pygame.K_PLUS}.issubset(self.keys_pressed):
+                # Emulate *
+                self.keys_pressed.remove(pygame.K_LSHIFT)
+                self.keys_pressed.update({pygame.K_ASTERISK})
 
             col = 0xFF - self.memory[0xDC00]  # Invert bits
             k = 0x00
 
             if col & 0b00000001:
-                if keypressed[pygame.KSCAN_DELETE] or keypressed[pygame.KSCAN_BACKSPACE]:
+                if pygame.K_DELETE in self.keys_pressed or pygame.K_BACKSPACE in self.keys_pressed:
                     k |= 0x01
-                if keypressed[pygame.KSCAN_RETURN] or keypressed[pygame.KSCAN_KP_ENTER]:
+                if pygame.K_RETURN in self.keys_pressed or pygame.K_KP_ENTER in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_RIGHT]:
+                if pygame.K_RIGHT in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_F7]:
+                if pygame.K_F7 in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_F1]:
+                if pygame.K_F1 in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_F3]:
+                if pygame.K_F3 in self.keys_pressed:
                     k |= 0x20
-                if keypressed[pygame.KSCAN_F5]:
+                if pygame.K_F5 in self.keys_pressed:
                     k |= 0x40
-                if keypressed[pygame.KSCAN_DOWN]:
+                if pygame.K_DOWN in self.keys_pressed:
                     k |= 0x80
 
             if col & 0b00000010:
-                if keypressed[pygame.KSCAN_3] or keypressed[pygame.KSCAN_KP3]:
+                if pygame.K_3 in self.keys_pressed or pygame.K_KP3 in self.keys_pressed:
                     k |= 0x01
-                if keypressed[pygame.KSCAN_W]:
+                if pygame.K_w in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_A]:
+                if pygame.K_a in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_4] or keypressed[pygame.KSCAN_KP4]:
+                if pygame.K_4 in self.keys_pressed or pygame.K_KP4 in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_Z]:
+                if pygame.K_z in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_S]:
+                if pygame.K_s in self.keys_pressed:
                     k |= 0x20
-                if keypressed[pygame.KSCAN_E]:
+                if pygame.K_e in self.keys_pressed:
                     k |= 0x40
-                if keypressed[pygame.KSCAN_LSHIFT]:
+                if pygame.K_LSHIFT in self.keys_pressed:
                     k |= 0x80
 
             if col & 0b00000100:
-                if keypressed[pygame.KSCAN_5] or keypressed[pygame.KSCAN_KP5]:
+                if pygame.K_5 in self.keys_pressed or pygame.K_KP5 in self.keys_pressed:
                     k |= 0x01
-                if keypressed[pygame.KSCAN_R]:
+                if pygame.K_r in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_D]:
+                if pygame.K_d in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_6] or keypressed[pygame.KSCAN_KP6]:
+                if pygame.K_6 in self.keys_pressed or pygame.K_KP6 in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_C]:
+                if pygame.K_c in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_F]:
+                if pygame.K_f in self.keys_pressed:
                     k |= 0x20
-                if keypressed[pygame.KSCAN_T]:
+                if pygame.K_t in self.keys_pressed:
                     k |= 0x40
-                if keypressed[pygame.KSCAN_X]:
+                if pygame.K_x in self.keys_pressed:
                     k |= 0x80
 
             if col & 0b00001000:
-                if keypressed[pygame.KSCAN_7] or keypressed[pygame.KSCAN_KP7]:
+                if pygame.K_7 in self.keys_pressed or pygame.K_KP7 in self.keys_pressed:
                     k |= 0x01
-                if keypressed[pygame.KSCAN_Y]:
+                if pygame.K_y in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_G]:
+                if pygame.K_g in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_8] or keypressed[pygame.KSCAN_KP8]:
+                if pygame.K_8 in self.keys_pressed or pygame.K_KP8 in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_B]:
+                if pygame.K_b in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_H]:
+                if pygame.K_h in self.keys_pressed:
                     k |= 0x20
-                if keypressed[pygame.KSCAN_U]:
+                if pygame.K_u in self.keys_pressed:
                     k |= 0x40
-                if keypressed[pygame.KSCAN_V]:
+                if pygame.K_v in self.keys_pressed:
                     k |= 0x80
 
             if col & 0b00010000:
-                if keypressed[pygame.KSCAN_9] or keypressed[pygame.KSCAN_KP9]:
+                if pygame.K_9 in self.keys_pressed or pygame.K_KP9 in self.keys_pressed:
                     k |= 0x01
-                if keypressed[pygame.KSCAN_I]:
+                if pygame.K_i in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_J]:
+                if pygame.K_j in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_0] or keypressed[pygame.KSCAN_KP0]:
+                if pygame.K_0 in self.keys_pressed or pygame.K_KP0 in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_M]:
+                if pygame.K_m in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_K]:
+                if pygame.K_k in self.keys_pressed:
                     k |= 0x20
-                if keypressed[pygame.KSCAN_O]:
+                if pygame.K_o in self.keys_pressed:
                     k |= 0x40
-                if keypressed[pygame.KSCAN_N]:
+                if pygame.K_n in self.keys_pressed:
                     k |= 0x80
 
             if col & 0b00100000:
-                if keypressed[pygame.KSCAN_MINUS] or keypressed[pygame.KSCAN_KP_PLUS]:
+                if pygame.K_PLUS in self.keys_pressed or pygame.K_KP_PLUS in self.keys_pressed:
                     k |= 0x01  # +
-                if keypressed[pygame.KSCAN_P]:
+                if pygame.K_p in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_L]:
+                if pygame.K_l in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_EQUALS] or keypressed[pygame.KSCAN_KP_MINUS]:
+                if pygame.K_MINUS in self.keys_pressed or pygame.K_KP_MINUS in self.keys_pressed:
                     k |= 0x08  # -
-                if keypressed[pygame.KSCAN_PERIOD] or keypressed[pygame.KSCAN_KP_PERIOD]:
+                if pygame.K_PERIOD in self.keys_pressed or pygame.K_KP_PERIOD in self.keys_pressed:
                     k |= 0x10  # .
-                if keypressed[pygame.KSCAN_SEMICOLON]:
+                if pygame.K_COLON in self.keys_pressed:
                     k |= 0x20  # :
-                if keypressed[pygame.KSCAN_LEFTBRACKET]:
+                if pygame.K_AT in self.keys_pressed:
                     k |= 0x40  # @
-                if keypressed[pygame.KSCAN_COMMA]:
+                if pygame.K_COMMA in self.keys_pressed:
                     k |= 0x80  # ,
 
             if col & 0b01000000:
-                if keypressed[pygame.KSCAN_INSERT]:
+                if pygame.K_CURRENCYUNIT in self.keys_pressed:
                     k |= 0x01  # £
-                if keypressed[pygame.KSCAN_RIGHTBRACKET] or keypressed[pygame.KSCAN_KP_MULTIPLY]:
+                if pygame.K_ASTERISK in self.keys_pressed or pygame.K_KP_MULTIPLY in self.keys_pressed:
                     k |= 0x02  # *
-                if keypressed[pygame.KSCAN_APOSTROPHE]:
+                if pygame.K_SEMICOLON in self.keys_pressed:
                     k |= 0x04  # ;
-                if keypressed[pygame.KSCAN_HOME]:
+                if pygame.K_HOME in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_RSHIFT]:
+                if pygame.K_RSHIFT in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_BACKSLASH]:
+                if pygame.K_EQUALS in self.keys_pressed:
                     k |= 0x20  # =
-                if keypressed[pygame.KSCAN_END]:
+                if 232 in self.keys_pressed:
                     k |= 0x40  # Up arrow / pi
-                if keypressed[pygame.KSCAN_SLASH] or keypressed[pygame.KSCAN_KP_DIVIDE]:
+                if pygame.K_SLASH in self.keys_pressed or pygame.K_KP_DIVIDE in self.keys_pressed:
                     k |= 0x80  # /
 
             if col & 0b10000000:
-                if keypressed[pygame.KSCAN_1] or keypressed[pygame.KSCAN_KP1]:
+                if pygame.K_1 in self.keys_pressed or pygame.K_KP1 in self.keys_pressed:
                     k |= 0x01
-                if keypressed[pygame.KSCAN_GRAVE]:
+                if pygame.K_BACKSLASH in self.keys_pressed:
                     k |= 0x02
-                if keypressed[pygame.KSCAN_LCTRL]:
+                if pygame.K_LCTRL in self.keys_pressed:
                     k |= 0x04
-                if keypressed[pygame.KSCAN_2] or keypressed[pygame.KSCAN_KP2]:
+                if pygame.K_2 in self.keys_pressed or pygame.K_KP2 in self.keys_pressed:
                     k |= 0x08
-                if keypressed[pygame.KSCAN_SPACE]:
+                if pygame.K_SPACE in self.keys_pressed:
                     k |= 0x10
-                if keypressed[pygame.KSCAN_LALT]:
+                if pygame.K_LALT in self.keys_pressed:
                     k |= 0x20  # C= KEY
-                if keypressed[pygame.KSCAN_Q]:
+                if pygame.K_q in self.keys_pressed:
                     k |= 0x40
-                if keypressed[pygame.KSCAN_ESCAPE]:
+                if pygame.K_ESCAPE in self.keys_pressed:
                     k |= 0x80  # RUN STOP
 
             return 255 - k
@@ -294,7 +349,7 @@ class CIA_A(CIA):
             # Bit 3: 1 = SDR full or empty, so full byte was transferred, depending of operating mode serial bus
             # Bit 4: 1 = IRQ Signal occured at FLAG-pin (cassette port Data input, serial bus SRQ IN)
             # Bit 5..6: always 0
-            # Bit 7: 1 = IRQ An interrupt occured, so at least one bit of INT MASK and INT DATA is set in both registers.
+            # Bit 7: 1 = IRQ An interrupt occured, so at least one bit of INT MASK and INT DATA is set in both registers
             result = sum(
                 bit * weight
                 for bit, weight in zip(
@@ -331,7 +386,8 @@ class CIA_A(CIA):
         elif address == 0xDC0E:
             # Bit 0: 0 = Stop timer; 1 = Start timer
             # Bit 1: 1 = Indicates a timer underflow at port B in bit 6.
-            # Bit 2: 0 = Through a timer overflow, bit 6 of port B will get high for one cycle , 1 = Through a timer underflow, bit 6 of port B will be inverted
+            # Bit 2: 0 = Through a timer overflow, bit 6 of port B will get high for one cycle ,
+            #        1 = Through a timer underflow, bit 6 of port B will be inverted
             # Bit 3: 0 = Timer-restart after underflow (latch will be reloaded), 1 = Timer stops after underflow.
             # Bit 4: 1 = Load latch into the timer once.
             # Bit 5: 0 = Timer counts system cycles, 1 = Timer counts positive slope at CNT-pin
