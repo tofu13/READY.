@@ -114,7 +114,7 @@ class CPU:
         :param value:
         :return: None
         """
-        self.F['N'] = value >= 0x80
+        self.F['N'] = value >= 0x80 or value < 0
         self.F['Z'] = value == 0
 
     @staticmethod
