@@ -28,7 +28,8 @@ class CPU:
 
     def __str__(self):
         st = "".join(symbol if flag else "." for symbol, flag in self.F.items())
-        return f"{self.PC:04X} A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}"
+        assembly, _ = self.memory.disassemble(self.PC)
+        return f"{self.PC:04X}  {assembly}{' ' * (24 - len(assembly))} - A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}"
 
     def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF,
               F={'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}):

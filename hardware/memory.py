@@ -84,50 +84,49 @@ class Memory:
         # Skip data bytes (or invalid opcodes)
         instruction = instruction or "???"
 
-        if mode == "IMP":
+        if mode == "addressing_IMP":
             arg = ""
             step = 1
-        elif mode == "ABS":
+        elif mode == "addressing_ABS":
             arg = f"${self[address + 2]:02X}{self[address + 1]:02X}"
             step = 3
-        elif mode == "ABS_X":
+        elif mode == "addressing_ABS_X":
             arg = f"${self[address + 2]:02X}{self[address + 1]:02X},X"
             step = 3
-        elif mode == "ABS_Y":
+        elif mode == "addressing_ABS_Y":
             arg = f"${self[address + 2]:02X}{self[address + 1]:02X},Y"
             step = 3
-        elif mode == "REL":
+        elif mode == "addressing_REL":
             delta = self[address + 1]
             arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
             step = 2
-        elif mode == "IMM":
+        elif mode == "addressing_IMM":
             arg = f"#${self[address + 1]:02X}"
             step = 2
-        elif mode == "ZP":
+        elif mode == "addressing_ZP":
             arg = f"${self[address + 1]:02X}"
             step = 2
-        elif mode == "ZP_X":
+        elif mode == "addressing_ZP_X":
             arg = f"${self[address + 1]:02X},X"
             step = 2
-        elif mode == "ZP_Y":
+        elif mode == "addressing_ZP_Y":
             arg = f"${self[address + 1]:02X},Y"
             step = 2
-        elif mode == "IND":
-            arg = f"$({self[address + 2]:02X}{self[address + 1]:02X})"
+        elif mode == "addressing_IND":
+            arg = f"(${self[address + 2]:02X}{self[address + 1]:02X})"
             step = 3
-        elif mode == "X_IND":
+        elif mode == "addressing_X_IND":
             arg = f"$({self[address + 1]:02X},X)"
             step = 3
-        elif mode == "IND_Y":
-            arg = f"$({self[address + 1]:02X}),Y"
-            step = 3
+        elif mode == "addressing_IND_Y":
+            arg = f"(${self[address + 1]:02X}),Y"
+            step = 2
         else:
             # Skip invalid addressing mode
             arg = ""
             step = 1
-
         # Compose line
-        output += f"${address:04X}  {' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
+        output += f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
                   f"{'   ' * (4 - step)}{instruction} {arg}"
         address = (address + step) & 0xFFFF
 
