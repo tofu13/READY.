@@ -27,8 +27,8 @@ class CPU:
         self.reset(A, X, Y, PC, SP)
 
     def __str__(self):
-        st = "".join(f"{k}:{v} " for k, v in self.F.items())
-        return f"A: {self.A:02X} X: {self.X:02X} Y: {self.Y:02X} PC: {self.PC:04X} SP: {self.SP:02X} {st}"
+        st = "".join(symbol if flag else "." for symbol, flag in self.F.items())
+        return f"{self.PC:04X} A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}"
 
     def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF,
               F={'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}):
@@ -114,7 +114,7 @@ class CPU:
         :param value:
         :return: None
         """
-        self.F['N'] = value >= 0x80
+        self.F['N'] = value >= 0x80 or value < 0
         self.F['Z'] = value == 0
 
     @staticmethod
