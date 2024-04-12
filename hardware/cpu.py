@@ -96,6 +96,7 @@ class CPU:
         """
         if not self.F['I']:
             # print(f"Serving IRQ - PC={self.PC:04X})")
+            self.F["I"] = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self._save_state()
             self.PC = self.memory.read_address(0xFFFE)
 
@@ -450,6 +451,7 @@ class CPU:
         self.F = self._unpack_status_register(self.pop())
         value = self.pop() + (self.pop() << 8)
         self.PC = value
+        self.F["I"] = False  # Re-enable interrupts after serving
 
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)

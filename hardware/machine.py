@@ -72,7 +72,7 @@ class Machine:
         }
 
         self.serial_device_number = None
-
+        self.keys_pressed = set()
 
     def run(self, address):
         """
@@ -127,11 +127,11 @@ class Machine:
             self.cpu.step()
 
             # Run CIA A, handle interrupt if any
-            if self.ciaA.step():
+            if self.ciaA.step(self.keys_pressed):
                 self.cpu.irq()
 
             self._clock_counter += 1
-            if self._clock_counter % 100000 == 0:
+            if self._clock_counter % 1000 == 0:
                 signal, nmi = self.manage_events()
 
             if nmi:
@@ -155,6 +155,7 @@ class Machine:
         nmi = False
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
+                self.keys_pressed.add(event.key)
                 # Scan RESTORE key
                 if event.key == pygame.K_PAGEUP:
                     nmi = True
@@ -174,12 +175,15 @@ class Machine:
                             "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
 
                 # Hardware events
-                elif event.key == pygame.K_p and event.mod & pygame.KMOD_RALT:
+                elif event.key == pygame.K_p and event.mod & pygame.KMOD_RCTRL:
                     # PLAY|REC|FFWD|REW is pressed on datassette
                     self.set_datassette_button_status(True)
-                elif event.key == pygame.K_s and event.mod & pygame.KMOD_RALT:
+                elif event.key == pygame.K_s and event.mod & pygame.KMOD_RCTRL:
                     # STOP is pressed on datassette
                     self.set_datassette_button_status(False)
+
+            elif event.type == pygame.KEYUP:
+                self.keys_pressed.remove(event.key)
 
             elif event.type == pygame.WINDOWCLOSE:
                 pygame.quit()
@@ -209,7 +213,7 @@ class Machine:
 
     def patch_SNDBYT(self):  # fix name
         data = self.memory[0x95]
-        print(f"Write byte to serial bus: data={bytes([data])} {chr(data)}")
+        # print(f"Write byte to serial bus: data={bytes([data])} {chr(data)}")
         self.outfile.write(bytes([data]))
         self.cpu.PC = 0xEDAC  # Jump to RTS
         # SAQ: ok salva. Ora distingui l'apertura del file dai dati
@@ -221,7 +225,7 @@ class Machine:
             self.memory[0x90] |= 0x40
         else:
             self.memory[0x90] &= 0xBF
-        print(f"Read byte from serial bus {chr(self.cpu.A)}")
+        #print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
@@ -234,7 +238,6 @@ class Machine:
         self.logical_file_number = self.cpu.A
         self.serial_device_number = self.cpu.X
         self.secondary_address = self.cpu.Y
-
 
     @classmethod
     def from_file(cls, filename):
