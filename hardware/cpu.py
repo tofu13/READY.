@@ -320,16 +320,22 @@ class CPU:
     def CMP(self, address):
         result = self.A - self.memory[address]
         self.F['C'] = result >= 0
+        if result < 0:
+            result += 255
         self._setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory[address]
         self.F['C'] = result >= 0
+        if result < 0:
+            result += 255
         self._setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory[address]
         self.F['C'] = result >= 0
+        if result < 0:
+            result += 255
         self._setNZ(result)
 
     def DEC(self, address):
