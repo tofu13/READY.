@@ -256,7 +256,7 @@ class CPU:
             value = self.A
         else:
             value = self.memory[address]
-        self.F['C'] = value > 0x80
+        self.F['C'] = value >= 0x80
         result = (value << 1) & 0xFF
         self._setNZ(result)
         if address is None:
