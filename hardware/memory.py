@@ -57,7 +57,7 @@ class Memory:
         else:
             if end is None:
                 end = start + 0x0100
-        step = 0x20 if as_chars else 0x10
+        step = 0x28 if as_chars else 0x10
 
         out = ""
         for row in range(start, end, step):

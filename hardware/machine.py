@@ -92,7 +92,7 @@ class Machine:
             if self.cpu.breakpoints:
                 self.monitor_active |= self.cpu.PC in self.cpu.breakpoints
             if self.monitor_active:
-                self.monitor_active = self.monitor.run()
+                self.monitor_active = self.monitor.cmdloop()
                 self.monitor_active = False
 
             if (patch := self.patches.get(self.cpu.PC)) is not None:

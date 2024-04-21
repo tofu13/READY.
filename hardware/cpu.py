@@ -15,7 +15,7 @@ class CPU:
     def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
         self.memory = memory
 
-        self._indent = 0
+        self.indent = 0
         self._debug = False
         self.breakpoints = set()
 
@@ -85,7 +85,8 @@ class CPU:
             except Exception as e:
                 print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
                 raise e
-        return not self.F['B']
+        # Return True for BRK
+        return opcode == 0
 
     def irq(self):
         """
@@ -373,7 +374,7 @@ class CPU:
         self.push((value & 0xFF00) >> 8)  # save high byte of PC
         self.push(value & 0x00FF)  # save low byte of PC
         self.PC = address
-        self._indent += 1
+        self.indent += 1
 
     def LDA(self, address):
         self.A = self.memory[address]
@@ -459,7 +460,7 @@ class CPU:
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
         self.PC = value + 1
-        self._indent -= 1
+        self.indent -= 1
 
     def SBC(self, address):
         result = self.A - self.memory[address] - (1 - self.F['C'])
