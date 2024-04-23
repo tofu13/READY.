@@ -17,7 +17,6 @@ class CPU:
 
         self.indent = 0
         self._debug = False
-        self.breakpoints = set()
 
         self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
         self.reset(A, X, Y, PC, SP)
@@ -65,10 +64,10 @@ class CPU:
         self.PC += 1
         return opcode
 
-    def step(self):
+    def step(self) -> bool:
         """
         Execute next instruction
-        :return: False if instruction is BRK or breakpoint hit, else True
+        :return: False if instruction is BRK, else True
         """
         opcode = self.fetch()
         instruction, mode = OPCODES[opcode]

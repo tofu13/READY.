@@ -146,21 +146,19 @@ class Monitor(cmd.Cmd):
             print(self.machine.memory.dump(self.current_address, end, as_chars=True))
             self.current_address = end
 
-    def do_bk(self, line):
-        args = line.split()
-        if len(args) > 1:
-            print("breakpoint allows max 1 address argument")
-        if len(args) == 1:
-            self.machine.cpu.breakpoints.add(int(args[0], 16))
-        print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
+    def do_bk(self, line: str):
+        if line:
+            address = self.convert(line.split(maxsplit=1)[0])
+            if address is not None:
+                self.machine.breakpoints.add(address)
+        print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
 
     def do_del(self, line):
-        args = line.split()
-        if len(args) == 1:
-            self.machine.cpu.breakpoints.discard(int(args[0], 16))
-            print("\n".join(map(lambda x: f"${x:04X}", self.machine.cpu.breakpoints)))
-        else:
-            print("delete breakpoint needs exactly 1 address argument")
+        if line:
+            address = self.convert(line.split(maxsplit=1)[0])
+            if address is not None:
+                self.machine.breakpoints.discard(address)
+        print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
 
     def do_step(self, line):
         """
