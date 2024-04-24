@@ -160,6 +160,25 @@ class Monitor(cmd.Cmd):
                 self.machine.breakpoints.discard(address)
         print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
 
+    def do_trace(self, line):
+        """
+        trace [<start_address> <end_address>]
+
+        Set a tracing exec from start to end.
+        Without arguments show tracepoints
+        """
+        show = False
+        args = line.split()
+        if len(args) == 2:
+            start = self.convert(args[0])
+            end = self.convert(args[1])
+            if start is not None and end is not None:
+                self.machine.tracepoints.add((start, end))
+                show = True
+        if len(args) == 0 or show:
+            for start, end in self.machine.tracepoints:
+                print(f"${start:04X} - ${end:04X}")
+
     def do_step(self, line):
         """
         step|z [<count>]

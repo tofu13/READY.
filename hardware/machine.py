@@ -75,6 +75,7 @@ class Machine:
         self.keys_pressed = set()
 
         self.breakpoints = set()
+        self.tracepoints = set()
 
     def run(self, address):
         """
@@ -96,6 +97,11 @@ class Machine:
             if self.monitor_active:
                 self.monitor_active = self.monitor.cmdloop()
                 self.monitor_active = False
+
+            if self.tracepoints:
+                for start, end in self.tracepoints:
+                    if start <= self.cpu.PC <= end:
+                        print(self.cpu)
 
             if (patch := self.patches.get(self.cpu.PC)) is not None:
                 patch()
