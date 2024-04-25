@@ -1,4 +1,5 @@
 from os import environ
+import re
 
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
@@ -322,6 +323,20 @@ OPCODES = {
 }
 
 INVERSE_OPCODES = {(mnemonic, addressing): opcode for opcode, (mnemonic, addressing) in OPCODES.items()}
+
+ASSEMBLER_REGEXES = {
+    re.compile(r"^#([$&+%]?[0123456789ABCDEF]{1,8})$", re.I): "IMM",
+    re.compile(r"^\((\$[0123456789ABCDEF]{4})\)$", re.I): "IND",
+    re.compile(r"^(\$[0123456789ABCDEF]{4})$", re.I): "ABS",
+    re.compile(r"^(\$[0123456789ABCDEF]{4}),X$", re.I): "ABS_X",
+    re.compile(r"^(\$[0123456789ABCDEF]{4}),Y$", re.I): "ABS_Y",
+    re.compile(r"^(\$[0123456789ABCDEF]{2})$", re.I): "ZP",
+    re.compile(r"^(\$[0123456789ABCDEF]{2}),X$", re.I): "ZP_X",
+    re.compile(r"^(\$[0123456789ABCDEF]{2}),Y$", re.I): "ZP_Y",
+    re.compile(r"^\((\$[0123456789ABCDEF]{2}),X\)$", re.I): "X_IND",
+    re.compile(r"^\((\$[0123456789ABCDEF]{2})\),Y$", re.I): "IND_Y",
+    # REL addressing not detected here: ambiguous with IMM
+}
 
 KEYTABLE = {
     pygame.K_BACKSPACE: [20, 148, 148],

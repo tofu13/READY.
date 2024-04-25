@@ -1,6 +1,8 @@
 import cmd
 from typing import Optional
 
+from hardware.constants import INVERSE_OPCODES, ASSEMBLER_REGEXES
+
 MONITOR_HELP = """READY. monitor. Commands list:
 d|disass [start] [end] -- disassemble
 m|mem [start] [end] -- show memory as hex and text
@@ -36,42 +38,8 @@ class Monitor(cmd.Cmd):
             if not args:
                 continue
 
-    @staticmethod
-    def convert(value: str) -> Optional[int]:
-        """Return base-10 int from binary %, octal &, decimal +, hex ($) values"""
-        match value[0]:
-            case "%":
-                base = 2
-                value = value[1:]
-            case "&":
-                base = 8
-                value = value[1:]
-            case "+":
-                base = 10
-                value = value[1:]
-            case "$":
-                base = 16
-                value = value[1:]
-            case _:
-                base = 16
-        try:
-            return int(value, base)
-        except Exception as err:
-            print(err)
-            return None
-
-    @staticmethod
-    def multiconvert(value: int) -> list[str]:
-        """Return int converted into different bases"""
-        return [
-            f"%{value:016b}",
-            f"&{value:06o}",
-            f"+{value}",
-            f"${value:04X}",
-        ]
-
     def parse_addresses(self, line: str, span: int = 0x20):
-        args = [self.convert(arg) for arg in line.split(maxsplit=2)]
+        args = [convert(arg) for arg in line.split(maxsplit=2)]
         if None in args:
             # Errors while converting
             return False
@@ -148,14 +116,14 @@ class Monitor(cmd.Cmd):
 
     def do_bk(self, line: str):
         if line:
-            address = self.convert(line.split(maxsplit=1)[0])
+            address = convert(line.split(maxsplit=1)[0])
             if address is not None:
                 self.machine.breakpoints.add(address)
         print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
 
     def do_del(self, line):
         if line:
-            address = self.convert(line.split(maxsplit=1)[0])
+            address = convert(line.split(maxsplit=1)[0])
             if address is not None:
                 self.machine.breakpoints.discard(address)
         print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
@@ -170,8 +138,8 @@ class Monitor(cmd.Cmd):
         show = False
         args = line.split()
         if len(args) == 2:
-            start = self.convert(args[0])
-            end = self.convert(args[1])
+            start = convert(args[0])
+            end = convert(args[1])
             if start is not None and end is not None:
                 self.machine.tracepoints.add((start, end))
                 show = True
@@ -219,7 +187,7 @@ class Monitor(cmd.Cmd):
             case 0:
                 address = self.current_address
             case 1:
-                if (address := self.convert(args[0])) is None:
+                if (address := convert(args[0])) is None:
                     return False
             case _:
                 return False
@@ -232,7 +200,7 @@ class Monitor(cmd.Cmd):
         convert <number>
         """
         args = line.split()
-        if (value := self.convert(args[0])) is not None:
+        if (value := convert(args[0])) is not None:
             print("\n".join(self.multiconvert(value)))
 
     def do_reset(self, line):
@@ -243,6 +211,12 @@ class Monitor(cmd.Cmd):
         """
         self.machine.cpu.reset(PC=0xFCE2)
         return True
+
+    def do_a(self, line):
+        args = line.split()
+        if len(args) == 1:
+            self.current_address = convert(args[0])
+            self.assembler()
 
     """
             #obsolete ?
@@ -267,5 +241,92 @@ class Monitor(cmd.Cmd):
         self.machine.cpu.PC = self.saved_address
         return True
 
-    if __name__ == '__main__':
-        Monitor().cmdloop()
+    def assembler(self):
+        while True:
+            cmd = input(f"{self.current_address:04X}\t")
+            args = cmd.split()
+            match len(args):
+                case 0:
+                    break
+                case 1 | 2:
+                    data = parse_assembly(args, self.current_address)
+                    for byte in data:
+                        self.machine.memory[self.current_address] = byte
+                        self.current_address += 1
+                    if not data:
+                        print("? parse error")
+                case _:
+                    print("? extra arguments")
+                    continue
+
+
+def convert(value: str) -> Optional[int]:
+    """Return base-10 int from binary %, octal &, decimal +, hex ($) values"""
+    if not value:
+        return None
+    match value[0]:
+        case "%":
+            base = 2
+            value = value[1:]
+        case "&":
+            base = 8
+            value = value[1:]
+        case "+":
+            base = 10
+            value = value[1:]
+        case "$":
+            base = 16
+            value = value[1:]
+        case _:
+            base = 16
+    try:
+        return int(value, base)
+    except Exception as err:
+        print(err)
+        return None
+
+
+def multiconvert(value: int) -> list[str]:
+    """Return int converted into different bases"""
+    return [
+        f"%{value:016b}",
+        f"&{value:06o}",
+        f"+{value}",
+        f"${value:04X}",
+    ]
+
+
+def parse_assembly(args: list[str], current_address: int) -> list[int]:
+    data = []
+    mnemonic = args[0].upper()
+    if len(args) == 1:
+        if (opcode := INVERSE_OPCODES.get((mnemonic, "addressing_IMP"))) is not None:
+            data.append(opcode)
+    elif len(args) == 2:
+        # if args[1].startswith("#"):
+        #    if value is not None and (opcode := INVERSE_OPCODES.get((mnemonic, "addressing_IMM"))) is not None:
+        #        data.append(opcode)
+        #        data.append(value)
+        if args[0].upper() in ("BCC", "BCS", "BEQ", "BMI", "BNE", "BPL", "BVC", "BVS"):
+            value = convert(args[1])
+            if value is not None and (opcode := INVERSE_OPCODES.get((mnemonic, "addressing_REL"))) is not None:
+                data.append(opcode)
+                jump = value - current_address - 2  # -2 'cauze PC already stepped
+                # TODO: check jump in range -128 + 127
+                data.append(jump if jump > 0 else 256 + jump)
+        else:
+            for regex, addressing in ASSEMBLER_REGEXES.items():
+                if (match := regex.match(args[1])) is not None:
+                    value = [convert(match.groups()[0])]
+                    if value[0] > 0x0100:
+                        # This is the case when value is an address (16 bits)
+                        value = [value[0] % 0x0100, value[0] // 0x0100]
+                    if (opcode := INVERSE_OPCODES.get((mnemonic, f"addressing_{addressing}"))) is not None:
+                        data.append(opcode)
+                        data.extend(value)
+                    break
+    return data
+
+
+if __name__ == '__main__':
+    Monitor().cmdloop()
