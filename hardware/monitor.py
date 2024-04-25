@@ -235,14 +235,16 @@ class Monitor(cmd.Cmd):
         if (value := self.convert(args[0])) is not None:
             print("\n".join(self.multiconvert(value)))
 
+    def do_reset(self, line):
+        """
+        reset
+
+        Soft reset
+        """
+        self.machine.cpu.reset(PC=0xFCE2)
+        return True
+
     """
-            elif cmd == "reset":
-                self.machine.cpu.reset(PC=0xFCE2)
-                return False
-
-            elif cmd in ("?", "help"):
-                print(MONITOR_HELP)
-
             #obsolete ?
             elif cmd == "buf":
                 self.machine.input_buffer = " ".join(args)
