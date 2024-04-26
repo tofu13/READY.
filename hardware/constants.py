@@ -321,6 +321,8 @@ OPCODES = {
     0xff: (None, ""),
 }
 
+INVERSE_OPCODES = {(mnemonic, addressing): opcode for opcode, (mnemonic, addressing) in OPCODES.items()}
+
 KEYTABLE = {
     pygame.K_BACKSPACE: [20, 148, 148],
     # pygame.K_TAB         :[\t      ,
