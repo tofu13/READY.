@@ -117,7 +117,7 @@ class Memory:
             step = 3
         elif mode == "addressing_X_IND":
             arg = f"$({self[address + 1]:02X},X)"
-            step = 3
+            step = 2
         elif mode == "addressing_IND_Y":
             arg = f"(${self[address + 1]:02X}),Y"
             step = 2
