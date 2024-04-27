@@ -241,7 +241,7 @@ OPCODES = {
     0xb3: (None, ""),
     0xb4: ("LDY", "addressing_ZP_X"),
     0xb5: ("LDA", "addressing_ZP_X"),
-    0xb6: ("LDX", "addressing_ZP_X"),
+    0xb6: ("LDX", "addressing_ZP_Y"),
     0xb7: (None, ""),
     0xb8: ("CLV", "addressing_IMP"),
     0xb9: ("LDA", "addressing_ABS_Y"),
