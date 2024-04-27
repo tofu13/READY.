@@ -1,4 +1,4 @@
-from .constants import *
+from .constants import OPCODES, BITRANGE
 
 
 # noinspection PyPep8Naming
@@ -18,10 +18,6 @@ class CPU:
         self._indent = 0
         self._debug = False
         self.breakpoints = set()
-
-        # for addressing in ADDRESSING_METHODS:
-        #    if not hasattr(self, f"addressing_{addressing}"):
-        #        setattr(self, f"addressing_{addressing}", self._not_implemented)
 
         self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
         self.reset(A, X, Y, PC, SP)
@@ -103,7 +99,7 @@ class CPU:
 
     def nmi(self):
         """
-        Hanlde NNI
+        Hanlde NMI
         """
         # print(f"Serving NMI - PC={self.PC:04X})")
         self._save_state()
