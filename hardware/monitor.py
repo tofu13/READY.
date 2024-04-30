@@ -223,8 +223,8 @@ class Monitor(cmd.Cmd):
 
     def assembler(self):
         while True:
-            cmd = input(f"{self.current_address:04X}\t")
-            args = cmd.split()
+            command = input(f"{self.current_address:04X}\t")
+            args = command.split()
             match len(args):
                 case 0:
                     break

@@ -232,7 +232,7 @@ class Machine:
             self.memory[0x90] |= 0x40
         else:
             self.memory[0x90] &= 0xBF
-        #print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
+        # print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
@@ -284,12 +284,12 @@ class Machine:
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
             # First two bytes are base address for loading into memory (little endian)
-            l, h = f.read(2)
+            lo, hi = f.read(2)
             if format_cbm:
-                base = h << 8 | l
+                base = hi << 8 | lo
             data = f.read()
-        for i, b in enumerate(data):
-            self.memory[base + i] = b
+        for i, byte in enumerate(data):
+            self.memory[base + i] = byte
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
 

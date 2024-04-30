@@ -12,7 +12,7 @@ class CPU:
     SP = 0xFF
     F = {'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}
 
-    def __init__(self, memory, A=0, X=0, Y=0, PC=0x0000, SP=0xFF):
+    def __init__(self, memory, A: int = 0, X: int = 0, Y: int = 0, PC: int = 0x0000, SP: int = 0xFF):
         self.memory = memory
 
         self.indent = 0
@@ -28,14 +28,13 @@ class CPU:
                 f"{assembly}{' ' * (24 - len(assembly))} - "
                 f"A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}")
 
-    def reset(self, A=0, X=0, Y=0, PC=0x0000, SP=0xFF,
-              F={'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}):
+    def reset(self, A: int = 0, X: int = 0, Y: int = 0, PC: int = 0x0000, SP: int = 0xFF, F: dict = None) -> None:
         self.A = A
         self.X = X
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.F = F
+        self.F = F or {'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}
 
     def push(self, value):
         """
@@ -214,10 +213,10 @@ class CPU:
         # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the
         # opcode. 
         # Note: replicate bug when address is on page boundary
-        l, h = self.memory[self.PC], (
+        lo, hi = self.memory[self.PC], (
             self.memory[self.PC + 1] if self.PC & 0xFF != 0xFF else self.memory[self.PC & 0xFF00])
         self.PC += 2
-        address = self._combine(l, h)
+        address = self._combine(lo, hi)
         return self.memory.read_address(address)
 
     def addressing_X_IND(self):
