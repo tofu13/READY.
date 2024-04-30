@@ -94,7 +94,7 @@ class Machine:
             if self.breakpoints:
                 self.monitor_active |= self.cpu.PC in self.breakpoints
             if self.monitor_active:
-                self.monitor_active = self.monitor.cmdloop()
+                self.monitor.cmdloop()
                 self.monitor_active = False
 
             if self.tracepoints:
