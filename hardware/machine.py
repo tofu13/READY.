@@ -74,6 +74,9 @@ class Machine:
         self.serial_device_number = None
         self.keys_pressed = set()
 
+        self.breakpoints = set()
+        self.tracepoints = set()
+
     def run(self, address):
         """
         Main process loop
@@ -89,11 +92,16 @@ class Machine:
 
         while True:
             # Activate monitor on breakpoints
-            if self.cpu.breakpoints:
-                self.monitor_active |= self.cpu.PC in self.cpu.breakpoints
+            if self.breakpoints:
+                self.monitor_active |= self.cpu.PC in self.breakpoints
             if self.monitor_active:
-                self.monitor_active = self.monitor.run()
+                self.monitor_active = self.monitor.cmdloop()
                 self.monitor_active = False
+
+            if self.tracepoints:
+                for start, end in self.tracepoints:
+                    if start <= self.cpu.PC <= end:
+                        print(self.cpu)
 
             if (patch := self.patches.get(self.cpu.PC)) is not None:
                 patch()
