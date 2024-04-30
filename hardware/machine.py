@@ -4,7 +4,7 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import PETSCII, TRANSPARENT_COLOR, VIDEO_SIZE
+from hardware.constants import PETSCII, VIDEO_SIZE
 from hardware import monitor
 
 
@@ -45,7 +45,6 @@ class Machine:
             pygame.KEYUP,
         ])
 
-        self.display.set_colorkey(TRANSPARENT_COLOR)
         self.CAPTION = "Commodore 64 (Text) {:.1f} FPS"
 
         # pygame.display.set_caption(self.CAPTION)

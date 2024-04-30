@@ -1,9 +1,4 @@
-from os import environ
 import re
-
-environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-
-import pygame
 
 DEFAULT_LOAD_ADDRESS = 0x0801
 
@@ -40,8 +35,6 @@ COLORS = [0x000000,
           0x877BDF,
           0xB5B5B5
           ]
-
-TRANSPARENT_COLOR = pygame.color.Color(1, 254, 0)
 
 PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 

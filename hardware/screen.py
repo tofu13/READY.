@@ -1,12 +1,14 @@
 from datetime import datetime
 
-from .constants import BITRANGE, COLORS, PALETTE, TRANSPARENT_COLOR, VIDEO_SIZE
+from .constants import BITRANGE, COLORS, PALETTE, VIDEO_SIZE
 
 from os import environ
 
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
+
+TRANSPARENT_COLOR = pygame.color.Color(1, 254, 0)
 
 
 # noinspection PyUnresolvedReferences
