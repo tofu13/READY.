@@ -201,7 +201,7 @@ class Monitor(cmd.Cmd):
         """
         args = line.split()
         if (value := convert(args[0])) is not None:
-            print("\n".join(self.multiconvert(value)))
+            print("\n".join(multiconvert(value)))
 
     def do_reset(self, line):
         """
