@@ -12,7 +12,7 @@ def memory():
 
 @pytest.fixture()
 def memory_with_roms():
-    memory = BytearrayMemory(65536, roms=roms.ROMS("../" + config.ROMS_FOLDER))
+    memory = BytearrayMemory(65536, roms=roms.ROMS("../../" + config.ROMS_FOLDER))
     memory.hiram = True
     memory.loram = True
     memory.chargen = True
@@ -60,6 +60,7 @@ def test_write_direct(memory):
     assert memory.read(0xDF00) == 24
 
 
+@pytest.mark.skip("Enable me when ROMs in folder")
 def test_read_read_word(memory_with_roms):
     memory_with_roms[0xC000] = 0xCD
     memory_with_roms[0xC001] = 0xAB
