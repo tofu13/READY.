@@ -3,17 +3,6 @@ from typing import Optional
 
 from hardware.constants import INVERSE_OPCODES, ASSEMBLER_REGEXES
 
-MONITOR_HELP = """READY. monitor. Commands list:
-d|disass [start] [end] -- disassemble
-m|mem [start] [end] -- show memory as hex and text
-i [start] [end] -- show memory as text
-bk [addres] -- show breakpoints. If address specifies, set one at address 
-s|step -- execute next instruction
-del [address] -- delete breakpoint at address
-q|quit -- exit monitor and resume
-reset -- reset machine
-"""
-
 
 class Monitor(cmd.Cmd):
     use_rawinput = False
@@ -28,15 +17,6 @@ class Monitor(cmd.Cmd):
         super().__init__()
         self.machine = machine
         self.current_address = None
-
-    def _run(self):
-        self.current_address = self.machine.cpu.PC
-        print(self.machine.cpu)
-        loop = True
-        while loop:
-            args = input(f"${self.current_address:04x}> ").split()
-            if not args:
-                continue
 
     def parse_addresses(self, line: str, span: int = 0x20):
         args = [convert(arg) for arg in line.split(maxsplit=2)]
@@ -56,7 +36,7 @@ class Monitor(cmd.Cmd):
             case _:
                 # Extra arguments
                 return False
-        return (start, end)
+        return start, end
 
     def preloop(self):
         self.saved_address = self.machine.cpu.PC
@@ -201,7 +181,7 @@ class Monitor(cmd.Cmd):
         """
         args = line.split()
         if (value := convert(args[0])) is not None:
-            print("\n".join(self.multiconvert(value)))
+            print("\n".join(multiconvert(value)))
 
     def do_reset(self, line):
         """
@@ -232,7 +212,7 @@ class Monitor(cmd.Cmd):
                     print(e)
     """
 
-    def do_x(self, args):
+    def do_x(self, line):
         """
         x
 
@@ -243,8 +223,8 @@ class Monitor(cmd.Cmd):
 
     def assembler(self):
         while True:
-            cmd = input(f"{self.current_address:04X}\t")
-            args = cmd.split()
+            command = input(f"{self.current_address:04X}\t")
+            args = command.split()
             match len(args):
                 case 0:
                     break
@@ -326,7 +306,3 @@ def parse_assembly(args: list[str], current_address: int) -> list[int]:
                         data.extend(value)
                     break
     return data
-
-
-if __name__ == '__main__':
-    Monitor().cmdloop()

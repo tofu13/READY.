@@ -7,3 +7,5 @@ from . import cia
 from . import disk_drive
 
 from . import monitor
+
+__all__ = ["memory", "roms", "cpu", "screen", "machine", "cia", "disk_drive", "monitor"]

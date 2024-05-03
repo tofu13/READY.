@@ -1,12 +1,14 @@
 from datetime import datetime
 
-from .constants import BITRANGE, COLORS, PALETTE, TRANSPARENT_COLOR, VIDEO_SIZE
+from .constants import BITRANGE, COLORS, PALETTE, VIDEO_SIZE
 
 from os import environ
 
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
-import pygame
+import pygame  # noqa -- weird pygame
+
+TRANSPARENT_COLOR = pygame.color.Color(1, 254, 0)
 
 
 # noinspection PyUnresolvedReferences
@@ -47,7 +49,8 @@ class VIC_II:
             """
             Bits #0-#2: Vertical raster scroll.
             Bit #3: Screen height; 0 = 24 rows; 1 = 25 rows.
-            Bit #4: 0 = Screen off, complete screen is covered by border; 1 = Screen on, normal screen contents are visible.
+            Bit #4: 0 = Screen off, complete screen is covered by border; 
+                    1 = Screen on, normal screen contents are visible.
             Bit #5: 0 = Text mode; 1 = Bitmap mode.
             Bit #6: 1 = Extended background mode on.
             Bit #7: Read: Current raster line (bit #8).

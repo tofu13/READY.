@@ -1,6 +1,6 @@
 import os
 
-from .constants import *
+from .constants import ROMSLIST
 
 
 class ROMS:

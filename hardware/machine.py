@@ -4,7 +4,7 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import PETSCII, TRANSPARENT_COLOR, VIDEO_SIZE
+from hardware.constants import PETSCII, VIDEO_SIZE
 from hardware import monitor
 
 
@@ -45,7 +45,6 @@ class Machine:
             pygame.KEYUP,
         ])
 
-        self.display.set_colorkey(TRANSPARENT_COLOR)
         self.CAPTION = "Commodore 64 (Text) {:.1f} FPS"
 
         # pygame.display.set_caption(self.CAPTION)
@@ -95,7 +94,7 @@ class Machine:
             if self.breakpoints:
                 self.monitor_active |= self.cpu.PC in self.breakpoints
             if self.monitor_active:
-                self.monitor_active = self.monitor.cmdloop()
+                self.monitor.cmdloop()
                 self.monitor_active = False
 
             if self.tracepoints:
@@ -233,7 +232,7 @@ class Machine:
             self.memory[0x90] |= 0x40
         else:
             self.memory[0x90] &= 0xBF
-        #print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
+        # print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
@@ -285,12 +284,12 @@ class Machine:
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:
             # First two bytes are base address for loading into memory (little endian)
-            l, h = f.read(2)
+            lo, hi = f.read(2)
             if format_cbm:
-                base = h << 8 | l
+                base = hi << 8 | lo
             data = f.read()
-        for i, b in enumerate(data):
-            self.memory[base + i] = b
+        for i, byte in enumerate(data):
+            self.memory[base + i] = byte
         print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
 
