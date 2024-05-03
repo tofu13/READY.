@@ -1,9 +1,6 @@
-import d64
 import pytest
 
-import config
 from hardware import disk_drive
-from hardware import roms
 
 
 @pytest.fixture
