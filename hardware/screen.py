@@ -6,7 +6,7 @@ from os import environ
 
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
-import pygame
+import pygame  # noqa -- weird pygame
 
 TRANSPARENT_COLOR = pygame.color.Color(1, 254, 0)
 
