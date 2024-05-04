@@ -2,7 +2,7 @@ from time import perf_counter
 
 import pygame
 
-from .constants import IRQ_RATE, BITVALUES
+from .constants import BITVALUES
 
 
 class CIA:
@@ -84,7 +84,6 @@ class CIA_A(CIA):
 
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
-        self.irq_delay = 1.0 / IRQ_RATE
 
         self.keys_pressed = set()
 
