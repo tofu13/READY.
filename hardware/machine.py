@@ -33,6 +33,9 @@ class Machine:
         # Assert datassette stopped
         self.set_datassette_button_status(False)
 
+        self.signal = None
+        self.nmi = False
+
         self.input_buffer = ""
         self._clock_counter = 0
 
@@ -78,81 +81,81 @@ class Machine:
 
     def run(self, address):
         """
-        Main process loop
-        :param address: address to run from
+        Run main loop
         """
 
         # Setup
         self.cpu.F['B'] = 0
         self.cpu.PC = address
 
-        signal = None
-        nmi = False
-
         while True:
-            # Activate monitor on breakpoints
-            if self.breakpoints:
-                self.monitor_active |= self.cpu.PC in self.breakpoints
-            if self.monitor_active:
-                self.monitor.cmdloop()
-                self.monitor_active = False
+            self.step()
 
-            if self.tracepoints:
-                for start, end in self.tracepoints:
-                    if start <= self.cpu.PC <= end:
-                        print(self.cpu)
+    def step(self):
+        """
+        Run a single step of all devices
+        """
+        # Activate monitor on breakpoints
+        if self.breakpoints:
+            self.monitor_active |= self.cpu.PC in self.breakpoints
+        if self.monitor_active:
+            self.monitor.cmdloop()
+            self.monitor_active = False
 
-            if (patch := self.patches.get(self.cpu.PC)) is not None:
-                patch()
+        if self.tracepoints:
+            for start, end in self.tracepoints:
+                if start <= self.cpu.PC <= end:
+                    print(self.cpu)
 
-            # Run VIC-II cycle
-            frame = self.screen.step()
+        if (patch := self.patches.get(self.cpu.PC)) is not None:
+            patch()
 
-            # Display complete frame
-            if frame is not None:
-                self.display.blit(frame, (0, 0))
-                pygame.display.flip()
-                # Get FPS
-                self.clock.tick()  # Max 50 FPS
-                if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
-                    pygame.display.set_caption(self.CAPTION.format(self.clock.get_fps()))
-                    self._last_fps = current_ticks
+        # Run VIC-II
+        frame = self.screen.step()
 
-            # Paste text
-            if self.paste_buffer and self.memory[0xC6] == 0:
-                # Inject char into empty keyboard buffer
-                char = self.paste_buffer.pop(0)
-                petscii_code = PETSCII.get(char.lower())
-                if not petscii_code:  # TODO: is None
-                    print(f"WARNING: character {char} not in PETSCII")
-                else:
-                    self.memory[0x277 + self.memory[0xC6]] = petscii_code
-                    # Update buffer length
-                    self.memory[0xC6] += 1
+        # Display complete frame
+        if frame is not None:
+            self.display.blit(frame, (0, 0))
+            pygame.display.flip()
+            # Get FPS
+            self.clock.tick()  # Max 50 FPS
+            if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
+                pygame.display.set_caption(self.CAPTION.format(self.clock.get_fps()))
+                self._last_fps = current_ticks
 
-            # Execute current instruction
-            self.cpu.step()
+        # Paste text
+        if self.paste_buffer and self.memory[0xC6] == 0:
+            # Inject char into empty keyboard buffer
+            char = self.paste_buffer.pop(0)
+            petscii_code = PETSCII.get(char.lower())
+            if not petscii_code:  # TODO: is None
+                print(f"WARNING: character {char} not in PETSCII")
+            else:
+                self.memory[0x277 + self.memory[0xC6]] = petscii_code
+                # Update buffer length
+                self.memory[0xC6] += 1
 
-            # Run CIA A, handle interrupt if any
-            if self.ciaA.step(self.keys_pressed):
-                self.cpu.irq()
+        # Run CPU
+        self.cpu.step()
 
-            self._clock_counter += 1
-            if self._clock_counter % 1000 == 0:
-                signal, nmi = self.manage_events()
+        # Run CIA A, handle interrupt if any
+        if self.ciaA.step(self.keys_pressed):
+            self.cpu.irq()
 
-            if nmi:
-                self.cpu.nmi()
-                nmi = False
+        self._clock_counter += 1
+        if self._clock_counter % 1000 == 0:
+            self.signal, self.nmi = self.manage_events()
 
-            if signal == "RESET":
-                self.cpu.reset(PC=0xFCE2)
-                signal = None
-            elif signal == "MONITOR":
-                self.monitor_active = True
-                signal = None
+        if self.nmi:
+            self.cpu.nmi()
+            self.nmi = False
 
-        # BRK encountered, exit
+        if self.signal == "RESET":
+            self.cpu.reset(PC=0xFCE2)
+            self.signal = None
+        elif self.signal == "MONITOR":
+            self.monitor_active = True
+            self.signal = None
 
     def manage_events(self):
         """
