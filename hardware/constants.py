@@ -87,7 +87,7 @@ OPCODES = {
     0x28: ("PLP", "addressing_IMP", 4),
     0x29: ("AND", "addressing_IMM", 2),
     0x2a: ("ROL", "addressing_IMP", 2),
-    0x2b: ("ANC", "addressing_IMM"),  # TODO: ???
+    0x2b: (None, "", 0),
     0x2c: ("BIT", "addressing_ABS", 4),
     0x2d: ("AND", "addressing_ABS", 4),
     0x2e: ("ROL", "addressing_ABS", 6),
@@ -96,7 +96,7 @@ OPCODES = {
     0x30: ("BMI", "addressing_REL", 2),
     0x31: ("AND", "addressing_IND_Y", 5),
     0x32: (None, "", 0),
-    0x33: ("RLA", "addressing_IND_Y"),  # TODO: ???
+    0x33: (None, "", 0),
     0x34: (None, "", 0),
     0x35: ("AND", "addressing_ZP_X", 4),
     0x36: ("ROL", "addressing_ZP_X", 6),
@@ -104,7 +104,7 @@ OPCODES = {
     0x38: ("SEC", "addressing_IMP", 2),
     0x39: ("AND", "addressing_ABS_Y", 4),
     0x3a: (None, "", 0),
-    0x3b: ("RLA", "addressing_ABS_Y"),  # TODO: ???
+    0x3b: (None, "", 0),
     0x3c: (None, "", 0),
     0x3d: ("AND", "addressing_ABS_X", 4),
     0x3e: ("ROL", "addressing_ABS_X", 7),
@@ -121,7 +121,7 @@ OPCODES = {
     0x48: ("PHA", "addressing_IMP", 3),
     0x49: ("EOR", "addressing_IMM", 2),
     0x4a: ("LSR", "addressing_IMP", 2),
-    0x4b: ("ALR", "addressing_IMM"),  # TODO: ???
+    0x4b: (None, "", 0),
     0x4c: ("JMP", "addressing_ABS", 3),
     0x4d: ("EOR", "addressing_ABS", 4),
     0x4e: ("LSR", "addressing_ABS", 6),
@@ -138,7 +138,7 @@ OPCODES = {
     0x58: ("CLI", "addressing_IMP", 2),
     0x59: ("EOR", "addressing_ABS_Y", 4),
     0x5a: (None, "", 0),
-    0x5b: ("SRE", "addressing_ABS_Y"),  # TODO: ???
+    0x5b: (None, "", 0),
     0x5c: (None, "", 0),
     0x5d: ("EOR", "addressing_ABS_X", 4),
     0x5e: ("LSR", "addressing_ABS_X", 7),
@@ -168,7 +168,7 @@ OPCODES = {
     0x74: (None, "", 0),
     0x75: ("ADC", "addressing_ZP_X", 4),
     0x76: ("ROR", "addressing_ZP_X", 6),
-    0x77: ("RRA", "addressing_ZP_X"),  # TODO: ???
+    0x77: (None, "", 0),
     0x78: ("SEI", "addressing_IMP", 2),
     0x79: ("ADC", "addressing_ABS_Y", 4),
     0x7a: (None, "", 0),
@@ -207,9 +207,9 @@ OPCODES = {
     0x99: ("STA", "addressing_ABS_Y", 5),
     0x9a: ("TXS", "addressing_IMP", 2),
     0x9b: (None, "", 0),
-    0x9c: ("SHY", "addressing_ABS_X"),  # TODO: ???
+    0x9c: (None, "", 0),
     0x9d: ("STA", "addressing_ABS_X", 5),
-    0x9e: ("SHX", "addressing_ABS_X"),  # TODO: ???
+    0x9e: (None, "", 0),
     0x9f: (None, "", 0),
 
     0xa0: ("LDY", "addressing_IMM", 2),
@@ -315,7 +315,7 @@ OPCODES = {
     0xff: (None, "", 0),
 }
 
-INVERSE_OPCODES = {(mnemonic, addressing): opcode for opcode, (mnemonic, addressing) in OPCODES.items()}
+INVERSE_OPCODES = {(mnemonic, addressing): opcode for opcode, (mnemonic, addressing, _) in OPCODES.items()}
 
 ASSEMBLER_REGEXES = {
     re.compile(r"^#([$&+%]?[0123456789ABCDEF]{1,8})$", re.I): "IMM",
