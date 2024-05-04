@@ -21,6 +21,8 @@ class CPU:
         self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
         self.reset(A, X, Y, PC, SP)
 
+        self._cycles_left = 0
+
     def __str__(self):
         st = "".join(symbol if flag else "." for symbol, flag in self.F.items())
         assembly, _ = self.memory.disassemble(self.PC)
@@ -65,44 +67,43 @@ class CPU:
         self.PC += 1
         return opcode
 
-    def step(self) -> bool:
+    def clock(self) -> None:
         """
         Execute next instruction
-        :return: False if instruction is BRK, else True
         """
+        if self._cycles_left > 0:
+            # Still working on last instruction
+            self._cycles_left -= 1
+            return
+
         opcode = self.fetch()
-        instruction, mode = OPCODES[opcode]
+        instruction, mode, self._cycles_left = OPCODES[opcode]
         try:
             # if instruction is None:
             #    raise ValueError(f"Opcode {opcode:02X} not implemented at {pc}")
             address = self.addressing_methods[mode]()
         except Exception as e:
             print(f"ERROR at ${self.PC:04X}, {instruction} {mode}: {e}")
-            return False
         else:
             try:
                 getattr(self, instruction)(address)
             except Exception as e:
                 print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
                 raise e
-        # Return True for BRK
-        return opcode == 0
 
     def irq(self):
         """
-        Hanlde IRQ
+        Handle IRQ
         """
         if not self.F['I']:
-            # print(f"Serving IRQ - PC={self.PC:04X})")
             self.F["I"] = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self._save_state()
             self.PC = self.memory.read_address(0xFFFE)
 
     def nmi(self):
         """
-        Hanlde NMI
+        Handle NMI
         """
-        # print(f"Serving NMI - PC={self.PC:04X})")
         self._save_state()
         self.PC = self.memory.read_address(0xFFFA)
 

@@ -25,7 +25,7 @@ class CIA:
 
         self.tod_zero = perf_counter()
 
-    def step(self, *args):
+    def clock(self, *args):
         if self.timer_A_start:
             self.timer_A -= 1
             if self.timer_A < 0:
@@ -87,13 +87,13 @@ class CIA_A(CIA):
 
         self.keys_pressed = set()
 
-    def step(self, keys_pressed: set):
+    def clock(self, keys_pressed: set):
         """
         Execute CIA stuff
         :return: signals [irq, nmi, reset, quit]
         """
         self.keys_pressed = keys_pressed.copy()
-        super().step()
+        super().clock()
         return self.irq_occured
 
     def get_registers(self, address, value):
@@ -410,7 +410,7 @@ class CIA_B(CIA):
         self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
         self.memory.write_watchers.append((0xDD00, 0xDDFF, self.set_registers))
 
-    def step(self):
+    def clock(self):
         pass
 
     def get_registers(self, address, value):

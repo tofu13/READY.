@@ -41,7 +41,7 @@ class VIC_II:
         self.irq_sprite_sprite_collision_enabled = 1
         self.irq_status_register = 0
 
-    def step(self):
+    def clock(self):
         pass
 
     def get_registers(self, address, value):
@@ -187,7 +187,7 @@ class RasterScreen(VIC_II):
 
         self.frame = pygame.Surface(VIDEO_SIZE)
 
-    def step(self):
+    def clock(self):
         if self.raster_x == 0 and self.DISPLAY_START <= self.raster_y <= self.DISPLAY_END and self._frame_on:
             if self.raster_y % 8 == self.Y_SCROLL:
                 # Fetch chars and colors from memory
@@ -422,7 +422,7 @@ class TextScreen(VIC_II):
             cache.append(char_colors)
         return cache
 
-    def step(self) -> pygame.Surface:
+    def clock(self) -> pygame.Surface:
         if self.clock_counter > 18656:  # Screen on - no sprites
             self.clock_counter = 0
             char_base = self.video_matrix_base_address
