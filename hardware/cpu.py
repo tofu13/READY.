@@ -67,10 +67,9 @@ class CPU:
         self.PC += 1
         return opcode
 
-    def step(self) -> None:
+    def clock(self) -> None:
         """
         Execute next instruction
-        :return: False if instruction is BRK, else True
         """
         if self._cycles_left > 0:
             # Still working on last instruction
@@ -91,24 +90,20 @@ class CPU:
             except Exception as e:
                 print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
                 raise e
-        # Return True for BRK
-        return
 
     def irq(self):
         """
-        Hanlde IRQ
+        Handle IRQ
         """
         if not self.F['I']:
-            # print(f"Serving IRQ - PC={self.PC:04X})")
             self.F["I"] = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self._save_state()
             self.PC = self.memory.read_address(0xFFFE)
 
     def nmi(self):
         """
-        Hanlde NMI
+        Handle NMI
         """
-        # print(f"Serving NMI - PC={self.PC:04X})")
         self._save_state()
         self.PC = self.memory.read_address(0xFFFA)
 

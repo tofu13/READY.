@@ -52,7 +52,7 @@ class Machine:
 
         # pygame.display.set_caption(self.CAPTION)
 
-        self.clock = pygame.time.Clock()
+        self.pygame_clock = pygame.time.Clock()
         self._last_fps = 0
 
         self.paste_buffer = []
@@ -89,9 +89,9 @@ class Machine:
         self.cpu.PC = address
 
         while True:
-            self.step()
+            self.clock()
 
-    def step(self):
+    def clock(self):
         """
         Run a single step of all devices
         """
@@ -111,16 +111,16 @@ class Machine:
             patch()
 
         # Run VIC-II
-        frame = self.screen.step()
+        frame = self.screen.clock()
 
         # Display complete frame
         if frame is not None:
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
             # Get FPS
-            self.clock.tick()  # Max 50 FPS
+            self.pygame_clock.tick()  # Max 50 FPS
             if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
-                pygame.display.set_caption(self.CAPTION.format(self.clock.get_fps()))
+                pygame.display.set_caption(self.CAPTION.format(self.pygame_clock.get_fps()))
                 self._last_fps = current_ticks
 
         # Paste text
@@ -136,10 +136,10 @@ class Machine:
                 self.memory[0xC6] += 1
 
         # Run CPU
-        self.cpu.step()
+        self.cpu.clock()
 
         # Run CIA A, handle interrupt if any
-        if self.ciaA.step(self.keys_pressed):
+        if self.ciaA.clock(self.keys_pressed):
             self.cpu.irq()
 
         self._clock_counter += 1
