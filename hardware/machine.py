@@ -4,7 +4,7 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import PETSCII, VIDEO_SIZE
+from hardware.constants import PETSCII, SCREEN_CHARCODE, VIDEO_SIZE
 from hardware import monitor
 
 
@@ -14,7 +14,8 @@ class Machine:
                  cpu: hardware.cpu.CPU,
                  screen: hardware.screen.VIC_II,
                  ciaA,
-                 diskdrive=None
+                 diskdrive=None,
+                 console=False
                  ):
 
         self.memory = memory
@@ -22,6 +23,7 @@ class Machine:
         self.screen = screen
         self.ciaA = ciaA
         self.diskdrive = diskdrive
+        self.console = console
 
         self.monitor = monitor.Monitor(self)
         self.monitor_active = False
@@ -145,6 +147,10 @@ class Machine:
         self._clock_counter += 1
         if self._clock_counter % 1000 == 0:
             self.signal, self.nmi = self.manage_events()
+            if self.console:
+                # Send screen to console
+                print("\033[H\033[1J", end="")  # Clear screen
+                print(self.screendump())
 
         if self.nmi:
             self.cpu.nmi()
@@ -307,6 +313,15 @@ class Machine:
             self.memory.write(0x01, self.memory[0x01] & 0b11101111)
         else:
             self.memory.write(0x01, self.memory[0x01] | 0b00010000)
+
+    def screendump(self) -> str:
+        dump = ""
+        base = self.screen.video_matrix_base_address
+        data = self.memory.get_slice(base, base + 1000)
+        data_char = list(map(lambda x: SCREEN_CHARCODE.get(x % 128, "."), data))
+        for row in range(25):
+            dump += "".join(data_char[row * 40: (row + 1) * 40 - 1]) + "\n"
+        return dump
 
 
 def DefaultMachine() -> Machine:

@@ -441,3 +441,16 @@ class TextScreen(VIC_II):
 
             return frame
         self.clock_counter += 1
+
+
+class VirtualScreen(VIC_II):
+    """
+    No display
+    """
+
+    def clock(self):
+        pass
+
+    @property
+    def raster_y(self):
+        return 0
