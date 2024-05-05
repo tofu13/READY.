@@ -12,6 +12,8 @@ def main():
                         help="Screen driver", default=config.SCREEN, choices=["raster", "simple", "text", "virtual"])
     parser.add_argument("-d", "--disk", action='store',
                         help="Disk (t64)", default="", type=str)
+    parser.add_argument("-c", "--console", action='store_true',
+                        help="Show screen in console (chars only)", default=False)
     args = parser.parse_args()
 
     roms = hardware.roms.ROMS(config.ROMS_FOLDER)
@@ -39,7 +41,12 @@ def main():
         screen=screen,
         ciaA=cia_a,
         diskdrive=diskdrive,
+        console=args.console,
     )
+
+    if args.console:
+        # Pre-clear screen for quicker runtime updates
+        print("\033[H\033[2J", end="")
 
     # Entry point
     # c64.cpu.breakpoints.add(0xFCFF)
