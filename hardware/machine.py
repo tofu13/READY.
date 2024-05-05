@@ -4,7 +4,7 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE
+from hardware.constants import CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE
 from hardware import monitor
 
 
@@ -145,12 +145,13 @@ class Machine:
             self.cpu.irq()
 
         self._clock_counter += 1
-        if self._clock_counter % 1000 == 0:
+        if self._clock_counter % SERVE_EVENTS_RATE == 0:
             self.signal, self.nmi = self.manage_events()
-            if self.console:
-                # Send screen to console
-                print("\033[H\033[1J", end="")  # Clear screen
-                print(self.screendump())
+
+        if self.console and self._clock_counter % CONSOLE_SCREEN_UPDATE_RATE == 0:
+            # Send screen to console
+            print("\033[H\033[1J", end="")  # Clear screen
+            print(self.screendump())
 
         if self.nmi:
             self.cpu.nmi()

@@ -7,8 +7,8 @@ SYMBOLS = {
     'R6510': 0x0001,
 }
 
-IRQ_RATE = 50
 SERVE_EVENTS_RATE = 10000  # Clock cycles between system event serving (keyboard scan, ...)
+CONSOLE_SCREEN_UPDATE_RATE = 50000  # Clock cycles between console screen (when enabled) updates
 
 ROMSLIST = [
     # (File)Name, begin address, end address, bit of bank switch register (R6510)
