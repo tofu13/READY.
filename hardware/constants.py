@@ -8,6 +8,7 @@ SYMBOLS = {
 }
 
 IRQ_RATE = 50
+SERVE_EVENTS_RATE = 10000  # Clock cycles between system event serving (keyboard scan, ...)
 
 ROMSLIST = [
     # (File)Name, begin address, end address, bit of bank switch register (R6510)

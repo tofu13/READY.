@@ -4,7 +4,7 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import PETSCII, SCREEN_CHARCODE, VIDEO_SIZE
+from hardware.constants import SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE
 from hardware import monitor
 
 
