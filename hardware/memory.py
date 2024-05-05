@@ -1,5 +1,5 @@
 from multiprocessing import Array
-from hardware.constants import OPCODES
+from hardware.constants import OPCODES, SCREEN_CHARCODE
 
 
 class Memory:
@@ -63,7 +63,7 @@ class Memory:
         for row in range(start, end, step):
             data = self.get_slice(row, row + step)
             data_hex = [f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
-            data_char = map(lambda x: chr(x) if 32 < x < 127 else '.', data)
+            data_char = map(lambda x: SCREEN_CHARCODE.get(x, "."), data)
 
             out += f"${row:04X}: "
             if as_chars:
