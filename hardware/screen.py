@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 
 from .constants import BITRANGE, COLORS, PALETTE, VIDEO_SIZE
 
@@ -438,7 +439,6 @@ class TextScreen(VIC_II):
                         frame.blit(self.font_cache[charcode][color], (col * 8 + 24, row * 8 + 51))
 
             return frame
-        self.clock_counter += 1
 
 
 class VirtualScreen(VIC_II):
@@ -448,6 +448,58 @@ class VirtualScreen(VIC_II):
 
     def clock(self, clock_counter: int):
         pass
+
+    @property
+    def raster_y(self):
+        return 0
+
+
+class NumpyScreen(VIC_II):
+    """
+    No display
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.font_cache = self.cache_fonts()
+
+    def cache_fonts(self):
+        cache = []
+        chargen = self.memory.get_chargen()
+        for i in range(512):
+            matrix = chargen[i * 8: (i + 1) * 8]
+            font_array = np.array(matrix, dtype="uint8")
+            font = np.unpackbits(font_array).reshape(8, 8).T
+            cache.append(font)
+        return cache
+
+    def clock(self, clock_counter: int) -> np.array:
+        if clock_counter % 18656 == 0:
+            screen = np.ones(VIDEO_SIZE, dtype="uint8") * self.border_color
+
+            if self.DEN:
+                char_base = self.video_matrix_base_address
+                charcodes = np.array(self.memory.get_slice(char_base, char_base + 1000))
+                colors = np.array(self.memory.get_slice(0xD800, 0xD800 + 1000))
+                chars = (
+                    # Compose frame pixels
+                    np.hstack(
+                        [
+                            # From chargen, with color applied
+                            self.font_cache[code].T * colors[i]
+                            # From screen codes
+                            for i, code in np.ndenumerate(charcodes)
+                        ]
+                    )
+                    # reorganize as 320 columns
+                    .reshape(8, -1, 320)
+                    .swapaxes(0, 1)
+                    .reshape(-1, 320)
+                    .T
+                )
+                chars = np.where(chars == 0, self.background_color, chars)
+                screen[24:344, 51:251] = chars
+            return screen
 
     @property
     def raster_y(self):

@@ -4,7 +4,8 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE
+from hardware.constants import CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE, \
+    PALETTE
 from hardware import monitor
 
 
@@ -41,7 +42,7 @@ class Machine:
         self.input_buffer = ""
         self._clock_counter = 0
 
-        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=16)  # , flags=pygame.SCALED)
+        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=8, flags=pygame.SCALED)  # , )
         pygame.event.set_blocked(None)
         pygame.event.set_allowed([
             pygame.QUIT,
@@ -117,6 +118,14 @@ class Machine:
 
         # Display complete frame
         if frame is not None:
+            if not isinstance(frame, pygame.Surface):
+                frame = pygame.surfarray.make_surface(frame)
+                frame.set_palette(PALETTE
+                                  # [
+                                  # pygame.Color(0,0,0),
+                                  # pygame.Color(255,255,255),
+                                  # ]
+                                  )
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
             # Get FPS

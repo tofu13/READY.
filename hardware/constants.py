@@ -17,7 +17,7 @@ ROMSLIST = [
     ("kernal", 0xE000, 0xFFFF, 2),
 ]
 
-VIDEO_SIZE = (504, 312)
+VIDEO_SIZE = (403, 284)
 
 COLORS = [0x000000,
           0xFFFFFF,
