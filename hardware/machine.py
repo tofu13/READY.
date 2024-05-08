@@ -113,7 +113,7 @@ class Machine:
             patch()
 
         # Run VIC-II
-        frame = self.screen.clock()
+        frame = self.screen.clock(self._clock_counter)
 
         # Display complete frame
         if frame is not None:
