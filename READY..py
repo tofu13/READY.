@@ -9,7 +9,8 @@ def main():
         description="An educational C=64 emulator."
     )
     parser.add_argument("-s", "--screen", action='store',
-                        help="Screen driver", default=config.SCREEN, choices=["raster", "simple", "text", "virtual"])
+                        help="Screen driver", default=config.SCREEN,
+                        choices=["raster", "simple", "text", "virtual", "numpy"])
     parser.add_argument("-d", "--disk", action='store',
                         help="Disk (t64)", default="", type=str)
     parser.add_argument("-c", "--console", action='store_true',
@@ -27,6 +28,8 @@ def main():
         screen = hardware.screen.TextScreen(memory)
     elif args.screen == "virtual":
         screen = hardware.screen.VirtualScreen(memory)
+    elif args.screen == "numpy":
+        screen = hardware.screen.NumpyScreen(memory)
     else:
         raise argparse.ArgumentError(f"Invalid screen driver {args.screen}")
     cia_a = hardware.cia.CIA_A(memory)

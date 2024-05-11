@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 
 from .constants import BITRANGE, COLORS, PALETTE, VIDEO_SIZE
 
@@ -41,7 +42,7 @@ class VIC_II:
         self.irq_sprite_sprite_collision_enabled = 1
         self.irq_status_register = 0
 
-    def clock(self):
+    def clock(self, clock_counter: int):
         pass
 
     def get_registers(self, address, value):
@@ -187,7 +188,7 @@ class RasterScreen(VIC_II):
 
         self.frame = pygame.Surface(VIDEO_SIZE)
 
-    def clock(self):
+    def clock(self, clock_counter: int):
         if self.raster_x == 0 and self.DISPLAY_START <= self.raster_y <= self.DISPLAY_END and self._frame_on:
             if self.raster_y % 8 == self.Y_SCROLL:
                 # Fetch chars and colors from memory
@@ -397,7 +398,6 @@ class TextScreen(VIC_II):
         self.visible_rect = pygame.rect.Rect(2, 15, 403, 299)
         self.window_rect = pygame.rect.Rect(24, 51, 320, 200)
 
-        self.clock_counter = 0
         self.font_cache = self.cache_fonts()
 
     @property
@@ -422,9 +422,8 @@ class TextScreen(VIC_II):
             cache.append(char_colors)
         return cache
 
-    def clock(self) -> pygame.Surface:
-        if self.clock_counter > 18656:  # Screen on - no sprites
-            self.clock_counter = 0
+    def clock(self, clock_counter: int) -> pygame.Surface:
+        if clock_counter % 18656 == 0:  # Screen on - no sprites
             char_base = self.video_matrix_base_address
             frame = pygame.Surface(self.VIDEO_SIZE, )
             # self.display.fill((0, 0, 0))
@@ -440,7 +439,6 @@ class TextScreen(VIC_II):
                         frame.blit(self.font_cache[charcode][color], (col * 8 + 24, row * 8 + 51))
 
             return frame
-        self.clock_counter += 1
 
 
 class VirtualScreen(VIC_II):
@@ -448,8 +446,60 @@ class VirtualScreen(VIC_II):
     No display
     """
 
-    def clock(self):
+    def clock(self, clock_counter: int):
         pass
+
+    @property
+    def raster_y(self):
+        return 0
+
+
+class NumpyScreen(VIC_II):
+    """
+    No display
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.font_cache = self.cache_fonts()
+
+    def cache_fonts(self):
+        cache = []
+        chargen = self.memory.get_chargen()
+        for i in range(512):
+            matrix = chargen[i * 8: (i + 1) * 8]
+            font_array = np.array(matrix, dtype="uint8")
+            font = np.unpackbits(font_array).reshape(8, 8).T
+            cache.append(font)
+        return cache
+
+    def clock(self, clock_counter: int) -> np.array:
+        if clock_counter % 18656 == 0:
+            screen = np.ones(VIDEO_SIZE, dtype="uint8") * self.border_color
+
+            if self.DEN:
+                char_base = self.video_matrix_base_address
+                charcodes = np.array(self.memory.get_slice(char_base, char_base + 1000))
+                colors = np.array(self.memory.get_slice(0xD800, 0xD800 + 1000))
+                chars = (
+                    # Compose frame pixels
+                    np.hstack(
+                        [
+                            # From chargen, with color applied
+                            self.font_cache[code].T * colors[i]
+                            # From screen codes
+                            for i, code in np.ndenumerate(charcodes)
+                        ]
+                    )
+                    # reorganize as 320 columns
+                    .reshape(8, -1, 320)
+                    .swapaxes(0, 1)
+                    .reshape(-1, 320)
+                    .T
+                )
+                chars = np.where(chars == 0, self.background_color, chars)
+                screen[24:344, 51:251] = chars
+            return screen
 
     @property
     def raster_y(self):

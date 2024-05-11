@@ -1,3 +1,4 @@
 d64
+numpy
 pygame
 pyperclip
