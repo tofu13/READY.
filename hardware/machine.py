@@ -5,8 +5,8 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import CLOCK_PER_PERFORMANCE_REFRESH, CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, \
-    SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE, \
+from hardware.constants import CLOCKS_PER_PERFORMANCE_REFRESH, CLOCKS_PER_CONSOLE_REFRESH, SCREEN_CHARCODE, \
+    CLOCKS_PER_EVENT_SERVING, PETSCII, VIDEO_SIZE, \
     PALETTE
 from hardware import monitor
 
@@ -143,10 +143,10 @@ class Machine:
             self.cpu.irq()
 
         self._clock_counter += 1
-        if self._clock_counter % SERVE_EVENTS_RATE == 0:
+        if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
             self.signal, self.nmi = self.manage_events()
 
-        if self.console and self._clock_counter % CONSOLE_SCREEN_UPDATE_RATE == 0:
+        if self.console and self._clock_counter % CLOCKS_PER_CONSOLE_REFRESH == 0:
             # Send screen to console
             print("\033[H\033[1J", end="")  # Clear screen
             print(self.screendump())
@@ -163,11 +163,11 @@ class Machine:
             self.signal = None
 
         self._cumulative_perf_timer += time.perf_counter()
-        if self._clock_counter % CLOCK_PER_PERFORMANCE_REFRESH == 0:
+        if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
                 self.CAPTION.format(self.pygame_clock.get_fps(),
-                                    CLOCK_PER_PERFORMANCE_REFRESH / 10000 / self._cumulative_perf_timer))
+                                    CLOCKS_PER_PERFORMANCE_REFRESH / 10000 / self._cumulative_perf_timer))
             self._cumulative_perf_timer = 0.0
 
     def manage_events(self):

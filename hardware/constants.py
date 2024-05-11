@@ -7,10 +7,10 @@ SYMBOLS = {
     'R6510': 0x0001,
 }
 
-SERVE_EVENTS_RATE = 10000  # Clock cycles between system event serving (keyboard scan, ...)
-CONSOLE_SCREEN_UPDATE_RATE = 50000  # Clock cycles between console screen (when enabled) updates
-CLOCK_PER_FRAME = 18656  # Clock cycles between frame update (non-raster screen drivers)
-CLOCK_PER_PERFORMANCE_REFRESH = 250000  # CLocks cycles between refresh of FPS/perf values
+CLOCKS_PER_EVENT_SERVING = 10000  # Clock cycles between system event serving (keyboard scan, ...)
+CLOCKS_PER_CONSOLE_REFRESH = 50000  # Clock cycles between console screen (when enabled) updates
+CLOCKS_PER_FRAME = 18656  # Clock cycles between frame update (non-raster screen drivers)
+CLOCKS_PER_PERFORMANCE_REFRESH = 250000  # CLocks cycles between refresh of FPS/perf values
 
 ROMSLIST = [
     # (File)Name, begin address, end address, bit of bank switch register (R6510)
