@@ -9,6 +9,7 @@ SYMBOLS = {
 
 SERVE_EVENTS_RATE = 10000  # Clock cycles between system event serving (keyboard scan, ...)
 CONSOLE_SCREEN_UPDATE_RATE = 50000  # Clock cycles between console screen (when enabled) updates
+CLOCK_PER_FRAME = 18656  # Clock cycles between frame update (non-raster screen drivers)
 
 ROMSLIST = [
     # (File)Name, begin address, end address, bit of bank switch register (R6510)
