@@ -135,18 +135,6 @@ class Machine:
             # Get FPS
             self.pygame_clock.tick()  # Max 50 FPS
 
-        # Paste text
-        if self.paste_buffer and self.memory[0xC6] == 0:
-            # Inject char into empty keyboard buffer
-            char = self.paste_buffer.pop(0)
-            petscii_code = PETSCII.get(char.lower())
-            if not petscii_code:  # TODO: is None
-                print(f"WARNING: character {char} not in PETSCII")
-            else:
-                self.memory[0x277 + self.memory[0xC6]] = petscii_code
-                # Update buffer length
-                self.memory[0xC6] += 1
-
         # Run CPU
         self.cpu.clock()
 
@@ -185,7 +173,20 @@ class Machine:
     def manage_events(self):
         """
         Manage system events
+        Do housekeeping
         """
+        # Paste text
+        if self.paste_buffer and self.memory[0xC6] == 0:
+            # Inject char into empty keyboard buffer
+            char = self.paste_buffer.pop(0)
+            petscii_code = PETSCII.get(char.lower())
+            if petscii_code is None:
+                print(f"WARNING: character {char} not in PETSCII")
+            else:
+                self.memory[0x277] = petscii_code
+                # Update buffer length
+                self.memory[0xC6] += 1
+
         signal = None
         nmi = False
         for event in pygame.event.get():
