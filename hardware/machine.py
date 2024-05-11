@@ -1,10 +1,12 @@
 import pickle
+import time
 
 import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE, \
+from hardware.constants import CLOCK_PER_PERFORMANCE_REFRESH, CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, \
+    SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE, \
     PALETTE
 from hardware import monitor
 
@@ -51,12 +53,13 @@ class Machine:
             pygame.KEYUP,
         ])
 
-        self.CAPTION = "Commodore 64 (Text) {:.1f} FPS"
+        self.CAPTION = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
 
         # pygame.display.set_caption(self.CAPTION)
 
         self.pygame_clock = pygame.time.Clock()
-        self._last_fps = 0
+        self._cumulative_perf_timer = 0.0
+        self._current_fps = 0.0
 
         self.paste_buffer = []
 
@@ -98,6 +101,7 @@ class Machine:
         """
         Run a single step of all devices
         """
+        self._cumulative_perf_timer -= time.perf_counter()
         # Activate monitor on breakpoints
         if self.breakpoints:
             self.monitor_active |= self.cpu.PC in self.breakpoints
@@ -130,9 +134,6 @@ class Machine:
             pygame.display.flip()
             # Get FPS
             self.pygame_clock.tick()  # Max 50 FPS
-            if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
-                pygame.display.set_caption(self.CAPTION.format(self.pygame_clock.get_fps()))
-                self._last_fps = current_ticks
 
         # Paste text
         if self.paste_buffer and self.memory[0xC6] == 0:
@@ -172,6 +173,14 @@ class Machine:
         elif self.signal == "MONITOR":
             self.monitor_active = True
             self.signal = None
+
+        self._cumulative_perf_timer += time.perf_counter()
+        if self._clock_counter % CLOCK_PER_PERFORMANCE_REFRESH == 0:
+            pygame.display.set_caption(
+                # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
+                self.CAPTION.format(self.pygame_clock.get_fps(),
+                                    CLOCK_PER_PERFORMANCE_REFRESH / 10000 / self._cumulative_perf_timer))
+            self._cumulative_perf_timer = 0.0
 
     def manage_events(self):
         """
