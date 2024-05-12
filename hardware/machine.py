@@ -1,221 +1,17 @@
 import pickle
+import time
 
 import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import CONSOLE_SCREEN_UPDATE_RATE, SCREEN_CHARCODE, SERVE_EVENTS_RATE, PETSCII, VIDEO_SIZE, \
+from hardware.constants import CLOCKS_PER_PERFORMANCE_REFRESH, CLOCKS_PER_CONSOLE_REFRESH, SCREEN_CHARCODE, \
+    CLOCKS_PER_EVENT_SERVING, PETSCII, VIDEO_SIZE, \
     PALETTE
 from hardware import monitor
 
 
-class Machine:
-    def __init__(self,
-                 memory: hardware.memory.Memory,
-                 cpu: hardware.cpu.CPU,
-                 screen: hardware.screen.VIC_II,
-                 ciaA,
-                 diskdrive=None,
-                 console=False
-                 ):
-
-        self.memory = memory
-        self.cpu = cpu
-        self.screen = screen
-        self.ciaA = ciaA
-        self.diskdrive = diskdrive
-        self.console = console
-
-        self.monitor = monitor.Monitor(self)
-        self.monitor_active = False
-
-        # Default processor I/O
-        self.memory[0] = 47
-        # Default processor ports  (HIRAM, LORAM, CHARGEN = 1)
-        self.memory[1] = 55
-        # Assert datassette stopped
-        self.set_datassette_button_status(False)
-
-        self.signal = None
-        self.nmi = False
-
-        self.input_buffer = ""
-        self._clock_counter = 0
-
-        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=8, flags=pygame.SCALED)  # , )
-        pygame.event.set_blocked(None)
-        pygame.event.set_allowed([
-            pygame.QUIT,
-            pygame.WINDOWCLOSE,
-            pygame.KEYDOWN,
-            pygame.KEYUP,
-        ])
-
-        self.CAPTION = "Commodore 64 (Text) {:.1f} FPS"
-
-        # pygame.display.set_caption(self.CAPTION)
-
-        self.pygame_clock = pygame.time.Clock()
-        self._last_fps = 0
-
-        self.paste_buffer = []
-
-        # self.cpu.breakpoints.add(0xF4C4)
-
-        self.outfile = open("OUTFILE", "wb")
-
-        self.patches = {
-            0xF4C4: self.patch_IECIN,
-            # 0xEDB9: self.patch_LSTNSA,
-            0xF3D5: self.patch_OPEN,
-            # 0xED0C: self.patch_LISTEN,
-            0xEEA9: self.patch_CLKDATA,
-            0xED40: self.patch_SNDBYT,
-            0xEE13: self.patch_RDBYTE,
-            0xFDF9: self.patch_SETNAM,
-            0xFE99: self.patch_SETLFS,
-        }
-
-        self.serial_device_number = None
-        self.keys_pressed = set()
-
-        self.breakpoints = set()
-        self.tracepoints = set()
-
-    def run(self, address):
-        """
-        Run main loop
-        """
-
-        # Setup
-        self.cpu.F['B'] = 0
-        self.cpu.PC = address
-
-        while True:
-            self.clock()
-
-    def clock(self):
-        """
-        Run a single step of all devices
-        """
-        # Activate monitor on breakpoints
-        if self.breakpoints:
-            self.monitor_active |= self.cpu.PC in self.breakpoints
-        if self.monitor_active:
-            self.monitor.cmdloop()
-            self.monitor_active = False
-
-        if self.tracepoints:
-            for start, end in self.tracepoints:
-                if start <= self.cpu.PC <= end:
-                    print(self.cpu)
-
-        if (patch := self.patches.get(self.cpu.PC)) is not None:
-            patch()
-
-        # Run VIC-II
-        frame = self.screen.clock(self._clock_counter)
-
-        # Display complete frame
-        if frame is not None:
-            if not isinstance(frame, pygame.Surface):
-                frame = pygame.surfarray.make_surface(frame)
-                frame.set_palette(PALETTE
-                                  # [
-                                  # pygame.Color(0,0,0),
-                                  # pygame.Color(255,255,255),
-                                  # ]
-                                  )
-            self.display.blit(frame, (0, 0))
-            pygame.display.flip()
-            # Get FPS
-            self.pygame_clock.tick()  # Max 50 FPS
-            if (current_ticks := pygame.time.get_ticks()) - self._last_fps > 1000:
-                pygame.display.set_caption(self.CAPTION.format(self.pygame_clock.get_fps()))
-                self._last_fps = current_ticks
-
-        # Paste text
-        if self.paste_buffer and self.memory[0xC6] == 0:
-            # Inject char into empty keyboard buffer
-            char = self.paste_buffer.pop(0)
-            petscii_code = PETSCII.get(char.lower())
-            if not petscii_code:  # TODO: is None
-                print(f"WARNING: character {char} not in PETSCII")
-            else:
-                self.memory[0x277 + self.memory[0xC6]] = petscii_code
-                # Update buffer length
-                self.memory[0xC6] += 1
-
-        # Run CPU
-        self.cpu.clock()
-
-        # Run CIA A, handle interrupt if any
-        if self.ciaA.clock(self.keys_pressed):
-            self.cpu.irq()
-
-        self._clock_counter += 1
-        if self._clock_counter % SERVE_EVENTS_RATE == 0:
-            self.signal, self.nmi = self.manage_events()
-
-        if self.console and self._clock_counter % CONSOLE_SCREEN_UPDATE_RATE == 0:
-            # Send screen to console
-            print("\033[H\033[1J", end="")  # Clear screen
-            print(self.screendump())
-
-        if self.nmi:
-            self.cpu.nmi()
-            self.nmi = False
-
-        if self.signal == "RESET":
-            self.cpu.reset(PC=0xFCE2)
-            self.signal = None
-        elif self.signal == "MONITOR":
-            self.monitor_active = True
-            self.signal = None
-
-    def manage_events(self):
-        """
-        Manage system events
-        """
-        signal = None
-        nmi = False
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                self.keys_pressed.add(event.key)
-                # Scan RESTORE key
-                if event.key == pygame.K_PAGEUP:
-                    nmi = True
-
-                # Also scan special keys
-                elif event.key == pygame.K_F12:
-                    signal = "RESET"
-                elif event.key == pygame.K_F11:
-                    signal = "MONITOR"
-                elif event.key == pygame.K_F10:
-                    # F10 -> paste text
-                    try:
-                        self.paste_buffer = list(pyperclip.paste())
-                    except pyperclip.PyperclipException:
-                        print(
-                            "Can't paste: xsel or xclip system packages not found. "
-                            "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
-
-                # Hardware events
-                elif event.key == pygame.K_p and event.mod & pygame.KMOD_RCTRL:
-                    # PLAY|REC|FFWD|REW is pressed on datassette
-                    self.set_datassette_button_status(True)
-                elif event.key == pygame.K_s and event.mod & pygame.KMOD_RCTRL:
-                    # STOP is pressed on datassette
-                    self.set_datassette_button_status(False)
-
-            elif event.type == pygame.KEYUP:
-                self.keys_pressed.remove(event.key)
-
-            elif event.type == pygame.WINDOWCLOSE:
-                pygame.quit()
-
-        return signal, nmi
-
+class PatchMixin:
     def patch_IECIN(self):
         print("Serial patch IECIN")
         print(self.cpu.A)  # self.cpu.A = 0x42
@@ -264,6 +60,222 @@ class Machine:
         self.logical_file_number = self.cpu.A
         self.serial_device_number = self.cpu.X
         self.secondary_address = self.cpu.Y
+
+
+class Machine(PatchMixin):
+    def __init__(self,
+                 memory: hardware.memory.Memory,
+                 cpu: hardware.cpu.CPU,
+                 screen: hardware.screen.VIC_II,
+                 ciaA,
+                 diskdrive=None,
+                 console=False
+                 ):
+
+        self.memory = memory
+        self.cpu = cpu
+        self.screen = screen
+        self.ciaA = ciaA
+        self.diskdrive = diskdrive
+        self.console = console
+
+        self.monitor = monitor.Monitor(self)
+        self.monitor_active = False
+
+        # Default processor I/O
+        self.memory[0] = 47
+        # Default processor ports  (HIRAM, LORAM, CHARGEN = 1)
+        self.memory[1] = 55
+        # Assert datassette stopped
+        self.set_datassette_button_status(False)
+
+        self.signal = None
+        self.nmi = False
+
+        self.input_buffer = ""
+        self._clock_counter = 0
+
+        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=8, flags=pygame.SCALED)  # , )
+        pygame.event.set_blocked(None)
+        pygame.event.set_allowed([
+            pygame.QUIT,
+            pygame.WINDOWCLOSE,
+            pygame.KEYDOWN,
+            pygame.KEYUP,
+        ])
+
+        self.CAPTION = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
+
+        # pygame.display.set_caption(self.CAPTION)
+
+        self.pygame_clock = pygame.time.Clock()
+        self._cumulative_perf_timer = 0.0
+        self._current_fps = 0.0
+
+        self.paste_buffer = []
+
+        # self.cpu.breakpoints.add(0xF4C4)
+
+        self.outfile = open("OUTFILE", "wb")
+
+        self.patches = {
+            0xF4C4: self.patch_IECIN,
+            # 0xEDB9: self.patch_LSTNSA,
+            0xF3D5: self.patch_OPEN,
+            # 0xED0C: self.patch_LISTEN,
+            0xEEA9: self.patch_CLKDATA,
+            0xED40: self.patch_SNDBYT,
+            0xEE13: self.patch_RDBYTE,
+            0xFDF9: self.patch_SETNAM,
+            0xFE99: self.patch_SETLFS,
+        }
+
+        self.serial_device_number = None
+        self.keys_pressed = set()
+
+        self.breakpoints = set()
+        self.tracepoints = set()
+
+    def run(self, address):
+        """
+        Run main loop
+        """
+
+        # Setup
+        self.cpu.F['B'] = 0
+        self.cpu.PC = address
+
+        while True:
+            self.clock()
+
+    def clock(self):
+        """
+        Run a single step of all devices
+        """
+        self._cumulative_perf_timer -= time.perf_counter()
+        # Activate monitor on breakpoints
+        if self.breakpoints:
+            self.monitor_active |= self.cpu.PC in self.breakpoints
+        if self.monitor_active:
+            self.monitor.cmdloop()
+            self.monitor_active = False
+
+        if self.tracepoints:
+            for start, end in self.tracepoints:
+                if start <= self.cpu.PC <= end:
+                    print(self.cpu)
+
+        if (patch := self.patches.get(self.cpu.PC)) is not None:
+            patch()
+
+        # Run VIC-II
+        frame = self.screen.clock(self._clock_counter)
+
+        # Display complete frame
+        if frame is not None:
+            if not isinstance(frame, pygame.Surface):
+                frame = pygame.surfarray.make_surface(frame)
+                frame.set_palette(PALETTE
+                                  # [
+                                  # pygame.Color(0,0,0),
+                                  # pygame.Color(255,255,255),
+                                  # ]
+                                  )
+            self.display.blit(frame, (0, 0))
+            pygame.display.flip()
+            # Get FPS
+            self.pygame_clock.tick()  # Max 50 FPS
+
+        # Run CPU
+        self.cpu.clock()
+
+        # Run CIA A, handle interrupt if any
+        if self.ciaA.clock(self.keys_pressed):
+            self.cpu.irq()
+
+        self._clock_counter += 1
+        if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
+            self.signal, self.nmi = self.manage_events()
+
+        if self.console and self._clock_counter % CLOCKS_PER_CONSOLE_REFRESH == 0:
+            # Send screen to console
+            print("\033[H\033[1J", end="")  # Clear screen
+            print(self.screendump())
+
+        if self.nmi:
+            self.cpu.nmi()
+            self.nmi = False
+
+        if self.signal == "RESET":
+            self.cpu.reset(PC=0xFCE2)
+            self.signal = None
+        elif self.signal == "MONITOR":
+            self.monitor_active = True
+            self.signal = None
+
+        self._cumulative_perf_timer += time.perf_counter()
+        if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
+            pygame.display.set_caption(
+                # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
+                self.CAPTION.format(self.pygame_clock.get_fps(),
+                                    CLOCKS_PER_PERFORMANCE_REFRESH / 10000 / self._cumulative_perf_timer))
+            self._cumulative_perf_timer = 0.0
+
+    def manage_events(self):
+        """
+        Manage system events
+        Do housekeeping
+        """
+        # Paste text
+        if self.paste_buffer and self.memory[0xC6] == 0:
+            # Inject char into empty keyboard buffer
+            char = self.paste_buffer.pop(0)
+            petscii_code = PETSCII.get(char.lower())
+            if petscii_code is None:
+                print(f"WARNING: character {char} not in PETSCII")
+            else:
+                self.memory[0x277] = petscii_code
+                # Update buffer length
+                self.memory[0xC6] += 1
+
+        signal = None
+        nmi = False
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                self.keys_pressed.add(event.key)
+                # Scan RESTORE key
+                if event.key == pygame.K_PAGEUP:
+                    nmi = True
+
+                # Also scan special keys
+                elif event.key == pygame.K_F12:
+                    signal = "RESET"
+                elif event.key == pygame.K_F11:
+                    signal = "MONITOR"
+                elif event.key == pygame.K_F10:
+                    # F10 -> paste text
+                    try:
+                        self.paste_buffer = list(pyperclip.paste())
+                    except pyperclip.PyperclipException:
+                        print(
+                            "Can't paste: xsel or xclip system packages not found. "
+                            "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
+
+                # Hardware events
+                elif event.key == pygame.K_p and event.mod & pygame.KMOD_RCTRL:
+                    # PLAY|REC|FFWD|REW is pressed on datassette
+                    self.set_datassette_button_status(True)
+                elif event.key == pygame.K_s and event.mod & pygame.KMOD_RCTRL:
+                    # STOP is pressed on datassette
+                    self.set_datassette_button_status(False)
+
+            elif event.type == pygame.KEYUP:
+                self.keys_pressed.remove(event.key)
+
+            elif event.type == pygame.WINDOWCLOSE:
+                pygame.quit()
+
+        return signal, nmi
 
     @classmethod
     def from_file(cls, filename):

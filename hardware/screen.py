@@ -1,7 +1,7 @@
 from datetime import datetime
 import numpy as np
 
-from .constants import BITRANGE, COLORS, PALETTE, VIDEO_SIZE
+from .constants import BITRANGE, CLOCKS_PER_FRAME, COLORS, PALETTE, VIDEO_SIZE
 
 from os import environ
 
@@ -423,7 +423,7 @@ class TextScreen(VIC_II):
         return cache
 
     def clock(self, clock_counter: int) -> pygame.Surface:
-        if clock_counter % 18656 == 0:  # Screen on - no sprites
+        if clock_counter % CLOCKS_PER_FRAME == 0:  # Screen on - no sprites
             char_base = self.video_matrix_base_address
             frame = pygame.Surface(self.VIDEO_SIZE, )
             # self.display.fill((0, 0, 0))
@@ -474,7 +474,7 @@ class NumpyScreen(VIC_II):
         return cache
 
     def clock(self, clock_counter: int) -> np.array:
-        if clock_counter % 18656 == 0:
+        if clock_counter % CLOCKS_PER_FRAME == 0:
             screen = np.ones(VIDEO_SIZE, dtype="uint8") * self.border_color
 
             if self.DEN:

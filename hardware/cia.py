@@ -92,7 +92,9 @@ class CIA_A(CIA):
         Execute CIA stuff
         :return: signals [irq, nmi, reset, quit]
         """
-        self.keys_pressed = keys_pressed.copy()
+        # Save key pressed
+        self.keys_pressed = keys_pressed
+
         super().clock()
         return self.irq_occured
 
