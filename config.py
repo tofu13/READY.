@@ -1,2 +1,2 @@
 ROMS_FOLDER = "roms"
-SCREEN = "text"
+SCREEN = "numpy"

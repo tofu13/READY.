@@ -1,11 +1,9 @@
 # READY.
 
-READY. is an educational Commodore 64 emulator written in python 3.
-
-Target is not perfect emulation or performance, but rather learning how that computer works and rebuilding it after
+READY. is an educational & fun Commodore 64 emulator, written for learning and rebuilding after
 decades.
 
-A special thanks to the numberless sources of information found on the web.
+A special thank to the numberless sources of information found on the web.
 
 ## Installation
 
@@ -25,7 +23,7 @@ virtualenv venv -p python3
 pip install -r requirements.txt
 ```
 
-Then download basic, kernal and chargen into roms/ folder.
+Then download basic, kernal and chargen into `roms/` folder.
 
 ## Usage
 
@@ -38,48 +36,49 @@ python READY..py```
 ### Options
 
 ```shell
-python READY..py --help
+> python READY..py --help
 ```
-
 ```
-usage: READY..py [-h] [-s {raster,simple,text}]
+usage: READY..py [-h] [-s {raster,simple,text,virtual,numpy}] [-d DISK] [-c]
 
 An educational C=64 emulator.
 
 options:
   -h, --help            show this help message and exit
-  -s {raster,simple,text}, --screen {raster,simple,text}
+  -s {raster,simple,text,virtual,numpy}, --screen {raster,simple,text,virtual,numpy}
                         Screen driver
+  -d DISK, --disk DISK  Disk (t64)
+  -c, --console         Show screen in console (chars only)
 ```
 
 ### Keyboard mapping
 
-- \ : <left arrow>
-- INS: £
+```
+- \ : <LEFT ARROW>
 - ESC: <RUN/STOP>
-- CANC: <DEL>
+- BACKSPACE: <DEL>
+- INS: <INS> (<SHIFT+DEL>)
 - HOME: <HOME>
 - PAGE_UP: <RESTORE>
 - LEFT_ALT: <C=>
+```
 
-Numeric keypad is mapped
+Special keys
 
+```
 - F10 paste (text)
 - F11 enter monitor
 - F12 reset
+- RIGHT_ALT + P: PLAY on datassette
+- RIGHT_ALT + S: STOP on datassette
+```
 
 ### Monitor
 
-The command line monitor understands the following commands:
-
+Enter monitor pressing F11
 ```
-READY. monitor. Commands list:
-d|disass [start] [end] -- disassemble
-m|mem [start] [end] -- show memory as hex and text
-i [start] [end] -- show memory as text
-bk [addres] -- show breakpoints. If address specifies, set one at address 
-s|step -- execute next instruction
-del [address] -- delete breakpoint at address
-q|quit -- exit monitor and resume
-reset -- reset machine
+$e5f5> help
+Documented commands (type help <topic>):
+========================================
+convert  disass  go  help  i  mem  next  reset  step  trace  x
 ```
