@@ -135,7 +135,7 @@ class Monitor(cmd.Cmd):
         more than a single instruction at a time ("step into").
         """
         output, step = self.machine.memory.disassemble(self.machine.cpu.PC)
-        self.machine.cpu.step()
+        self.machine.cpu.clock()
         self.current_address = self.machine.cpu.PC
         print(output, self.machine.cpu)
 
