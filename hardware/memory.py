@@ -3,10 +3,12 @@ from hardware.constants import OPCODES, SCREEN_CHARCODE
 
 
 class Memory:
-    read_watchers = []
-    write_watchers = []
-    roms = {}
-    chargen, loram, hiram = None, None, None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.read_watchers = []
+        self.write_watchers = []
+        self.roms = {}
+        self.charen, self.loram, self.hiram = None, None, None
 
     def __getitem__(self, address: int) -> int:
         # print(f"Memory read at {address}: {value}")
@@ -15,7 +17,7 @@ class Memory:
         elif 0xE000 <= address <= 0xFFFF and self.hiram:
             return self.roms['kernal'][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
-            if not self.chargen and (not self.hiram and not self.loram):
+            if not self.charen and (self.hiram or self.loram):
                 return self.roms['chargen'][address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
@@ -27,7 +29,7 @@ class Memory:
     def __setitem__(self, address: int, value: int) -> None:
         # Hard coded processor port at $01
         if address == 1:
-            self.chargen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
+            self.charen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
             # Set only writable bits in the processor port
             value &= self[0x00]
             value |= self[0x01] & (255 - self[0])
@@ -43,9 +45,60 @@ class Memory:
     def __str__(self):
         return self.dump()
 
+    def read(self, address) -> int:
+        """
+        Direct read from memory, no masking
+        """
+        return super().__getitem__(address)
+
+    def read_address(self, address: int) -> int:
+        """
+        Optimized consecutive reads
+        Return big endian word (16-bit address)
+        """
+        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+            lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
+        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+            lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
+        else:
+            lo, hi = super().__getitem__(slice(address, address + 2))
+        return hi * 256 + lo
+
+    def write(self, address, value) -> None:
+        """
+        Direct write to memory, no masking
+        """
+        super().__setitem__(address, value)
+
+    def get_slice(self, start: int, end: int) -> bytearray:
+        """
+        Return memory from start to end in a bytearray
+        Warning: ignores ROMs masking, data are always read from (underlying) memory
+        :param start:
+        :param end:
+        :return:
+        """
+        return super().__getitem__(slice(start, end))
+
+    def set_slice(self, start: int, data) -> None:
+        """
+        Set data into memory starting from start
+        :param start:
+        :param data:
+        :return:
+        """
+        super().__setitem__(slice(start, start + len(data)), data)
+
+    def get_chargen(self) -> bytearray:
+        """
+        Quick returns chargen rom
+        :return:
+        """
+        return self.roms['chargen']
+
     def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
         """
-        Return a textual representiation of memory from start to end
+        Return a textual representation of memory from start to end
         :param as_chars:
         :param start:
         :param end:
@@ -131,57 +184,6 @@ class Memory:
         address = (address + step) & 0xFFFF
 
         return output, step
-
-    def read(self, address) -> int:
-        """
-        Direct read from memory, no masking
-        """
-        return super().__getitem__(address)
-
-    def read_address(self, address: int) -> int:
-        """
-        Optimized consecutive reads
-        Return big endian word (16-bit address)
-        """
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
-            lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
-            lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
-        else:
-            lo, hi = super().__getitem__(slice(address, address + 2))
-        return hi * 256 + lo
-
-    def write(self, address, value) -> None:
-        """
-        Direct write to memory, no masking
-        """
-        super().__setitem__(address, value)
-
-    def get_slice(self, start: int, end: int) -> bytearray:
-        """
-        Return memory from start to end in a bytearray
-        Warning: ignores ROMs masking, data are always read from (underlying) memory
-        :param start:
-        :param end:
-        :return:
-        """
-        return super().__getitem__(slice(start, end))
-
-    def set_slice(self, start: int, data) -> None:
-        """
-        Set data into memory starting from start
-        :param start:
-        :param data:
-        :return:
-        """
-        super().__setitem__(slice(start, start + len(data)), data)
-
-    def get_chargen(self) -> bytearray:
-        """
-        Quick returns chargen rom
-        :return:
-        """
-        return self.roms['chargen']
 
 
 class BytearrayMemory(Memory, bytearray):
