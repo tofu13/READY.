@@ -3,6 +3,7 @@ import pytest
 from hardware.memory import BytearrayMemory
 from hardware import roms
 
+import config
 
 @pytest.fixture
 def memory():
@@ -11,7 +12,7 @@ def memory():
 
 @pytest.fixture()
 def memory_with_roms():
-    memory = BytearrayMemory(65536, roms=roms.ROMS("tests/roms"))
+    memory = BytearrayMemory(65536, roms=roms.ROMS(config.TESTING_ROMS_FOLDER))
     memory.hiram = True
     memory.loram = True
     memory.charen = True
