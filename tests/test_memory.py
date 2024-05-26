@@ -1,6 +1,5 @@
 import pytest
 
-import config
 from hardware.memory import BytearrayMemory
 from hardware import roms
 
@@ -12,10 +11,10 @@ def memory():
 
 @pytest.fixture()
 def memory_with_roms():
-    memory = BytearrayMemory(65536, roms=roms.ROMS("../../" + config.ROMS_FOLDER))
+    memory = BytearrayMemory(65536, roms=roms.ROMS("tests/roms"))
     memory.hiram = True
     memory.loram = True
-    memory.chargen = True
+    memory.charen = True
     return memory
 
 
@@ -34,30 +33,28 @@ def test_write_read_slice(memory):
     assert memory.get_slice(0xC000, 0xC0FF) == data
 
 
-def test_read_direct(memory):
+def test_read_direct(memory_with_roms):
     def dummy_read_watcher(address, value):
         return 0
 
-    memory.read_watchers.append((0xD000, 0xDFFF, dummy_read_watcher))
-    # enable CHAREN
-    memory[1] = 4
+    memory_with_roms.read_watchers.append((0xD000, 0xDFFF, dummy_read_watcher))
+    memory_with_roms.charen = False
 
-    memory[0xDF00] = 24
-    assert memory[0xDF00] == 0
-    assert memory.read(0xDF00) == 24
+    memory_with_roms[0xDF00] = 24
+    assert memory_with_roms[0xDF00] == memory_with_roms.roms["chargen"][0x0F00]
+    assert memory_with_roms.read(0xDF00) == 24
 
 
-def test_write_direct(memory):
+def test_write_direct(memory_with_roms):
     def dummy_write_watcher(address, value):
         pytest.fail("Should not be called")
 
-    memory.write_watchers.append((0xD000, 0xDFFF, dummy_write_watcher))
-    # enable CHAREN
-    memory[1] = 4
+    memory_with_roms.write_watchers.append((0xD000, 0xDFFF, dummy_write_watcher))
+    memory_with_roms.charen = False
 
-    memory.write(0xDF00, 24)
-    assert memory[0xDF00] == 0
-    assert memory.read(0xDF00) == 24
+    memory_with_roms.write(0xDF00, 24)
+    assert memory_with_roms[0xDF00] == memory_with_roms.roms["chargen"][0x0F00]
+    assert memory_with_roms.read(0xDF00) == 24
 
 
 @pytest.mark.skip("Enable me when ROMs in folder")
