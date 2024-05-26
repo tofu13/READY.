@@ -1,2 +1,3 @@
 ROMS_FOLDER = "roms"
-SCREEN = "numpy"
+# SCREEN = "numpy"
+SCREEN = "raster"

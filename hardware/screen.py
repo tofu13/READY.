@@ -1,7 +1,7 @@
 from datetime import datetime
 import numpy as np
 
-from .constants import BITRANGE, CLOCKS_PER_FRAME, COLORS, PALETTE, VIDEO_SIZE
+from .constants import CLOCKS_PER_FRAME, PALETTE, VIDEO_SIZE
 
 from os import environ
 
@@ -24,8 +24,8 @@ class VIC_II:
         self.memory[0xD020] = 0x0E  # Default border color
 
         # Watchers
-        self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
-        self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
+        # self.memory.write_watchers.append((0xD000, 0xD3FF, self.set_registers))
+        # self.memory.read_watchers.append((0xD000, 0xD3FF, self.get_registers))
 
         # Registers
         self.pointer_character_memory = 0x0000
@@ -87,11 +87,11 @@ class VIC_II:
     @property
     def memory_bank(self):
         # Bits in the VIC bank register are inverted
-        return (3 - self.memory[0xDD00] & 0b11) << 6
+        return (3 - self.memory.read(0xDD00) & 0b11) << 6
 
     @property
     def video_matrix_base_address(self):
-        return self.memory_bank + (self.memory[0xD018] & 0b11110000) << 6
+        return self.memory_bank + (self.memory.read(0xD018) & 0b11110000) << 6
 
     @property
     def character_generator_base_address(self):
@@ -100,7 +100,7 @@ class VIC_II:
     @property
     def Y_SCROLL(self):
         # 0XD011 bits #0-2
-        return self.memory[0xD011] & 0x07
+        return self.memory.read(0xD011) & 0x07
 
     @property
     def RSEL(self):
@@ -110,7 +110,7 @@ class VIC_II:
     @property
     def DEN(self):
         # 0XD011 bit #4
-        return bool(self.memory[0xD011] & 0b00010000)
+        return bool(self.memory.read(0xD011) & 0b00010000)
 
     @property
     def bitmap_mode(self):
@@ -125,12 +125,12 @@ class VIC_II:
     @property
     def X_SCROLL(self):
         # 0XD016 bits #0-2
-        return self.memory[0xD016] & 0x07
+        return self.memory.read(0xD016) & 0x07
 
     @property
     def CSEL(self):
         # 0XD016 bit #3
-        return bool(self.memory[0xD016] & 0b1000)
+        return bool(self.memory.read(0xD016) & 0b1000)
 
     @property
     def multicolor_mode(self):
@@ -139,11 +139,11 @@ class VIC_II:
 
     @property
     def border_color(self):
-        return self.memory[0xD020] & 0x0F
+        return self.memory.read(0xD020) & 0x0F
 
     @property
     def background_color(self):
-        return self.memory[0xD021] & 0x0F
+        return self.memory.read(0xD021) & 0x0F
 
     @property
     def background_color_1(self):
@@ -184,17 +184,16 @@ class RasterScreen(VIC_II):
         self.char_buffer = bytearray([32] * 40)
         self.color_buffer = bytearray([0] * 40)
 
-        self._frame_on = True
+        self._frame_on = self.DEN
 
-        self.frame = pygame.Surface(VIDEO_SIZE)
+        self.frame = np.zeros(VIDEO_SIZE, dtype="uint8")
 
     def clock(self, clock_counter: int):
         if self.raster_x == 0 and self.DISPLAY_START <= self.raster_y <= self.DISPLAY_END and self._frame_on:
             if self.raster_y % 8 == self.Y_SCROLL:
                 # Fetch chars and colors from memory
                 # (the infamous bad line)
-                # TODO: make base pointer parametric (char only, color is fixed)
-                char_pointer = 0X0400 + (self.raster_y - self.DISPLAY_START) // 8 * 40
+                char_pointer = self.video_matrix_base_address + (self.raster_y - self.DISPLAY_START) // 8 * 40
                 color_pointer = 0XD800 + (self.raster_y - self.DISPLAY_START) // 8 * 40
 
                 self.char_buffer = self.memory.get_slice(char_pointer, char_pointer + 40)
@@ -227,15 +226,14 @@ class RasterScreen(VIC_II):
                 pixels = 0
 
             # Draw pixels
-            for i, bit in BITRANGE:
-                self.frame.set_at((self.raster_x + i, self.raster_y),
-                                  COLORS[self.color_buffer[char_col] & 0x0F] if pixels & bit
-                                  else COLORS[self.background_color])
+            pixel_data = np.unpackbits(np.array(pixels, dtype="uint8")) * self.color_buffer[char_col]
+            self.frame[self.raster_x:self.raster_x + 8, self.raster_y] = np.where(pixel_data == 0,
+                                                                                  self.background_color, pixel_data)
 
         elif (self.H_VISIBLE_START <= self.raster_x <= self.H_VISIBLE_END and
               self.V_VISIBLE_START <= self.raster_y <= self.V_VISIBLE_END):
             # Raster is in the visible border
-            self.frame.fill(PALETTE[self.border_color], (self.raster_x, self.raster_y, 8, 1))
+            self.frame[self.raster_x:self.raster_x + 8, self.raster_y] = self.border_color
             # TODO: use pixel-perfect borders with fine column check (and flip-flop), not raw byte advance
 
         # else:
@@ -246,7 +244,7 @@ class RasterScreen(VIC_II):
         if self.raster_x >= self.H_LAST:
             # Line is complete
             self.raster_x = 0
-            if self.raster_y >= self.V_LAST:
+            if self.raster_y >= self.V_LAST - 1:  # TODO: wrong
                 # Frame is complete
                 self.raster_y = 0
                 # Check if the next frame is blank
@@ -255,12 +253,11 @@ class RasterScreen(VIC_II):
                 # Clear line buffers
                 self.char_buffer = bytearray([32] * 40)
                 self.color_buffer = bytearray([0] * 40)
-                return_frame = self.frame
-                self.frame = pygame.Surface(VIDEO_SIZE)
-                return return_frame
+                return self.frame
             else:
                 # Advance next scanline
                 self.raster_y += 1
+                self.memory.write(0xD012, self.raster_y & 0xFF)
 
         else:
             # Advance next pixel pack
