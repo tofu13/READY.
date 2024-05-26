@@ -132,7 +132,7 @@ class Memory:
         :return:
         """
         output = ""
-        instruction, mode = OPCODES[self[address]]
+        instruction, mode, _ = OPCODES[self[address]]
 
         # Skip data bytes (or invalid opcodes)
         instruction = instruction or "???"
