@@ -1,3 +1,3 @@
 ROMS_FOLDER = "roms"
-# SCREEN = "numpy"
-SCREEN = "raster"
+SCREEN = "fast"
+# SCREEN = "raster"
