@@ -168,7 +168,7 @@ class CIA_A(CIA):
                 keys_pressed.remove(pygame.K_LSHIFT)
                 keys_pressed.update({pygame.K_ASTERISK})
 
-            col = 0xFF - self.memory[0xDC00]  # Invert bits
+            col = 0xFF - self.memory.read(0xDC00)  # Invert bits
             k = 0x00
 
             if col & 0b00000001:
