@@ -15,48 +15,46 @@ def main():
                         help="Disk (t64)", default="", type=str)
     parser.add_argument("-c", "--console", action='store_true',
                         help="Show screen in console (chars only)", default=False)
+    parser.add_argument("-t", "--loadstate", action='store',
+                        help="Load state from file", default=False)
     args = parser.parse_args()
 
-    roms = hardware.roms.ROMS(config.ROMS_FOLDER)
-    memory = hardware.memory.BytearrayMemory(65536, roms)
-    cpu = hardware.cpu.CPU(memory)
-    if args.screen == "raster":
-        screen = hardware.screen.RasterScreen(memory)
-    elif args.screen == "virtual":
-        screen = hardware.screen.VirtualScreen(memory)
-    elif args.screen == "fast":
-        screen = hardware.screen.FastScreen(memory)
+    if args.loadstate:
+        c64 = hardware.machine.Machine.from_file(args.loadstate)
+        c64.run()
     else:
-        raise argparse.ArgumentError(None, f"Invalid screen driver {args.screen}")
+        roms = hardware.roms.ROMS(config.ROMS_FOLDER)
+        memory = hardware.memory.BytearrayMemory(65536, roms)
+        cpu = hardware.cpu.CPU(memory)
+        if args.screen == "raster":
+            screen = hardware.screen.RasterScreen(memory)
+        elif args.screen == "virtual":
+            screen = hardware.screen.VirtualScreen(memory)
+        elif args.screen == "fast":
+            screen = hardware.screen.FastScreen(memory)
+        else:
+            raise argparse.ArgumentError(None, f"Invalid screen driver {args.screen}")
 
-    cia_a = hardware.cia.CIA_A(memory)
+        cia_a = hardware.cia.CIA_A(memory)
 
-    diskdrive = hardware.disk_drive.Drive()
-    if disk := args.disk:
-        diskdrive.set_imagefile(disk)
+        diskdrive = hardware.disk_drive.Drive()
+        if disk := args.disk:
+            diskdrive.set_imagefile(disk)
 
-    c64 = hardware.machine.Machine(
-        memory=memory,
-        cpu=cpu,
-        screen=screen,
-        ciaA=cia_a,
-        diskdrive=diskdrive,
-        console=args.console,
-    )
+        c64 = hardware.machine.Machine(
+            memory=memory,
+            cpu=cpu,
+            screen=screen,
+            ciaA=cia_a,
+            diskdrive=diskdrive,
+            console=args.console,
+        )
 
-    if args.console:
-        # Pre-clear screen for quicker runtime updates
-        print("\033[H\033[2J", end="")
+        if args.console:
+            # Pre-clear screen for quicker runtime updates
+            print("\033[H\033[2J", end="")
 
-    # Entry point
-    # c64.cpu.breakpoints.add(0xFCFF)
-    # c64.run(0xFCE2)
-    # c64.save("state8")
-
-    c64.run(0xFCE2)
-    # c64.restore("state8")
-    # c64.run(0xFCFF)
-
+        c64.run(0xFCE2)
 
 if __name__ == '__main__':
     main()
