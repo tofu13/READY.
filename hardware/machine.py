@@ -1,5 +1,6 @@
 import pickle
 import time
+from typing import Optional
 
 import pygame.event
 import pyperclip
@@ -8,7 +9,6 @@ import hardware.memory
 from hardware.constants import CLOCKS_PER_PERFORMANCE_REFRESH, CLOCKS_PER_CONSOLE_REFRESH, SCREEN_CHARCODE, \
     CLOCKS_PER_EVENT_SERVING, PETSCII, VIDEO_SIZE, \
     PALETTE
-from hardware import monitor
 
 
 class PatchMixin:
@@ -79,7 +79,6 @@ class Machine(PatchMixin):
         self.diskdrive = diskdrive
         self.console = console
 
-        self.monitor = monitor.Monitor(self)
         self.monitor_active = False
 
         # Default processor I/O
@@ -95,28 +94,16 @@ class Machine(PatchMixin):
         self.input_buffer = ""
         self._clock_counter = 0
 
-        self.display = pygame.display.set_mode(VIDEO_SIZE, depth=8, flags=pygame.SCALED)  # , )
-        pygame.event.set_blocked(None)
-        pygame.event.set_allowed([
-            pygame.QUIT,
-            pygame.WINDOWCLOSE,
-            pygame.KEYDOWN,
-            pygame.KEYUP,
-        ])
-
         self.CAPTION = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
 
         # pygame.display.set_caption(self.CAPTION)
 
-        self.pygame_clock = pygame.time.Clock()
         self._cumulative_perf_timer = 0.0
         self._current_fps = 0.0
 
         self.paste_buffer = []
 
         # self.cpu.breakpoints.add(0xF4C4)
-
-        self.outfile = open("OUTFILE", "wb")
 
         self.patches = {
             0xF4C4: self.patch_IECIN,
@@ -136,14 +123,49 @@ class Machine(PatchMixin):
         self.breakpoints = set()
         self.tracepoints = set()
 
-    def run(self, address):
+        self.post_init()
+
+    def post_init(self):
+        """
+        Second stage init, for proper loading of saved state
+        """
+        if not isinstance(self.screen, hardware.screen.VirtualScreen):
+            self.display = pygame.display.set_mode(VIDEO_SIZE, depth=8, flags=pygame.SCALED)
+            pygame.event.set_blocked(None)
+            pygame.event.set_allowed([
+                pygame.QUIT,
+                pygame.WINDOWCLOSE,
+                pygame.KEYDOWN,
+                pygame.KEYUP,
+            ])
+            self.pygame_clock = pygame.time.Clock()
+        self.monitor = hardware.monitor.Monitor(self)
+        self.outfile = open("OUTFILE", "wb")  # TODO: handle this
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Drop attributes that will be re-created from scratch after loading
+        for attribute in [
+            "monitor",
+            "display",
+            "pygame_clock",
+            "outfile",
+        ]:
+            if attribute in state:
+                del state[attribute]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.post_init()
+        self.monitor_active = False  # Exit monitor after loading
+
+    def run(self, address: Optional[int] = None) -> None:
         """
         Run main loop
         """
-
-        # Setup
-        self.cpu.F['B'] = 0
-        self.cpu.PC = address
+        if address:
+            self.cpu.PC = address
 
         while True:
             self.clock()
@@ -280,17 +302,9 @@ class Machine(PatchMixin):
     @classmethod
     def from_file(cls, filename):
         with open(filename, 'rb') as f:
-            machine = cls()
-            machine.cpu.A = pickle.load(f)
-            machine.cpu.X = pickle.load(f)
-            machine.cpu.Y = pickle.load(f)
-            machine.cpu.PC = pickle.load(f)
-            machine.cpu.SP = pickle.load(f)
-            machine.cpu.F = pickle.load(f)
-            machine.cpu.memory = pickle.load(f)
-        return machine
+            return pickle.load(f)
 
-    def restore(self, filename):
+    def restore(self, filename):  # TODO drop
         with open(filename, 'rb') as f:
             self.cpu.A = pickle.load(f)
             self.cpu.X = pickle.load(f)
@@ -304,13 +318,7 @@ class Machine(PatchMixin):
 
     def save(self, filename):
         with open(filename, 'wb') as f:
-            pickle.dump(self.cpu.A, f)
-            pickle.dump(self.cpu.X, f)
-            pickle.dump(self.cpu.Y, f)
-            pickle.dump(self.cpu.PC, f)
-            pickle.dump(self.cpu.SP, f)
-            pickle.dump(self.cpu.F, f)
-            pickle.dump(self.memory, f)
+            pickle.dump(self, f)
 
     def load(self, filename, base, format_cbm=False):
         with open(filename, 'rb') as f:

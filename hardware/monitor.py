@@ -198,6 +198,10 @@ class Monitor(cmd.Cmd):
             self.current_address = convert(args[0])
             self.assembler()
 
+    def do_save(self, line):
+        filename, *_ = line.split()
+        self.machine.save(filename)
+
     """
             #obsolete ?
             elif cmd == "buf":
