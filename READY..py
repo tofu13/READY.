@@ -24,7 +24,7 @@ def main():
         c64.run()
     else:
         roms = hardware.roms.ROMS(config.ROMS_FOLDER)
-        memory = hardware.memory.BytearrayMemory(65536, roms)
+        memory = hardware.memory.Memory(roms=roms)
         cpu = hardware.cpu.CPU(memory)
         if args.screen == "raster":
             screen = hardware.screen.RasterScreen(memory)

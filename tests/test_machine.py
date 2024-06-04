@@ -8,7 +8,7 @@ import hardware
 @pytest.fixture
 def c64():
     roms = hardware.roms.ROMS(config.TESTING_ROMS_FOLDER)
-    memory = hardware.memory.BytearrayMemory(65536, roms=roms)
+    memory = hardware.memory.Memory(roms=roms)
     return hardware.machine.Machine(
         memory=memory,
         cpu=hardware.cpu.CPU(memory),

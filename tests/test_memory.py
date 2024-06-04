@@ -1,18 +1,19 @@
 import pytest
 
-from hardware.memory import BytearrayMemory
+from hardware.memory import Memory
 from hardware import roms
 
 import config
 
+
 @pytest.fixture
-def memory():
-    return BytearrayMemory(65536)
+def memory() -> Memory:
+    return Memory()
 
 
 @pytest.fixture()
-def memory_with_roms():
-    memory = BytearrayMemory(65536, roms=roms.ROMS(config.TESTING_ROMS_FOLDER))
+def memory_with_roms() -> Memory:
+    memory = Memory(roms=roms.ROMS(config.TESTING_ROMS_FOLDER))
     memory.hiram = True
     memory.loram = True
     memory.charen = True
@@ -20,48 +21,69 @@ def memory_with_roms():
 
 
 def test_instance(memory):
-    assert isinstance(memory, BytearrayMemory)
+    assert isinstance(memory, Memory)
 
 
-def test_write_read_cell(memory):
+def test_memory_cell(memory):
     memory[42] = 24
     assert memory[42] == 24
 
 
-def test_write_read_slice(memory):
+def test_memory_slice(memory):
     data = bytearray(range(0xFF))
-    memory.set_slice(0xC000, data)
-    assert memory.get_slice(0xC000, 0xC0FF) == data
+    memory[0xC000: 0xC0FF] = data
+    assert memory[0xC000: 0xC0FF] == data
 
 
-def test_read_direct(memory_with_roms):
-    def dummy_read_watcher(address, value):
-        return 0
+def test_read_read_word(memory):
+    memory[0xC000] = 0xCD
+    memory[0xC001] = 0xAB
 
-    memory_with_roms.read_watchers.append((0xD000, 0xDFFF, dummy_read_watcher))
-    memory_with_roms.charen = False
-
-    memory_with_roms[0xDF00] = 24
-    assert memory_with_roms[0xDF00] == memory_with_roms.roms["chargen"][0x0F00]
-    assert memory_with_roms.read(0xDF00) == 24
+    assert memory.read_address(0xC000) == 0xABCD
 
 
-def test_write_direct(memory_with_roms):
-    def dummy_write_watcher(address, value):
-        pytest.fail("Should not be called")
+def test_memory_as_seen_by_cpu(memory_with_roms):
+    memory_with_roms.cpu_write(0XC000, 42)
+    assert memory_with_roms.cpu_read(0xC000) == 42
 
-    memory_with_roms.write_watchers.append((0xD000, 0xDFFF, dummy_write_watcher))
-    memory_with_roms.charen = False
+    assert memory_with_roms.cpu_read(0xA000) == 79  # value from test roms
+    # CPU write into active ROM area
+    memory_with_roms.cpu_write(0xA000, 42)
+    assert memory_with_roms.cpu_read(0xA000) == 79  # value from test roms
+    assert memory_with_roms[0xA000] == 42
 
-    memory_with_roms.write(0xDF00, 24)
-    assert memory_with_roms[0xDF00] == memory_with_roms.roms["chargen"][0x0F00]
-    assert memory_with_roms.read(0xDF00) == 24
+
+def test_read_watcher(memory_with_roms):
+    def read_watcher(address, value):
+        return 42
+
+    memory_with_roms.read_watchers.append((0xD000, 0xDFFF, read_watcher))
+
+    assert memory_with_roms.cpu_read(0xD020) == 42
 
 
-@pytest.mark.skip("Enable me when ROMs in folder")
-def test_read_read_word(memory_with_roms):
-    memory_with_roms[0xC000] = 0xCD
-    memory_with_roms[0xC001] = 0xAB
+def test_write_watcher(memory_with_roms):
+    def write_watcher(address, value):
+        raise Exception
 
-    assert memory_with_roms.read_address(0xC000) == 0xABCD
-    assert memory_with_roms.read_address(0xFFFC) == 0xFCE2
+    memory_with_roms.write_watchers.append((0xD000, 0XDFFF, write_watcher))
+
+    # Assert watcher is called
+    with pytest.raises(Exception):
+        memory_with_roms.cpu_write(0xD020, 42)
+
+
+def test_vic_read(memory_with_roms):
+    # Set bank 0 ($0000-$3FFF)
+    memory_with_roms[0xDD00] = 3
+
+    memory_with_roms[0x0400] = 42
+    assert memory_with_roms.vic_read(0x0400) == 42
+    assert memory_with_roms.vic_read(0x1000) == 16  # value from test roms
+
+    # Set bank 3 ($C000-$FFFF)
+    memory_with_roms[0xDD00] = 0
+
+    memory_with_roms[0xC400] = 42
+    assert memory_with_roms.vic_read(0x0400) == 42
+    assert memory_with_roms.vic_read(0x1000) == 0
