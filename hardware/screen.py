@@ -10,7 +10,7 @@ class VIC_II:
 
     def __init__(self, memory):
         self.memory = memory
-        self.memory[0xD020] = 0x0E  # Default border color
+        self.memory.write(0xD020, 0x0E)  # Default border color
 
         # Registers
         self.pointer_character_memory = 0x0000
@@ -33,15 +33,15 @@ class VIC_II:
     @property
     def memory_bank(self):
         # Bits in the VIC bank register are inverted
-        return (3 - self.memory.read(0xDD00) & 0b11) << 6
+        return (3 - self.memory.read(0xDD00) & 0b11) << 14
 
     @property
     def video_matrix_base_address(self):
-        return self.memory_bank + (self.memory.read(0xD018) & 0b11110000) << 6
+        return self.memory_bank + ((self.memory.read(0xD018) & 0b11110000) << 6)
 
     @property
     def character_generator_base_address(self):
-        return self.memory_bank + (self.memory[0xD018] & 0b00001110) << 10
+        return self.memory_bank + ((self.memory.read(0xD018) & 0b00001110) << 10)
 
     @property
     def Y_SCROLL(self):
@@ -51,7 +51,7 @@ class VIC_II:
     @property
     def RSEL(self):
         # 0XD011 bit #3
-        return bool(self.memory[0xD011] & 0xb1000)
+        return bool(self.memory.read(0xD011) & 0xb1000)
 
     @property
     def DEN(self):
@@ -61,12 +61,12 @@ class VIC_II:
     @property
     def bitmap_mode(self):
         # 0XD011 bit #5
-        return bool(self.memory[0XD011] & 0b10000)
+        return bool(self.memory.read(0XD011) & 0b10000)
 
     @property
     def extended_background(self):
         # 0XD011 bit #6
-        return bool(self.memory[0XD011] & 0b100000)
+        return bool(self.memory.read(0XD011) & 0b100000)
 
     @property
     def X_SCROLL(self):
@@ -81,7 +81,7 @@ class VIC_II:
     @property
     def multicolor_mode(self):
         # 0XD016 bit #3
-        return bool(self.memory[0xD016] & 0b10000)
+        return bool(self.memory.read(0xD016) & 0b10000)
 
     @property
     def border_color(self):
@@ -93,34 +93,35 @@ class VIC_II:
 
     @property
     def background_color_1(self):
-        return self.memory[0xD022] & 0x0F
+        return self.memory.read(0xD022) & 0x0F
 
     @property
     def background_color_2(self):
-        return self.memory[0xD023] & 0x0F
+        return self.memory.read(0xD023) & 0x0F
 
     @property
     def background_color_3(self):
-        return self.memory[0xD024] & 0x0F
+        return self.memory.read(0xD024) & 0x0F
 
 
 class RasterScreen(VIC_II):
     CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
 
+    SCAN_AREA = [504, 312]
     DISPLAY_START = 0x30
     DISPLAY_END = 0xF7
 
-    H_VISIBLE_START = 0
+    H_VISIBLE_START = 50
     FIRST_COLUMN = [31, 24]
     LAST_COLUMN = [334, 343]
-    H_VISIBLE_END = 414
-    H_LAST = VIDEO_SIZE[0]
+    H_VISIBLE_END = 454
+    H_LAST = SCAN_AREA[0]
 
     V_VISIBLE_START = 15
     FIRST_LINE = [55, 51]
     LAST_LINE = [246, 250]
     V_VISIBLE_END = 299
-    V_LAST = VIDEO_SIZE[1]
+    V_LAST = SCAN_AREA[1]
 
     def __init__(self, memory):
         super().__init__(memory)
@@ -133,81 +134,53 @@ class RasterScreen(VIC_II):
         self._frame_on = self.DEN
 
         self.frame = np.zeros(VIDEO_SIZE, dtype="uint8")
+        self.dataframe = np.empty(shape=(VIDEO_SIZE[0] // 8 + 1, VIDEO_SIZE[1], 3),
+                                  dtype="uint8")  # +1 cause partial byte @ 403
 
     def clock(self, clock_counter: int):
-        if self.raster_x == 0 and self.DISPLAY_START <= self.raster_y <= self.DISPLAY_END and self._frame_on:
-            if self.raster_y % 8 == self.Y_SCROLL:
-                # Fetch chars and colors from memory
-                # (the infamous bad line)
-                char_pointer = self.video_matrix_base_address + (self.raster_y - self.DISPLAY_START) // 8 * 40
-                color_pointer = 0XD800 + (self.raster_y - self.DISPLAY_START) // 8 * 40
+        if self.raster_x <= VIDEO_SIZE[0] and self.raster_y <= VIDEO_SIZE[1]:
+            raster_x__8 = self.raster_x // 8
+            if self._frame_on:
+                rsel, csel = self.RSEL, self.CSEL
 
-                self.char_buffer = self.memory.get_slice(char_pointer, char_pointer + 40)
-                self.color_buffer = self.memory.get_slice(color_pointer, color_pointer + 40)
+                # Bad lines
+                if self.raster_x == 0 and self.raster_y % 8 == 0:
+                    char_pointer = self.video_matrix_base_address + (self.raster_y - 50) // 8 * 40
+                    color_pointer = 0XD800 + (self.raster_y - 50) // 8 * 40
 
-        if (self.FIRST_LINE[self.RSEL] <= self.raster_y <= self.LAST_LINE[self.RSEL]
-                and
-                self.FIRST_COLUMN[self.CSEL] <= self.raster_x <= self.LAST_COLUMN[self.CSEL]
-                and self._frame_on):
-            # Raster is in the pixelated area
-            # Get pixel data
-            char_col = (self.raster_x - self.FIRST_COLUMN[1]) // 8  # 24 is always the first column for char data
-            if self.raster_y <= self.DISPLAY_END + self.Y_SCROLL:  # Note: counting 200 lines would be better
-                chargen = self.memory.get_chargen()
-                vertical_scroll_pointer = (self.raster_y - self.Y_SCROLL) % 8
+                    self.char_buffer = np.array(self.memory.get_slice(char_pointer, char_pointer + 40), dtype='uint8')
+                    self.color_buffer = np.array(self.memory.get_slice(color_pointer, color_pointer + 40),
+                                                 dtype='uint8')
 
-                # Get pixel data for two characters
-                if char_col > 0:
-                    byte_left = chargen[self.char_buffer[char_col - 1] * 8 + vertical_scroll_pointer]
+                # Display
+                if (self.FIRST_COLUMN[csel] < self.raster_x < self.LAST_COLUMN[csel] + 8 and
+                        self.FIRST_LINE[rsel] < self.raster_y < self.LAST_LINE[rsel]):
+                    char = self.char_buffer[raster_x__8 - 4]
+                    color = self.color_buffer[raster_x__8 - 4]
+                    pixels = self.memory.roms["chargen"][char * 8 + self.raster_y % 8]
+                    self.dataframe[raster_x__8, self.raster_y] = [pixels, self.background_color, color]
+
+                # Border
                 else:
-                    # Left column empty
-                    byte_left = 0
-
-                byte_right = chargen[self.char_buffer[char_col] * 8 + vertical_scroll_pointer]
-
-                # Combine 2 byte of pixel data into 1 scrolled byte
-                pixels = (byte_left << (8 - self.X_SCROLL) | byte_right >> self.X_SCROLL)
+                    self.dataframe[raster_x__8, self.raster_y - 1] = [0, self.border_color, 0]
             else:
-                # Empty bottom partial row
-                pixels = 0
+                self.dataframe[raster_x__8, self.raster_y - 1] = [0, self.border_color, 0]
 
-            # Draw pixels
-            pixel_data = np.unpackbits(np.array(pixels, dtype="uint8")) * self.color_buffer[char_col]
-            self.frame[self.raster_x:self.raster_x + 8, self.raster_y] = np.where(pixel_data == 0,
-                                                                                  self.background_color, pixel_data)
-
-        elif (self.H_VISIBLE_START <= self.raster_x <= self.H_VISIBLE_END and
-              self.V_VISIBLE_START <= self.raster_y <= self.V_VISIBLE_END):
-            # Raster is in the visible border
-            self.frame[self.raster_x:self.raster_x + 8, self.raster_y] = self.border_color
-            # TODO: use pixel-perfect borders with fine column check (and flip-flop), not raw byte advance
-
-        # else:
-        # Raster is in the invisible area
-        # Do nothing
-        # self.display.fill((0,0,0), rect)
-
-        if self.raster_x >= self.H_LAST:
-            # Line is complete
+        self.raster_x += 8
+        if self.raster_x > self.SCAN_AREA[0]:
             self.raster_x = 0
-            if self.raster_y >= self.V_LAST - 1:  # TODO: wrong
-                # Frame is complete
+            self.memory.write(0xD012, self.raster_y & 0xFF)
+            self.raster_y += 1
+            if self.raster_y > self.SCAN_AREA[1]:
                 self.raster_y = 0
-                # Check if the next frame is blank
-                # This is checked once a frame
                 self._frame_on = self.DEN
-                # Clear line buffers
-                self.char_buffer = bytearray([32] * 40)
-                self.color_buffer = bytearray([0] * 40)
-                return self.frame
-            else:
-                # Advance next scanline
-                self.raster_y += 1
-                self.memory.write(0xD012, self.raster_y & 0xFF)
-
-        else:
-            # Advance next pixel pack
-            self.raster_x += 8
+                return (np.where(
+                    # For each bit == pixel
+                    np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
+                    # If zero its background color
+                    np.repeat(self.dataframe[:, :, 1], 8, axis=0),
+                    # If one its foreground color
+                    np.repeat(self.dataframe[:, :, 2], 8, axis=0)))
 
 
 class VirtualScreen(VIC_II):
