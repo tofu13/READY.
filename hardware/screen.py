@@ -1,25 +1,52 @@
+import dataclasses
 import numpy as np
 
-from .constants import CLOCKS_PER_FRAME, VIDEO_SIZE
+from .constants import BITRANGE, CLOCKS_PER_FRAME, VIDEO_SIZE
+
+
+@dataclasses.dataclass(slots=True)
+class Sprite:
+    x: int = 0
+    y: int = 0
+    msb_x: bool = False  # Most significant bit of x coordinate
+    enable: bool = False
+    expand_x: bool = False
+    expand_y: bool = False
+    priority: bool = False
+    multicolor: bool = False
+    color: int = 0
+
+    @property
+    def coordinates(self):
+        return (
+            self.x + (256 if self.msb_x else 0),
+            self.y
+        )
+
+    @property
+    def X(self):
+        return self.coordinates[0]
+
+    @property
+    def Y(self):
+        return self.y
 
 
 class VIC_II:
     """
     Abstraction of VIC-II and its registers
     """
+
     def __init__(self, memory):
         self.memory = memory
 
         # Registers
-
-        self.irq_raster_enabled = 0
-        self.irq_sprite_background_collision_enabled = 0
-        self.irq_sprite_sprite_collision_enabled = 0
-
-        self.irq_raster_line = 0
-        self.irq_raster_enabled = 1
-        self.irq_sprite_background_collision_enabled = 1
-        self.irq_sprite_sprite_collision_enabled = 1
+        self.irq_raster_line_lsb = 0
+        self.irq_raster_line_msb = 0
+        self.irq_raster_enabled: bool = False
+        self.irq_sprite_background_collision_enabled: bool = False
+        self.irq_sprite_sprite_collision_enabled: bool = False
+        self.irq_lightpen_enabled: bool = False
         self.irq_status_register = 0
 
         self.extended_background = False
@@ -37,11 +64,18 @@ class VIC_II:
         self.background_color_1 = 0x03
         self.background_color_2 = 0x04
         self.background_color_3 = 0x05
+        self.sprite_multicolor_1 = 0x05
+        self.sprite_multicolor_2 = 0x05
+
+        self.sprites = [Sprite() for _ in range(8)]
 
         self.memory.write_watchers.append((0xD000, 0XD3FF, self.write_registers))
         self.memory[0x0400:0x0800] = [1] * 1024
         self.memory[0xD800:0xDC00] = [0xE] * 1024
 
+    @property
+    def irq_raster_line(self):
+        return self.irq_raster_line_lsb + (0x100 if self.irq_raster_line_msb else 0)
     def clock(self, clock_counter: int):
         pass
 
@@ -49,30 +83,65 @@ class VIC_II:
         # The VIC registers are repeated each 64 bytes in the area $d000-$d3ff
         address &= 0x3F
         match address:
+            case sprite if sprite in {0, 2, 4, 6, 8, 10, 12, 14}:
+                self.sprites[sprite // 2].x = value
+            case sprite if sprite in {1, 3, 5, 7, 9, 11, 13, 15}:
+                self.sprites[sprite // 2].y = value
+            case 0x10:
+                for i in range(8):
+                    self.sprites[i].msb_x = bool(value & BITRANGE[i][1])
             case 0x11:
+                self.irq_raster_line_msb = bool(value & 0b10000000)
                 self.extended_background = bool(value & 0b01000000)
                 self.bitmap_mode = bool(value & 0b00100000)
                 self.DEN = bool(value & 0b00010000)
                 self.RSEL = bool(value & 0b00001000)
                 self.Y_SCROLL = value & 0b00000111
+            case 0x12:
+                self.irq_raster_line_lsb = value
+            case 0x15:
+                for i in range(8):
+                    self.sprites[i].enable = bool(value & BITRANGE[i][1])
             case 0x16:
                 self.multicolor_mode = bool(value & 0b10000)
                 self.CSEL = bool(value & 0b1000)
                 self.X_SCROLL = value & 0xb111
+            case 0x17:
+                for i in range(8):
+                    self.sprites[i].expand_y = bool(value & BITRANGE[i][1])
             case 0x18:
                 self.video_matrix_base_address = (value & 0b11110000) << 6
                 self.character_generator_base_address = (value & 0b00001110) << 10
+            case 0x1A:
+                self.irq_lightpen_enabled = bool(value & 0b1000)
+                self.irq_sprite_sprite_collision_enabled = bool(value & 0b0100)
+                self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
+                self.irq_raster_enabled = bool(value & 0b0001)
+            case 0x1B:
+                for i in range(8):
+                    self.sprites[i].priority = bool(value & BITRANGE[i][1])
+            case 0x1C:
+                for i in range(8):
+                    self.sprites[i].multicolor = bool(value & BITRANGE[i][1])
+            case 0x1D:
+                for i in range(8):
+                    self.sprites[i].expand_x = bool(value & BITRANGE[i][1])
             case 0x20:
-                self.border_color = value
+                self.border_color = value & 0x0F
             case 0x21:
-                self.background_color = value
+                self.background_color = value & 0x0F
             case 0x22:
-                self.background_color_1 = value
+                self.background_color_1 = value & 0x0F
             case 0x23:
-                self.background_color_2 = value
+                self.background_color_2 = value & 0x0F
             case 0x24:
-                self.background_color_3 = value
-
+                self.background_color_3 = value & 0x0F
+            case 0x25:
+                self.sprite_multicolor_1 = value & 0x0F
+            case 0x26:
+                self.sprite_multicolor_2 = value & 0x0F
+            case sprite if 0x27 <= sprite <= 0x2E:
+                self.sprites[sprite - 0x27].color = value & 0x0F
 
 class RasterScreen(VIC_II):
     CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
