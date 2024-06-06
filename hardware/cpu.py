@@ -45,7 +45,7 @@ class CPU:
         :return: None
         """
         # Stack memory is at page 1 (0x100)
-        self.memory[0x100 | self.SP] = value
+        self.memory.cpu_write(0x100 | self.SP, value)
         self.SP = (self.SP - 1) & 0xFF
 
     def pop(self):
@@ -55,14 +55,14 @@ class CPU:
         """
         # Stack memory is at page 1 (0x100)
         self.SP = (self.SP + 1) & 0xFF
-        return self.memory[0x100 | self.SP]
+        return self.memory.cpu_read(0x100 | self.SP)
 
     def fetch(self):
         """
         Fetch next istruction (memory read at PC, advance PC)
         :return: None
         """
-        opcode = self.memory[self.PC]
+        opcode = self.memory.cpu_read(self.PC)
         # print(f"Fetched at {self.PC:04X}: {self.opcodes[opcode]}")
         self.PC += 1
         return opcode
@@ -166,7 +166,7 @@ class CPU:
     def addressing_REL(self):
         # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective 
         # address. 
-        address = self.memory[self.PC]
+        address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return address if address < 127 else address - 256
 
@@ -178,7 +178,7 @@ class CPU:
 
     def addressing_ZP(self):
         # An 8-bit address is provided within the zero page.
-        address = self.memory[self.PC]
+        address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return address
 
@@ -199,14 +199,14 @@ class CPU:
     def addressing_ZP_X(self):
         # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, 
         # the address wraps around within the zero page). 
-        base_address = self.memory[self.PC]
+        base_address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return (base_address + self.X) & 0xFF
 
     def addressing_ZP_Y(self):
         # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows, 
         # the address wraps around within the zero page). 
-        base_address = self.memory[self.PC]
+        base_address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return (base_address + self.Y) & 0xFF
 
@@ -214,8 +214,8 @@ class CPU:
         # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the
         # opcode. 
         # Note: replicate bug when address is on page boundary
-        lo, hi = self.memory[self.PC], (
-            self.memory[self.PC + 1] if self.PC & 0xFF != 0xFF else self.memory[self.PC & 0xFF00])
+        lo, hi = self.memory.cpu_read(self.PC), (
+            self.memory.cpu_read(self.PC + 1) if self.PC & 0xFF != 0xFF else self.memory.cpu_read(self.PC & 0xFF00))
         self.PC += 2
         address = self._combine(lo, hi)
         return self.memory.read_address(address)
@@ -224,12 +224,12 @@ class CPU:
         # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, 
         # the address wraps around within page 0). The resulting address is used as a pointer to the data being 
         # accessed. 
-        base = self.memory[self.PC] + self.X
+        base = self.memory.cpu_read(self.PC) + self.X
         self.PC += 1
-        return self.memory.read_address(self.memory[base])
+        return self.memory.read_address(self.memory.cpu_read(base))
 
     def addressing_IND_Y(self):
-        base = self.memory[self.PC]
+        base = self.memory.cpu_read(self.PC)
         self.PC += 1
         return self.memory.read_address(base) + self.Y
 
@@ -237,15 +237,15 @@ class CPU:
 
     # region Instructions
     def ADC(self, address):
-        result = self.A + self.memory[address] + self.F['C']
+        result = self.A + self.memory.cpu_read(address) + self.F['C']
         self._setNZ(result & 0xFF)
         self.F['C'] = result > 0xFF
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = bool((self.A ^ result) & (self.memory[address] ^ result) & 0x80)
+        self.F['V'] = bool((self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def AND(self, address):
-        result = self.A & self.memory[address]
+        result = self.A & self.memory.cpu_read(address)
         self._setNZ(result)
         self.A = result
 
@@ -253,14 +253,14 @@ class CPU:
         if address is None:
             value = self.A
         else:
-            value = self.memory[address]
+            value = self.memory.cpu_read(address)
         self.F['C'] = value >= 0x80
         result = (value << 1) & 0xFF
         self._setNZ(result)
         if address is None:
             self.A = result
         else:
-            self.memory[address] = result
+            self.memory.cpu_write(address, result)
 
     def BRK(self, address):
         self.F['B'] = True
@@ -298,7 +298,7 @@ class CPU:
             self.PC += address
 
     def BIT(self, address):
-        value = self.memory[address]
+        value = self.memory.cpu_read(address)
         self._setNZ(value & self.A)
         self.F['N'] = value >= 0x80
         self.F['V'] = bool(value & 0x40)
@@ -316,29 +316,29 @@ class CPU:
         self.F['V'] = False
 
     def CMP(self, address):
-        result = self.A - self.memory[address]
+        result = self.A - self.memory.cpu_read(address)
         self.F['C'] = result >= 0
         if result < 0:
             result += 255
         self._setNZ(result)
 
     def CPX(self, address):
-        result = self.X - self.memory[address]
+        result = self.X - self.memory.cpu_read(address)
         self.F['C'] = result >= 0
         if result < 0:
             result += 255
         self._setNZ(result)
 
     def CPY(self, address):
-        result = self.Y - self.memory[address]
+        result = self.Y - self.memory.cpu_read(address)
         self.F['C'] = result >= 0
         if result < 0:
             result += 255
         self._setNZ(result)
 
     def DEC(self, address):
-        result = (self.memory[address] - 1) & 0xFF
-        self.memory[address] = result
+        result = (self.memory.cpu_read(address) - 1) & 0xFF
+        self.memory.cpu_write(address, result)
         self._setNZ(result)
 
     def DEX(self, address):
@@ -350,13 +350,13 @@ class CPU:
         self._setNZ(self.Y)
 
     def EOR(self, address):
-        result = self.A ^ self.memory[address]
+        result = self.A ^ self.memory.cpu_read(address)
         self._setNZ(result)
         self.A = result
 
     def INC(self, address):
-        value = (self.memory[address] + 1) & 0xFF
-        self.memory[address] = value
+        value = (self.memory.cpu_read(address) + 1) & 0xFF
+        self.memory.cpu_write(address, value)
         self._setNZ(value)
 
     def INX(self, address):
@@ -378,35 +378,35 @@ class CPU:
         self.indent += 1
 
     def LDA(self, address):
-        self.A = self.memory[address]
+        self.A = self.memory.cpu_read(address)
         self._setNZ(self.A)
 
     def LDX(self, address):
-        self.X = self.memory[address]
+        self.X = self.memory.cpu_read(address)
         self._setNZ(self.X)
 
     def LDY(self, address):
-        self.Y = self.memory[address]
+        self.Y = self.memory.cpu_read(address)
         self._setNZ(self.Y)
 
     def LSR(self, address):
         if address is None:
             value = self.A
         else:
-            value = self.memory[address]
+            value = self.memory.cpu_read(address)
         self.F['C'] = value & 0x01
         result = value >> 1
         self._setNZ(result)
         if address is None:
             self.A = result
         else:
-            self.memory[address] = result
+            self.memory.cpu_write(address, result)
 
     def NOP(self, address):
         pass
 
     def ORA(self, address):
-        result = self.A | self.memory[address]
+        result = self.A | self.memory.cpu_read(address)
         self._setNZ(result)
         self.A = result
 
@@ -427,7 +427,7 @@ class CPU:
         if address is None:
             value = self.A
         else:
-            value = self.memory[address]
+            value = self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
         result = ((value << 1) | self.F['C']) & 0xFF
         self._setNZ(result)
@@ -435,13 +435,13 @@ class CPU:
         if address is None:
             self.A = result
         else:
-            self.memory[address] = result
+            self.memory.cpu_write(address, result)
 
     def ROR(self, address):
         if address is None:
             value = self.A
         else:
-            value = self.memory[address]
+            value = self.memory.cpu_read(address)
         _carrytemp = value & 0x01
         result = ((value >> 1) | self.F['C'] << 7) & 0xFF
         self._setNZ(result)
@@ -449,7 +449,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
-            self.memory[address] = result
+            self.memory.cpu_write(address, result)
 
     def RTI(self, Address):
         # TODO: untested
@@ -464,11 +464,11 @@ class CPU:
         self.indent -= 1
 
     def SBC(self, address):
-        result = self.A - self.memory[address] - (1 - self.F['C'])
+        result = self.A - self.memory.cpu_read(address) - (1 - self.F['C'])
         self._setNZ(result & 0xFF)
         self.F['C'] = result >= 0x00
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = bool((self.A ^ result) & ((0xFF - self.memory[address]) ^ result) & 0x80)
+        self.F['V'] = bool((self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def SEC(self, address):
@@ -481,13 +481,13 @@ class CPU:
         self.F['I'] = True
 
     def STA(self, address):
-        self.memory[address] = self.A
+        self.memory.cpu_write(address, self.A)
 
     def STX(self, address):
-        self.memory[address] = self.X
+        self.memory.cpu_write(address, self.X)
 
     def STY(self, address):
-        self.memory[address] = self.Y
+        self.memory.cpu_write(address, self.Y)
 
     def TAX(self, address):
         self.X = self.A
