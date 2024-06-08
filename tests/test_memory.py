@@ -87,3 +87,10 @@ def test_vic_read(memory_with_roms):
     memory_with_roms[0xC400] = 42
     assert memory_with_roms.vic_read(0x0400) == 42
     assert memory_with_roms.vic_read(0x1000) == 0
+
+
+def test_dump(memory_with_roms):
+    for i in range(0x10):
+        memory_with_roms[0xC000 + i] = i + 32
+    assert (memory_with_roms.dump(0xC000, 0xC010) ==
+            "$C000:  20 21 22 23  24 25 26 27  28 29 2A 2B  2C 2D 2E 2F    !\"#$%&\'()*+,-./\n")

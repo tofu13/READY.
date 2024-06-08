@@ -1,3 +1,6 @@
+from hardware.constants import SCREEN_CHARCODE, OPCODES
+
+
 class Memory:
     def __init__(self, ram=None, roms=None):
         """
@@ -71,6 +74,95 @@ class Memory:
         else:
             lo, hi = self.ram[address: address + 2]
         return hi * 256 + lo
+
+    def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
+        """
+        Return a textual representation of memory from start to end
+        :param as_chars:
+        :param start:
+        :param end:
+        :return:
+        """
+        if start is None:
+            start = 0x0000
+            end = 0xFFFF
+        else:
+            if end is None:
+                end = start + 0x0100
+        step = 0x28 if as_chars else 0x10
+
+        out = ""
+        for row in range(start, end, step):
+            data = [self.cpu_read(i) for i in range(start, end)]
+            data_hex = [f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
+            data_char = map(lambda x: SCREEN_CHARCODE.get(x, "."), data)
+
+            out += f"${row:04X}: "
+            if as_chars:
+                out += f"{''.join(data_char)}\n"
+            else:
+                out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
+        return out
+
+    def disassemble(self, address) -> str:
+        """
+        Return disassembled memory
+        :param address:
+        :return:
+        """
+        output = ""
+        instruction, mode, _ = OPCODES[self[address]]
+
+        # Skip data bytes (or invalid opcodes)
+        instruction = instruction or "???"
+
+        if mode == "addressing_IMP":
+            arg = ""
+            step = 1
+        elif mode == "addressing_ABS":
+            arg = f"${self[address + 2]:02X}{self[address + 1]:02X}"
+            step = 3
+        elif mode == "addressing_ABS_X":
+            arg = f"${self[address + 2]:02X}{self[address + 1]:02X},X"
+            step = 3
+        elif mode == "addressing_ABS_Y":
+            arg = f"${self[address + 2]:02X}{self[address + 1]:02X},Y"
+            step = 3
+        elif mode == "addressing_REL":
+            delta = self[address + 1]
+            arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
+            step = 2
+        elif mode == "addressing_IMM":
+            arg = f"#${self[address + 1]:02X}"
+            step = 2
+        elif mode == "addressing_ZP":
+            arg = f"${self[address + 1]:02X}"
+            step = 2
+        elif mode == "addressing_ZP_X":
+            arg = f"${self[address + 1]:02X},X"
+            step = 2
+        elif mode == "addressing_ZP_Y":
+            arg = f"${self[address + 1]:02X},Y"
+            step = 2
+        elif mode == "addressing_IND":
+            arg = f"(${self[address + 2]:02X}{self[address + 1]:02X})"
+            step = 3
+        elif mode == "addressing_X_IND":
+            arg = f"$({self[address + 1]:02X},X)"
+            step = 2
+        elif mode == "addressing_IND_Y":
+            arg = f"(${self[address + 1]:02X}),Y"
+            step = 2
+        else:
+            # Skip invalid addressing mode
+            arg = ""
+            step = 1
+        # Compose line
+        output += f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
+                  f"{'   ' * (4 - step)}{instruction} {arg}"
+        address = (address + step) & 0xFFFF
+
+        return output, step
 
 
 class BytearrayMemory(Memory, bytearray):
