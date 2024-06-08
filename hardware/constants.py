@@ -7,7 +7,7 @@ SYMBOLS = {
     'R6510': 0x0001,
 }
 
-CLOCKS_PER_EVENT_SERVING = 10000  # Clock cycles between system event serving (keyboard scan, ...)
+CLOCKS_PER_EVENT_SERVING = 25000  # Clock cycles between system event serving (keyboard scan, ...)
 CLOCKS_PER_CONSOLE_REFRESH = 50000  # Clock cycles between console screen (when enabled) updates
 CLOCKS_PER_FRAME = 18656  # Clock cycles between frame update (non-raster screen drivers)
 CLOCKS_PER_PERFORMANCE_REFRESH = 250000  # CLocks cycles between refresh of FPS/perf values
