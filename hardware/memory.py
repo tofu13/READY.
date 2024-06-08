@@ -108,7 +108,7 @@ class Memory:
                 out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
         return out
 
-    def disassemble(self, address) -> str:
+    def disassemble(self, address) -> tuple[str, int]:
         """
         Return disassembled memory
         :param address:
@@ -152,7 +152,7 @@ class Memory:
             arg = f"(${self[address + 2]:02X}{self[address + 1]:02X})"
             step = 3
         elif mode == "addressing_X_IND":
-            arg = f"$({self[address + 1]:02X},X)"
+            arg = f"(${self[address + 1]:02X},X)"
             step = 2
         elif mode == "addressing_IND_Y":
             arg = f"(${self[address + 1]:02X}),Y"
@@ -164,7 +164,6 @@ class Memory:
         # Compose line
         output += f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
                   f"{'   ' * (4 - step)}{instruction} {arg}"
-        address = (address + step) & 0xFFFF
 
         return output, step
 
