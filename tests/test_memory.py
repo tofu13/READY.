@@ -13,16 +13,38 @@ def memory() -> Memory:
 
 @pytest.fixture()
 def memory_with_roms() -> Memory:
+    """
+    Memory with default configuration:
+    BASIC ROM is active
+    KERNAL ROM is active
+    I/O is active
+    """
     memory = Memory(roms=roms.ROMS(config.TESTING_ROMS_FOLDER))
-    memory.hiram = True
-    memory.loram = True
-    memory.charen = True
+    memory.cpu_write(0x00, 0x07)
+    memory.cpu_write(0x01, 0x07)
     return memory
 
 
-def test_instance(memory):
-    assert isinstance(memory, Memory)
+def test_cpu_ports(memory_with_roms):
+    assert memory_with_roms._hiram is True
+    assert memory_with_roms._loram is True
+    assert memory_with_roms._io is True
 
+    # Make only hiram port writable
+    memory_with_roms.cpu_write(0x00, 0x01)
+
+    # Try to reset all ports
+    memory_with_roms.cpu_write(0x01, 0x00)
+
+    assert memory_with_roms._hiram is False
+    assert memory_with_roms._loram is True
+    assert memory_with_roms._io is True
+
+    # Restore ports
+    memory_with_roms.cpu_write(0x01, 0x07)
+    assert memory_with_roms._hiram is True
+    assert memory_with_roms._loram is True
+    assert memory_with_roms._io is True
 
 def test_memory_cell(memory):
     memory[42] = 24
@@ -47,10 +69,23 @@ def test_memory_as_seen_by_cpu(memory_with_roms):
     assert memory_with_roms.cpu_read(0xC000) == 42
 
     assert memory_with_roms.cpu_read(0xA000) == 79  # value from test roms
+
+    # Set I/O false to access chargen ROM
+    memory_with_roms.cpu_write(0x00, 0x04)
+    memory_with_roms.cpu_write(0x01, 0x00)
+
     # CPU write into active ROM area
     memory_with_roms.cpu_write(0xA000, 42)
     assert memory_with_roms.cpu_read(0xA000) == 79  # value from test roms
     assert memory_with_roms[0xA000] == 42
+
+    memory_with_roms.cpu_write(0xFFFF, 42)
+    assert memory_with_roms.cpu_read(0xFFFF) == 104  # value from test roms
+    assert memory_with_roms[0xFFFF] == 42
+
+    memory_with_roms.cpu_write(0xD020, 42)
+    assert memory_with_roms.cpu_read(0xD020) == 95  # value from test roms
+    assert memory_with_roms[0xD020] == 42
 
 
 def test_read_watcher(memory_with_roms):

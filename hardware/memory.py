@@ -10,9 +10,11 @@ class Memory:
         self.ram = ram if ram is not None else bytearray(65536)
         self.roms = roms.contents if roms is not None else dict()
 
-        self.charen, self.loram, self.hiram = True, True, True
         self.read_watchers = []
         self.write_watchers = []
+
+        # Internals
+        self._io, self._loram, self._hiram = True, True, True
 
     def __getitem__(self, item):
         return self.ram[item]
@@ -22,12 +24,12 @@ class Memory:
 
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+        if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
             return self.roms['basic'][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+        elif 0xE000 <= address <= 0xFFFF and self._hiram:
             return self.roms['kernal'][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
-            if not self.charen and (self.hiram or self.loram):
+            if not self._io and (self._hiram or self._loram):
                 return self.roms['chargen'][address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
@@ -38,11 +40,13 @@ class Memory:
     def cpu_write(self, address: int, value: int):
         """Write into RAM or I/O depending on CPU ports"""
         # Hard coded processor port at $01
-        if address == 1:
-            self.charen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
+        if address == 0x01:
             # Set only writable bits in the processor port
-            value &= self.ram[0x00]
-            value |= self.ram[0x01] & (255 - self.ram[0])
+            mask = self.ram[0x00]
+            self.ram[0x01] = ((255 - mask) & self.ram[0x01]) | (mask & value)
+            # Update internal flags
+            self._io, self._loram, self._hiram = map(bool, map(int, f"{self.ram[0x01] & 0x7:03b}"))
+            return
 
         for start, end, callback in self.write_watchers:
             if start <= address <= end:
@@ -67,9 +71,9 @@ class Memory:
         Optimized consecutive reads
         Return big endian word (16-bit address)
         """
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+        if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
             lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+        elif 0xE000 <= address <= 0xFFFF and self._hiram:
             lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
         else:
             lo, hi = self.ram[address: address + 2]

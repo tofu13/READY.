@@ -9,9 +9,8 @@ from hardware.screen import VIC_II
 @pytest.fixture
 def memory():
     memory = Memory(roms=roms.ROMS(config.TESTING_ROMS_FOLDER))
-    memory.hiram = True
-    memory.loram = True
-    memory.charen = True
+    memory.cpu_write(0x00, 0x07)
+    memory.cpu_write(0x01, 0x07)
     return memory
 
 
