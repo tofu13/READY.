@@ -202,20 +202,6 @@ class Monitor(cmd.Cmd):
         filename, *_ = line.split()
         self.machine.save(filename)
 
-    """
-            #obsolete ?
-            elif cmd == "buf":
-                self.machine.input_buffer = " ".join(args)
-
-            #obsolete ?
-            elif cmd == "buffile":
-                try:
-                    with open(args[0], 'r') as ifile:
-                        self.machine.input_buffer = ifile.read()
-                except FileNotFoundError as e:
-                    print(e)
-    """
-
     def do_x(self, line):
         """
         x
