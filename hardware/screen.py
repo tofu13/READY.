@@ -70,18 +70,26 @@ class VIC_II:
         self.sprites = [Sprite() for _ in range(8)]
 
         self.memory.write_watchers.append((0xD000, 0XD3FF, self.write_registers))
-        self.memory[0x0400:0x0800] = [1] * 1024
-        self.memory[0xD800:0xDC00] = [0xE] * 1024
+        self.memory.read_watchers.append((0xD000, 0XD3FF, self.read_registers))
+
+        self._register_cache = bytearray(0x40)
+
+        # self.memory[0x0400:0x0800] = [1] * 1024
+        # self.memory[0xD800:0xDC00] = [0xE] * 1024
 
     @property
     def irq_raster_line(self):
         return self.irq_raster_line_lsb + (0x100 if self.irq_raster_line_msb else 0)
+
     def clock(self, clock_counter: int):
         pass
 
     def write_registers(self, address: int, value: int):
         # The VIC registers are repeated each 64 bytes in the area $d000-$d3ff
         address &= 0x3F
+        # Store value for quick retrival
+        self._register_cache[address] = value
+
         match address:
             case sprite if sprite in {0, 2, 4, 6, 8, 10, 12, 14}:
                 self.sprites[sprite // 2].x = value
@@ -142,6 +150,39 @@ class VIC_II:
                 self.sprite_multicolor_2 = value & 0x0F
             case sprite if 0x27 <= sprite <= 0x2E:
                 self.sprites[sprite - 0x27].color = value & 0x0F
+
+    def read_registers(self, address: int, _: int) -> int:
+        address &= 0x3F
+        match address:
+            # Dynamic registers
+            case 0x12:
+                return 0
+            case 0x13:
+                # Light pen X (MSB only, 2 pixel resolution)
+                return 0
+            case 0x14:
+                # Light pen Y
+                return 0
+            case 0x19:
+                # Interrupts
+                return 0 | 0b01110000  # (disconnected bits are 1 on read)
+            case 0x1E:
+                # Sprite sprite collision
+                return 0
+            case 0x1F:
+                # Sprite background collision
+                return 0
+            # Static register (disconnected bits are 1 on read)
+            case 0x16:
+                return self._register_cache[0x16] | 0b11000000
+            case 0x18:
+                return self._register_cache[0x18] | 0b00000001
+            case 0x1A:
+                return self._register_cache[0x1A] | 0b11110000
+            case color if 0x20 <= color <= 0x2E:
+                return self._register_cache[color] | 0b11110000
+            case other:
+                return self._register_cache[other]
 
 class RasterScreen(VIC_II):
     CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
@@ -207,8 +248,6 @@ class RasterScreen(VIC_II):
         self.raster_x += 8
         if self.raster_x > self.SCAN_AREA[0]:
             self.raster_x = 0
-            # TODO: move into read_registers
-            self.memory[0xD012] = self.raster_y & 0xFF
             self.raster_y += 1
             if self.raster_y >= self.SCAN_AREA[1]:
                 self.raster_y = 0
