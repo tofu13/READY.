@@ -229,7 +229,8 @@ class RasterScreen(VIC_II):
 
                     char = self.char_buffer[(self.raster_x - 24) // 8]
                     color = self.color_buffer[raster_x__8 - 24 // 8]
-                    pixels = self.memory.roms["chargen"][char * 8 + (self.raster_y - 51) % 8]
+                    pixels = self.memory.vic_read(
+                        self.character_generator_base_address + char * 8 + (self.raster_y - 51) % 8)
 
                     # TODO: XY SCROLL
                     self.dataframe[raster_x__8, self.raster_y] = [pixels, self.background_color, color]
