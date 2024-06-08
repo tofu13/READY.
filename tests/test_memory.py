@@ -46,6 +46,7 @@ def test_cpu_ports(memory_with_roms):
     assert memory_with_roms._loram is True
     assert memory_with_roms._io is True
 
+
 def test_memory_cell(memory):
     memory[42] = 24
     assert memory[42] == 24
@@ -57,11 +58,14 @@ def test_memory_slice(memory):
     assert memory[0xC000: 0xC0FF] == data
 
 
-def test_read_read_word(memory):
-    memory[0xC000] = 0xCD
-    memory[0xC001] = 0xAB
+def test_read_read_address(memory_with_roms):
+    memory_with_roms[0xC000] = 0xCD
+    memory_with_roms[0xC001] = 0xAB
 
-    assert memory.read_address(0xC000) == 0xABCD
+    assert memory_with_roms.read_address(0xC000) == 0xABCD
+
+    assert memory_with_roms.read_address(0xFFFE) == 0x6810  # value from test roms
+    assert memory_with_roms.read_address(0xA000) == 0x914F  # value from test roms
 
 
 def test_memory_as_seen_by_cpu(memory_with_roms):
@@ -129,3 +133,23 @@ def test_dump(memory_with_roms):
         memory_with_roms[0xC000 + i] = i + 32
     assert (memory_with_roms.dump(0xC000, 0xC010) ==
             "$C000:  20 21 22 23  24 25 26 27  28 29 2A 2B  2C 2D 2E 2F    !\"#$%&\'()*+,-./\n")
+
+
+@pytest.mark.parametrize("mem, disassembled", [
+    ([0x52], ("52         ??? ", 1)),
+    ([0x18], ("18         CLC ", 1)),
+    ([0xA9, 0x42], ("A9 42      LDA #$42", 2)),
+    ([0xD0, 0xFB], ("D0 FB      BNE $BFFD", 2)),
+    ([0xA5, 0x02], ("A5 02      LDA $02", 2)),
+    ([0xB5, 0x02], ("B5 02      LDA $02,X", 2)),
+    ([0xB6, 0x02], ("B6 02      LDX $02,Y", 2)),
+    ([0x41, 0x47], ("41 47      EOR ($47,X)", 2)),
+    ([0xD1, 0xA8], ("D1 A8      CMP ($A8),Y", 2)),
+    ([0xBD, 0x34, 0x12], ("BD 34 12   LDA $1234,X", 3)),
+    ([0xB9, 0x21, 0x43], ("B9 21 43   LDA $4321,Y", 3)),
+    ([0x4C, 0x00, 0xC0], ("4C 00 C0   JMP $C000", 3)),
+    ([0x6C, 0xFE, 0xFF], ("6C FE FF   JMP ($FFFE)", 3)),
+])
+def test_disassemble(memory_with_roms, mem, disassembled):
+    memory_with_roms[0xC000: 0xC003] = mem
+    assert memory_with_roms.disassemble(0xC000) == disassembled
