@@ -1,5 +1,4 @@
-from multiprocessing import Array
-from hardware.constants import OPCODES, SCREEN_CHARCODE
+from hardware.constants import SCREEN_CHARCODE, OPCODES
 
 
 class Memory:
@@ -11,9 +10,11 @@ class Memory:
         self.ram = ram if ram is not None else bytearray(65536)
         self.roms = roms.contents if roms is not None else dict()
 
-        self.charen, self.loram, self.hiram = True, True, True
         self.read_watchers = []
         self.write_watchers = []
+
+        # Internals
+        self._io, self._loram, self._hiram = True, True, True
 
     def __getitem__(self, item):
         return self.ram[item]
@@ -23,12 +24,12 @@ class Memory:
 
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+        if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
             return self.roms['basic'][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+        elif 0xE000 <= address <= 0xFFFF and self._hiram:
             return self.roms['kernal'][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
-            if not self.charen and (self.hiram or self.loram):
+            if not self._io and (self._hiram or self._loram):
                 return self.roms['chargen'][address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
@@ -39,11 +40,13 @@ class Memory:
     def cpu_write(self, address: int, value: int):
         """Write into RAM or I/O depending on CPU ports"""
         # Hard coded processor port at $01
-        if address == 1:
-            self.charen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
+        if address == 0x01:
             # Set only writable bits in the processor port
-            value &= self.ram[0x00]
-            value |= self.ram[0x01] & (255 - self.ram[0])
+            mask = self.ram[0x00]
+            self.ram[0x01] = ((255 - mask) & self.ram[0x01]) | (mask & value)
+            # Update internal flags
+            self._io, self._loram, self._hiram = map(bool, map(int, f"{self.ram[0x01] & 0x7:03b}"))
+            return
 
         for start, end, callback in self.write_watchers:
             if start <= address <= end:
@@ -68,108 +71,13 @@ class Memory:
         Optimized consecutive reads
         Return big endian word (16-bit address)
         """
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
+        if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
             lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
+        elif 0xE000 <= address <= 0xFFFF and self._hiram:
             lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
         else:
             lo, hi = self.ram[address: address + 2]
         return hi * 256 + lo
-
-
-class _Memory:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.read_watchers = []
-        self.write_watchers = []
-        self.roms = {}
-        self.charen, self.loram, self.hiram = None, None, None
-
-    def __getitem__(self, address: int) -> int:
-        # print(f"Memory read at {address}: {value}")
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
-            return self.roms['basic'][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
-            return self.roms['kernal'][address - 0xE000]
-        elif 0xD000 <= address <= 0xDFFF:
-            if not self.charen and (self.hiram or self.loram):
-                return self.roms['chargen'][address - 0xD000]
-            else:
-                for start, end, callback in self.read_watchers:
-                    if start <= address <= end:
-                        return callback(address, super().__getitem__(address))
-
-        return super().__getitem__(address)
-
-    def __setitem__(self, address: int, value: int) -> None:
-        # Hard coded processor port at $01
-        if address == 1:
-            self.charen, self.loram, self.hiram = map(bool, map(int, f"{value & 0x7:03b}"))
-            # Set only writable bits in the processor port
-            value &= self[0x00]
-            value |= self[0x01] & (255 - self[0])
-
-        for start, end, callback in self.write_watchers:
-            if start <= address <= end:
-                callback(address, value)
-                break
-
-        # print(f"Memory write at {key}: {value}")
-        super().__setitem__(address, value)
-
-    def __str__(self):
-        return self.dump()
-
-    def read(self, address) -> int:
-        """
-        Direct read from memory, no masking
-        """
-        return super().__getitem__(address)
-
-    def read_address(self, address: int) -> int:
-        """
-        Optimized consecutive reads
-        Return big endian word (16-bit address)
-        """
-        if 0xA000 <= address <= 0xBFFF and self.hiram and self.loram:
-            lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram:
-            lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
-        else:
-            lo, hi = super().__getitem__(slice(address, address + 2))
-        return hi * 256 + lo
-
-    def write(self, address, value) -> None:
-        """
-        Direct write to memory, no masking
-        """
-        super().__setitem__(address, value)
-
-    def get_slice(self, start: int, end: int) -> bytearray:
-        """
-        Return memory from start to end in a bytearray
-        Warning: ignores ROMs masking, data are always read from (underlying) memory
-        :param start:
-        :param end:
-        :return:
-        """
-        return super().__getitem__(slice(start, end))
-
-    def set_slice(self, start: int, data) -> None:
-        """
-        Set data into memory starting from start
-        :param start:
-        :param data:
-        :return:
-        """
-        super().__setitem__(slice(start, start + len(data)), data)
-
-    def get_chargen(self) -> bytearray:
-        """
-        Quick returns chargen rom
-        :return:
-        """
-        return self.roms['chargen']
 
     def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
         """
@@ -189,7 +97,7 @@ class _Memory:
 
         out = ""
         for row in range(start, end, step):
-            data = self.get_slice(row, row + step)
+            data = [self.cpu_read(i) for i in range(start, end)]
             data_hex = [f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
             data_char = map(lambda x: SCREEN_CHARCODE.get(x, "."), data)
 
@@ -200,7 +108,7 @@ class _Memory:
                 out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
         return out
 
-    def disassemble(self, address) -> str:
+    def disassemble(self, address) -> tuple[str, int]:
         """
         Return disassembled memory
         :param address:
@@ -244,7 +152,7 @@ class _Memory:
             arg = f"(${self[address + 2]:02X}{self[address + 1]:02X})"
             step = 3
         elif mode == "addressing_X_IND":
-            arg = f"$({self[address + 1]:02X},X)"
+            arg = f"(${self[address + 1]:02X},X)"
             step = 2
         elif mode == "addressing_IND_Y":
             arg = f"(${self[address + 1]:02X}),Y"
@@ -256,7 +164,6 @@ class _Memory:
         # Compose line
         output += f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
                   f"{'   ' * (4 - step)}{instruction} {arg}"
-        address = (address + step) & 0xFFFF
 
         return output, step
 
@@ -270,45 +177,3 @@ class BytearrayMemory(Memory, bytearray):
         super().__init__(size)
         if roms is not None:
             self.roms = roms.contents
-
-
-class CTypesMemory:
-    read_watchers = []
-    write_watchers = []
-    roms = {}
-    contents = Array('B', 65536)
-
-    def __getitem__(self, address):
-        # print(f"Memory read at {item}: {value}")
-        value = self.contents[address]
-        chargen, loram, hiram = map(int, f"{self.contents[1] & 0x7:03b}")
-
-        if 0xA000 <= address <= 0xBFFF:
-            if hiram and loram:
-                return self.roms['basic'][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF:
-            if hiram:
-                return self.roms['kernal'][address - 0xE000]
-        elif 0xD000 <= address <= 0xDFFF:
-            if not chargen and (not hiram and not loram):
-                return self.roms['chargen'][address - 0xD000]
-            elif chargen:
-                for start, end, callback in self.read_watchers:
-                    if start <= address <= end:
-                        return callback(address, value)
-        return value
-
-    def __setitem__(self, address, value):
-        if value < 0 or value > 255:
-            raise ValueError(f"Trying to write to memory a value ({value}) out of range (0-255).")
-        for start, end, callback in self.write_watchers:
-            if start <= address <= end:
-                callback(address, value)
-                break
-        # print(f"Memory write at {key}: {value}")
-        self.contents[address] = value
-
-
-if __name__ == '__main__':
-    m = BytearrayMemory(65536)
-    print(m)
