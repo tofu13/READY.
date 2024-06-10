@@ -30,23 +30,22 @@ def test_cpu_defaults(cpu):
 
 
 def test_cpu_registers(cpu):
-    cpu.reset(
-        A=0xFF,
-        X=0xFF,
-        Y=0xFF,
-        PC=0XFFFF,
-        SP=0X00,
-        F={
-            'N': True,
-            'V': True,
-            '-': True,  # Bad
-            'B': True,
-            'D': True,
-            'I': False,
-            'Z': True,
-            'C': True,
-        }
-    )
+    cpu.A = 0xFF
+    cpu.X = 0xFF
+    cpu.Y = 0xFF
+    cpu.PC = 0XFFFF
+    cpu.SP = 0X00
+    cpu.F = {
+        'N': True,
+        'V': True,
+        '-': True,  # Bad
+        'B': True,
+        'D': True,
+        'I': False,
+        'Z': True,
+        'C': True,
+    }
+
     assert str(cpu) == "FFFF  00         BRK           - A:FF X:FF Y:FF SP:00 NV-BD.ZC"
 
 
@@ -108,7 +107,6 @@ def test_cpu_addressing_methods(cpu, method, expected, advance):
     cpu.memory.cpu_write(0x0034, 0xCD)
     cpu.memory.cpu_write(0x0035, 0xAB)
 
-    # TODO: should use cpu.reset (new version)
     cpu.X = 0x01
     cpu.Y = 0x02
     cpu.PC = 0xC000

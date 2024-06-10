@@ -189,7 +189,7 @@ class Monitor(cmd.Cmd):
 
         Soft reset
         """
-        self.machine.cpu.reset(PC=0xFCE2)
+        self.machine.cpu.PC = 0xFCE2
         return True
 
     def do_a(self, line):
