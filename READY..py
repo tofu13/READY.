@@ -54,7 +54,11 @@ def main():
             # Pre-clear screen for quicker runtime updates
             print("\033[H\033[2J", end="")
 
+        if config.QUICK_BOOT:
+            # Shorten boot routine
+            c64.memory.roms["kernal"][0x1D69] = 159
         c64.run(0xFCE2)
+
 
 if __name__ == '__main__':
     main()

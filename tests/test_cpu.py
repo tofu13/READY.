@@ -7,7 +7,7 @@ from hardware.roms import ROMS
 
 
 @pytest.fixture
-def cpu():
+def cpu() -> CPU:
     return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)))
 
 
@@ -25,28 +25,27 @@ def test_cpu_defaults(cpu):
     assert cpu.F['Z'] is False
     assert cpu.F['C'] is False
 
-    assert cpu._pack_status_register(cpu.F) == 0b00100100
+    assert cpu._pack_status_register() == 0b00100100
     assert str(cpu) == "0000  00         BRK           - A:00 X:00 Y:00 SP:FF ..-..I.."
 
 
 def test_cpu_registers(cpu):
-    cpu.reset(
-        A=0xFF,
-        X=0xFF,
-        Y=0xFF,
-        PC=0XFFFF,
-        SP=0X00,
-        F={
-            'N': True,
-            'V': True,
-            '-': True,  # Bad
-            'B': True,
-            'D': True,
-            'I': False,
-            'Z': True,
-            'C': True,
-        }
-    )
+    cpu.A = 0xFF
+    cpu.X = 0xFF
+    cpu.Y = 0xFF
+    cpu.PC = 0XFFFF
+    cpu.SP = 0X00
+    cpu.F = {
+        'N': True,
+        'V': True,
+        '-': True,  # Bad
+        'B': True,
+        'D': True,
+        'I': False,
+        'Z': True,
+        'C': True,
+    }
+
     assert str(cpu) == "FFFF  00         BRK           - A:FF X:FF Y:FF SP:00 NV-BD.ZC"
 
 
@@ -64,6 +63,31 @@ def test_cpu_stack(cpu):
     assert cpu.SP == 0xFF
 
 
+def test_cpu_fetch(cpu):
+    cpu.memory.cpu_write(0xC000, 0x42)
+    cpu.PC = 0xC000
+
+    assert cpu.fetch() == 0x42
+    assert cpu.PC == 0xC001
+
+
+def test_cpu_irq(cpu):
+    cpu.PC = 0xC000
+    cpu.F['I'] = True
+    cpu.irq()
+    assert cpu.F['I'] is True
+
+    cpu.F['I'] = False
+    cpu.irq()
+    assert cpu.F['I'] is True
+    assert cpu.PC == 0x6810  # Value from testing roms
+
+
+def test_cpu_nmi(cpu):
+    cpu.PC = 0xC000
+    cpu.nmi()
+    assert cpu.PC == 0xBA2E  # Value from testing roms
+
 @pytest.mark.parametrize("value, N, Z", [
     (0x00, False, True),
     (0x01, False, False),
@@ -80,6 +104,24 @@ def test_cpu_setNZ(cpu, value, N, Z):
 
 def test_cpu_combine(cpu):
     assert cpu._combine(0x34, 0x12) == 0x1234
+
+
+def test_cpu_save_state(cpu):
+    cpu.PC = 0x1234
+    cpu.F = {
+        'N': True,
+        'V': True,
+        'B': True,
+        'D': True,
+        'I': False,
+        'Z': True,
+        'C': True,
+    }
+    cpu._save_state()
+
+    assert cpu.pop() == 0b1101111
+    assert cpu.pop() == 0x34
+    assert cpu.pop() == 0x12
 
 
 @pytest.mark.parametrize("method, expected, advance", [
@@ -108,7 +150,6 @@ def test_cpu_addressing_methods(cpu, method, expected, advance):
     cpu.memory.cpu_write(0x0034, 0xCD)
     cpu.memory.cpu_write(0x0035, 0xAB)
 
-    # TODO: should use cpu.reset (new version)
     cpu.X = 0x01
     cpu.Y = 0x02
     cpu.PC = 0xC000

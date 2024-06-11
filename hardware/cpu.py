@@ -19,7 +19,6 @@ class CPU:
         self._debug = False
 
         self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
-        self.reset(A, X, Y, PC, SP)
 
         self._cycles_left = 0
 
@@ -29,14 +28,6 @@ class CPU:
         return (f"{self.PC:04X}  "
                 f"{assembly}{' ' * (24 - len(assembly))} - "
                 f"A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}")
-
-    def reset(self, A: int = 0, X: int = 0, Y: int = 0, PC: int = 0x0000, SP: int = 0xFF, F: dict = None) -> None:
-        self.A = A
-        self.X = X
-        self.Y = Y
-        self.PC = PC
-        self.SP = SP
-        self.F = F or {'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}
 
     def push(self, value):
         """
@@ -127,10 +118,9 @@ class CPU:
         """
         return high << 8 | low
 
-    @staticmethod
-    def _pack_status_register(value):
+    def _pack_status_register(self):
         result = 0
-        for i, flag in enumerate(value.values()):
+        for i, flag in enumerate(self.F.values()):
             result += BITRANGE[i][1] * flag
         return result
 
@@ -149,7 +139,7 @@ class CPU:
         """
         self.push(self.PC >> 8)
         self.push(self.PC & 0XFF)
-        self.push(self._pack_status_register(self.F))
+        self.push(self._pack_status_register())
 
     # region Addressing methods
     @staticmethod
@@ -414,7 +404,7 @@ class CPU:
         self.push(self.A)
 
     def PHP(self, address):
-        self.push(self._pack_status_register(self.F))
+        self.push(self._pack_status_register())
 
     def PLA(self, address):
         self.A = self.pop()
