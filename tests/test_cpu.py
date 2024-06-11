@@ -63,6 +63,31 @@ def test_cpu_stack(cpu):
     assert cpu.SP == 0xFF
 
 
+def test_cpu_fetch(cpu):
+    cpu.memory.cpu_write(0xC000, 0x42)
+    cpu.PC = 0xC000
+
+    assert cpu.fetch() == 0x42
+    assert cpu.PC == 0xC001
+
+
+def test_cpu_irq(cpu):
+    cpu.PC = 0xC000
+    cpu.F['I'] = True
+    cpu.irq()
+    assert cpu.F['I'] is True
+
+    cpu.F['I'] = False
+    cpu.irq()
+    assert cpu.F['I'] is True
+    assert cpu.PC == 0x6810  # Value from testing roms
+
+
+def test_cpu_nmi(cpu):
+    cpu.PC = 0xC000
+    cpu.nmi()
+    assert cpu.PC == 0xBA2E  # Value from testing roms
+
 @pytest.mark.parametrize("value, N, Z", [
     (0x00, False, True),
     (0x01, False, False),
@@ -79,6 +104,24 @@ def test_cpu_setNZ(cpu, value, N, Z):
 
 def test_cpu_combine(cpu):
     assert cpu._combine(0x34, 0x12) == 0x1234
+
+
+def test_cpu_save_state(cpu):
+    cpu.PC = 0x1234
+    cpu.F = {
+        'N': True,
+        'V': True,
+        'B': True,
+        'D': True,
+        'I': False,
+        'Z': True,
+        'C': True,
+    }
+    cpu._save_state()
+
+    assert cpu.pop() == 0b1101111
+    assert cpu.pop() == 0x34
+    assert cpu.pop() == 0x12
 
 
 @pytest.mark.parametrize("method, expected, advance", [
