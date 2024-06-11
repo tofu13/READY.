@@ -7,7 +7,7 @@ from hardware.roms import ROMS
 
 
 @pytest.fixture
-def cpu():
+def cpu() -> CPU:
     return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)))
 
 
@@ -25,7 +25,7 @@ def test_cpu_defaults(cpu):
     assert cpu.F['Z'] is False
     assert cpu.F['C'] is False
 
-    assert cpu._pack_status_register(cpu.F) == 0b00100100
+    assert cpu._pack_status_register() == 0b00100100
     assert str(cpu) == "0000  00         BRK           - A:00 X:00 Y:00 SP:FF ..-..I.."
 
 

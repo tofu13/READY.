@@ -118,10 +118,9 @@ class CPU:
         """
         return high << 8 | low
 
-    @staticmethod
-    def _pack_status_register(value):
+    def _pack_status_register(self):
         result = 0
-        for i, flag in enumerate(value.values()):
+        for i, flag in enumerate(self.F.values()):
             result += BITRANGE[i][1] * flag
         return result
 
@@ -140,7 +139,7 @@ class CPU:
         """
         self.push(self.PC >> 8)
         self.push(self.PC & 0XFF)
-        self.push(self._pack_status_register(self.F))
+        self.push(self._pack_status_register())
 
     # region Addressing methods
     @staticmethod
@@ -405,7 +404,7 @@ class CPU:
         self.push(self.A)
 
     def PHP(self, address):
-        self.push(self._pack_status_register(self.F))
+        self.push(self._pack_status_register())
 
     def PLA(self, address):
         self.A = self.pop()
