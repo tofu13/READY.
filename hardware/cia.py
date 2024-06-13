@@ -33,10 +33,10 @@ class CIA:
                 if self.timer_A_restart_after_underflow:
                     self.timer_A_load()
                 else:
+                    self.timer_A = 0  # Unsure which value to set
                     self.timer_A_start = False
 
     def timer_A_load(self):
-        # self.timer_A_underflow = False
         self.timer_A = self.timer_A_latch
 
     @property
