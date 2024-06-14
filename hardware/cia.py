@@ -99,12 +99,16 @@ class CIA_A(CIA):
         return self.irq_occured
 
     def get_registers(self, address, value):
-        if address == 0xDC01:
-            keys_pressed = self.keys_pressed.copy()
-            if not keys_pressed:
+        # Registers repeated every 0x10
+        address &= 0x0F
+        if address == 0x01:
+            if not self.keys_pressed:
                 # Shortcut
                 return 0xFF
-            elif pygame.K_RCTRL in keys_pressed:
+
+            keys_pressed = self.keys_pressed.copy()
+
+            if pygame.K_RCTRL in keys_pressed:
                 # Ignore keyboard commands via RCTRL
                 return 0xFF
             elif pygame.K_UP in keys_pressed:
@@ -316,24 +320,24 @@ class CIA_A(CIA):
                     k |= 0x80  # RUN STOP
 
             return 255 - k
-        elif address == 0xDC04:
+        elif address == 0x04:
             return self.timer_A % 256
-        elif address == 0xDC05:
+        elif address == 0x05:
             return self.timer_A // 256
-        elif address == 0xDC06:
+        elif address == 0x06:
             return self.timer_B % 256
-        elif address == 0xDC07:
+        elif address == 0x07:
             return self.timer_B // 256
 
-        elif address == 0xDC08:
+        elif address == 0x08:
             return self.tod[3]
-        elif address == 0xDC09:
+        elif address == 0x09:
             secs = self.tod[2]
             return (secs // 10) * 16 + secs % 10
-        elif address == 0xDC0A:
+        elif address == 0x0A:
             mins = self.tod[1]
             return (mins // 10) * 16 + mins % 10
-        elif address == 0xDC0B:
+        elif address == 0x0B:
             # Bit 0..3: Single hours in BCD-format ($0-$9)
             # Bit 4..6: Ten hours in BCD-format ($0-$5)
             # Bit 7: Differentiation AM/PM, 0=AM, 1=PM
@@ -341,7 +345,7 @@ class CIA_A(CIA):
             hours = self.tod[0]
             return (hours > 12) * 128 + (hours % 12 // 10) * 16 + hours % 10
 
-        elif address == 0xDC0D:
+        elif address == 0x0D:
             # Bit 0: 1 = Underflow Timer A
             # Bit 1: 1 = Underflow Timer B
             # Bit 2: 1 = Time of day and alarm time is equal
