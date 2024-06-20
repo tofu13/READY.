@@ -266,7 +266,7 @@ class Machine(PatchMixin):
             if event.type == pygame.KEYDOWN:
                 self.keys_pressed.add(event.key)
                 # Scan RESTORE key
-                if event.key == pygame.K_PAGEUP:
+                if event.key == pygame.K_PAGEDOWN:
                     nmi = True
 
                 # Also scan special keys
