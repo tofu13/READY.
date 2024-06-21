@@ -288,7 +288,7 @@ class FastScreen(VIC_II):
 
     def cache_fonts(self):
         cache = []
-        chargen = self.memory.get_chargen()
+        chargen = self.memory.roms["chargen"]
         for i in range(512):
             matrix = chargen[i * 8: (i + 1) * 8]
             font_array = np.array(matrix, dtype="uint8")
@@ -302,8 +302,8 @@ class FastScreen(VIC_II):
 
             if self.DEN:
                 char_base = self.video_matrix_base_address
-                charcodes = np.array(self.memory.get_slice(char_base, char_base + 1000))
-                colors = np.array(self.memory.get_slice(0xD800, 0xD800 + 1000))
+                charcodes = np.array([self.memory.vic_read(i) for i in range(char_base, char_base + 1000)])
+                colors = np.array(self.memory[0xD800: 0xD800 + 1000])
                 chars = (
                     # Compose frame pixels
                     np.hstack(
@@ -322,7 +322,7 @@ class FastScreen(VIC_II):
                 )
                 chars = np.where(chars == 0, self.background_color, chars)
                 frame[24:344, 51:251] = chars
-            self.memory.write(0xD012, 0)  # This lets the system boot (see $FF5E)
+            self.memory[0xD012] = 0  # This lets the system boot (see $FF5E)
             return frame
 
     @property
