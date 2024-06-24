@@ -1,8 +1,6 @@
 from time import perf_counter
 
-import pygame
-
-from .constants import BITVALUES
+from .constants import BITVALUES, KEYBOARD
 
 
 class CIA:
@@ -33,10 +31,10 @@ class CIA:
                 if self.timer_A_restart_after_underflow:
                     self.timer_A_load()
                 else:
+                    self.timer_A = 0  # Unsure which value to set
                     self.timer_A_start = False
 
     def timer_A_load(self):
-        # self.timer_A_underflow = False
         self.timer_A = self.timer_A_latch
 
     @property
@@ -99,241 +97,45 @@ class CIA_A(CIA):
         return self.irq_occured
 
     def get_registers(self, address, value):
-        if address == 0xDC01:
-            keys_pressed = self.keys_pressed.copy()
-            if not keys_pressed:
+        # Registers repeated every 0x10
+        address &= 0x0F
+        if address == 0x01:
+            if not self.keys_pressed:
                 # Shortcut
                 return 0xFF
-            elif pygame.K_RCTRL in keys_pressed:
-                # Ignore keyboard commands via RCTRL
-                return 0xFF
-            elif pygame.K_UP in keys_pressed:
-                # Emulate SHIFT+DOWN
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_DOWN})
-            elif pygame.K_LEFT in keys_pressed:
-                # Emulate SHIFT+RIGHT
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_RIGHT})
-            elif pygame.K_INSERT in keys_pressed:
-                # Emulate INS (bonus)
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_DELETE})
-            elif {pygame.K_LSHIFT, pygame.K_LESS}.issubset(keys_pressed):
-                # Emulate >
-                # Keep shift
-                keys_pressed.update({pygame.K_PERIOD})
-            elif pygame.K_LESS in keys_pressed:
-                # Emulate <
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_COMMA})
-            elif {pygame.K_RALT, 242}.issubset(keys_pressed):
-                # Emulate @
-                keys_pressed.difference_update({pygame.K_RALT, 242})
-                keys_pressed.update({pygame.K_AT})
-            elif {pygame.K_RALT, 224}.issubset(keys_pressed):
-                # Emulate #
-                keys_pressed.difference_update({pygame.K_RALT, 224})
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_3})
-            elif {pygame.K_RALT, 232}.issubset(keys_pressed):
-                # Emulate [
-                keys_pressed.difference_update({pygame.K_RALT, 232})
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_COLON})
-            elif {pygame.K_RALT, pygame.K_PLUS}.issubset(keys_pressed):
-                # Emulate ]
-                keys_pressed.difference_update({pygame.K_RALT, pygame.K_PLUS})
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_SEMICOLON})
+            col = 255 - self.memory[0xDC00]  # Invert bits
 
-            elif {pygame.K_LSHIFT, pygame.K_QUOTE}.issubset(keys_pressed):
-                # Emulate ?
-                # Keep shift
-                keys_pressed.update({pygame.K_SLASH})
-            elif {pygame.K_LSHIFT, pygame.K_0}.issubset(keys_pressed):
-                # Emulate =
-                # Keep shift
-                keys_pressed.update({pygame.K_EQUALS})
-            elif {pygame.K_LSHIFT, pygame.K_3}.issubset(keys_pressed):
-                # Emulate £ through pygame.CURRENCYUNIT
-                keys_pressed.remove(pygame.K_LSHIFT)
-                keys_pressed.update({pygame.K_CURRENCYUNIT})
-            elif pygame.K_QUOTE in keys_pressed:
-                # Emulate '
-                keys_pressed.update({pygame.K_LSHIFT, pygame.K_7})
-            elif {pygame.K_LSHIFT, pygame.K_COMMA}.issubset(keys_pressed):
-                # Emulate ;
-                keys_pressed.remove(pygame.K_LSHIFT)
-                keys_pressed.update({pygame.K_SEMICOLON})
-            elif {pygame.K_LSHIFT, pygame.K_PERIOD}.issubset(keys_pressed):
-                # Emulate :
-                keys_pressed.remove(pygame.K_LSHIFT)
-                keys_pressed.update({pygame.K_COLON})
-            elif {pygame.K_LSHIFT, pygame.K_PLUS}.issubset(keys_pressed):
-                # Emulate *
-                keys_pressed.remove(pygame.K_LSHIFT)
-                keys_pressed.update({pygame.K_ASTERISK})
+            c64keys = []
+            keys_pressed = self.keys_pressed.copy()
+            for kmap, val in KEYBOARD.items():
+                if kmap.issubset(keys_pressed):
+                    c64keys.extend([k.value for k in val])
+                    keys_pressed.difference_update(kmap)
+                    # break
 
-            col = 0xFF - self.memory[0xDC00]  # Invert bits
             k = 0x00
-
-            if col & 0b00000001:
-                if pygame.K_DELETE in keys_pressed or pygame.K_BACKSPACE in keys_pressed:
-                    k |= 0x01
-                if pygame.K_RETURN in keys_pressed or pygame.K_KP_ENTER in keys_pressed:
-                    k |= 0x02
-                if pygame.K_RIGHT in keys_pressed:
-                    k |= 0x04
-                if pygame.K_F7 in keys_pressed:
-                    k |= 0x08
-                if pygame.K_F1 in keys_pressed:
-                    k |= 0x10
-                if pygame.K_F3 in keys_pressed:
-                    k |= 0x20
-                if pygame.K_F5 in keys_pressed:
-                    k |= 0x40
-                if pygame.K_DOWN in keys_pressed:
-                    k |= 0x80
-
-            if col & 0b00000010:
-                if pygame.K_3 in keys_pressed or pygame.K_KP3 in keys_pressed:
-                    k |= 0x01
-                if pygame.K_w in keys_pressed:
-                    k |= 0x02
-                if pygame.K_a in keys_pressed:
-                    k |= 0x04
-                if pygame.K_4 in keys_pressed or pygame.K_KP4 in keys_pressed:
-                    k |= 0x08
-                if pygame.K_z in keys_pressed:
-                    k |= 0x10
-                if pygame.K_s in keys_pressed:
-                    k |= 0x20
-                if pygame.K_e in keys_pressed:
-                    k |= 0x40
-                if pygame.K_LSHIFT in keys_pressed:
-                    k |= 0x80
-
-            if col & 0b00000100:
-                if pygame.K_5 in keys_pressed or pygame.K_KP5 in keys_pressed:
-                    k |= 0x01
-                if pygame.K_r in keys_pressed:
-                    k |= 0x02
-                if pygame.K_d in keys_pressed:
-                    k |= 0x04
-                if pygame.K_6 in keys_pressed or pygame.K_KP6 in keys_pressed:
-                    k |= 0x08
-                if pygame.K_c in keys_pressed:
-                    k |= 0x10
-                if pygame.K_f in keys_pressed:
-                    k |= 0x20
-                if pygame.K_t in keys_pressed:
-                    k |= 0x40
-                if pygame.K_x in keys_pressed:
-                    k |= 0x80
-
-            if col & 0b00001000:
-                if pygame.K_7 in keys_pressed or pygame.K_KP7 in keys_pressed:
-                    k |= 0x01
-                if pygame.K_y in keys_pressed:
-                    k |= 0x02
-                if pygame.K_g in keys_pressed:
-                    k |= 0x04
-                if pygame.K_8 in keys_pressed or pygame.K_KP8 in keys_pressed:
-                    k |= 0x08
-                if pygame.K_b in keys_pressed:
-                    k |= 0x10
-                if pygame.K_h in keys_pressed:
-                    k |= 0x20
-                if pygame.K_u in keys_pressed:
-                    k |= 0x40
-                if pygame.K_v in keys_pressed:
-                    k |= 0x80
-
-            if col & 0b00010000:
-                if pygame.K_9 in keys_pressed or pygame.K_KP9 in keys_pressed:
-                    k |= 0x01
-                if pygame.K_i in keys_pressed:
-                    k |= 0x02
-                if pygame.K_j in keys_pressed:
-                    k |= 0x04
-                if pygame.K_0 in keys_pressed or pygame.K_KP0 in keys_pressed:
-                    k |= 0x08
-                if pygame.K_m in keys_pressed:
-                    k |= 0x10
-                if pygame.K_k in keys_pressed:
-                    k |= 0x20
-                if pygame.K_o in keys_pressed:
-                    k |= 0x40
-                if pygame.K_n in keys_pressed:
-                    k |= 0x80
-
-            if col & 0b00100000:
-                if pygame.K_PLUS in keys_pressed or pygame.K_KP_PLUS in keys_pressed:
-                    k |= 0x01  # +
-                if pygame.K_p in keys_pressed:
-                    k |= 0x02
-                if pygame.K_l in keys_pressed:
-                    k |= 0x04
-                if pygame.K_MINUS in keys_pressed or pygame.K_KP_MINUS in keys_pressed:
-                    k |= 0x08  # -
-                if pygame.K_PERIOD in keys_pressed or pygame.K_KP_PERIOD in keys_pressed:
-                    k |= 0x10  # .
-                if pygame.K_COLON in keys_pressed:
-                    k |= 0x20  # :
-                if pygame.K_AT in keys_pressed:
-                    k |= 0x40  # @
-                if pygame.K_COMMA in keys_pressed:
-                    k |= 0x80  # ,
-
-            if col & 0b01000000:
-                if pygame.K_CURRENCYUNIT in keys_pressed:
-                    k |= 0x01  # £
-                if pygame.K_ASTERISK in keys_pressed or pygame.K_KP_MULTIPLY in keys_pressed:
-                    k |= 0x02  # *
-                if pygame.K_SEMICOLON in keys_pressed:
-                    k |= 0x04  # ;
-                if pygame.K_HOME in keys_pressed:
-                    k |= 0x08
-                if pygame.K_RSHIFT in keys_pressed:
-                    k |= 0x10
-                if pygame.K_EQUALS in keys_pressed:
-                    k |= 0x20  # =
-                if 232 in keys_pressed:
-                    k |= 0x40  # Up arrow / pi
-                if pygame.K_SLASH in keys_pressed or pygame.K_KP_DIVIDE in keys_pressed:
-                    k |= 0x80  # /
-
-            if col & 0b10000000:
-                if pygame.K_1 in keys_pressed or pygame.K_KP1 in keys_pressed:
-                    k |= 0x01
-                if pygame.K_BACKSLASH in keys_pressed:
-                    k |= 0x02
-                if pygame.K_LCTRL in keys_pressed:
-                    k |= 0x04
-                if pygame.K_2 in keys_pressed or pygame.K_KP2 in keys_pressed:
-                    k |= 0x08
-                if pygame.K_SPACE in keys_pressed:
-                    k |= 0x10
-                if pygame.K_LALT in keys_pressed:
-                    k |= 0x20  # C= KEY
-                if pygame.K_q in keys_pressed:
-                    k |= 0x40
-                if pygame.K_ESCAPE in keys_pressed:
-                    k |= 0x80  # RUN STOP
-
+            for k_col, k_row in c64keys:
+                if col & k_col:
+                    k |= k_row
             return 255 - k
-        elif address == 0xDC04:
+        elif address == 0x04:
             return self.timer_A % 256
-        elif address == 0xDC05:
+        elif address == 0x05:
             return self.timer_A // 256
-        elif address == 0xDC06:
+        elif address == 0x06:
             return self.timer_B % 256
-        elif address == 0xDC07:
+        elif address == 0x07:
             return self.timer_B // 256
 
-        elif address == 0xDC08:
+        elif address == 0x08:
             return self.tod[3]
-        elif address == 0xDC09:
+        elif address == 0x09:
             secs = self.tod[2]
             return (secs // 10) * 16 + secs % 10
-        elif address == 0xDC0A:
+        elif address == 0x0A:
             mins = self.tod[1]
             return (mins // 10) * 16 + mins % 10
-        elif address == 0xDC0B:
+        elif address == 0x0B:
             # Bit 0..3: Single hours in BCD-format ($0-$9)
             # Bit 4..6: Ten hours in BCD-format ($0-$5)
             # Bit 7: Differentiation AM/PM, 0=AM, 1=PM
@@ -341,7 +143,7 @@ class CIA_A(CIA):
             hours = self.tod[0]
             return (hours > 12) * 128 + (hours % 12 // 10) * 16 + hours % 10
 
-        elif address == 0xDC0D:
+        elif address == 0x0D:
             # Bit 0: 1 = Underflow Timer A
             # Bit 1: 1 = Underflow Timer B
             # Bit 2: 1 = Time of day and alarm time is equal
