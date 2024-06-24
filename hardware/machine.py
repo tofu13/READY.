@@ -119,6 +119,7 @@ class Machine(PatchMixin):
 
         self.serial_device_number = None
         self.keys_pressed = set()
+        self.caps_lock = False
 
         self.breakpoints = set()
         self.tracepoints = set()
@@ -264,7 +265,6 @@ class Machine(PatchMixin):
         nmi = False
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
-                self.keys_pressed.add(event.key)
                 # Scan RESTORE key
                 if event.key == pygame.K_PAGEDOWN:
                     nmi = True
@@ -290,9 +290,18 @@ class Machine(PatchMixin):
                 elif event.key == pygame.K_s and event.mod & pygame.KMOD_RCTRL:
                     # STOP is pressed on datassette
                     self.set_datassette_button_status(False)
+                elif event.key == pygame.K_CAPSLOCK:
+                    self.caps_lock = not self.caps_lock
+                    if not self.caps_lock:
+                        self.keys_pressed.remove(pygame.K_LSHIFT)
+                else:
+                    self.keys_pressed.add(event.key)
+
+                if self.caps_lock:
+                    self.keys_pressed.add(pygame.K_LSHIFT)
 
             elif event.type == pygame.KEYUP:
-                self.keys_pressed.remove(event.key)
+                self.keys_pressed.discard(event.key)
 
             elif event.type == pygame.WINDOWCLOSE:
                 pygame.quit()
