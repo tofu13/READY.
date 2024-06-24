@@ -3,6 +3,8 @@ import re
 
 import pygame
 
+import config
+
 DEFAULT_LOAD_ADDRESS = 0x0801
 
 SYMBOLS = {
@@ -536,37 +538,81 @@ class C64_KEYS(enum.Enum):
     RUN_STOP = (0x80, 0x80)
 
 
-KEYBOARD = {
-    # IT keymap
-    frozenset((pygame.K_LSHIFT, pygame.K_PLUS)): {C64_KEYS.ASTERISK},  # *
-    frozenset((pygame.K_LSHIFT, pygame.K_0)): {C64_KEYS.EQUAL},  # =
-    frozenset((pygame.K_LSHIFT, pygame.K_7)): {C64_KEYS.SLASH},  # /
-    frozenset((pygame.K_LSHIFT, pygame.K_QUOTE)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SLASH},  # ?
-    frozenset((pygame.K_LSHIFT, pygame.K_PERIOD)): {C64_KEYS.COLON},  # :
-    frozenset((pygame.K_LSHIFT, pygame.K_COMMA)): {C64_KEYS.SEMICOLON},  # ;
-    frozenset((pygame.K_LSHIFT, pygame.K_3)): {C64_KEYS.POUND},  # £
-    frozenset((pygame.K_LSHIFT, pygame.K_LESS)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.PERIOD},  # >
-    frozenset((pygame.K_RSHIFT, pygame.K_PLUS)): {C64_KEYS.ASTERISK},  # *
-    frozenset((pygame.K_RSHIFT, pygame.K_0)): {C64_KEYS.EQUAL},  # =
-    frozenset((pygame.K_RSHIFT, pygame.K_7)): {C64_KEYS.SLASH},  # /
-    frozenset((pygame.K_RSHIFT, pygame.K_QUOTE)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SLASH},  # ?
-    frozenset((pygame.K_RSHIFT, pygame.K_PERIOD)): {C64_KEYS.COLON},  # :
-    frozenset((pygame.K_RSHIFT, pygame.K_COMMA)): {C64_KEYS.SEMICOLON},  # ;
-    frozenset((pygame.K_RSHIFT, pygame.K_3)): {C64_KEYS.POUND},  # £
-    frozenset((pygame.K_RSHIFT, pygame.K_LESS)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.PERIOD},  # >
-    frozenset((pygame.K_RALT, 224)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_3},  # #
-    frozenset((pygame.K_RALT, 242)): {C64_KEYS.AT},  # @
-    frozenset((pygame.K_RALT, 232)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.COLON},  # [
-    frozenset((pygame.K_RALT, pygame.K_PLUS)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SEMICOLON},  # ]
-    frozenset((pygame.K_LESS,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.COMMA},  # <
-    frozenset((pygame.K_PAGEUP,)): {C64_KEYS.UP_ARROW},  #
-    frozenset((pygame.K_BACKSLASH,)): {C64_KEYS.LEFT_ARROW},
-    frozenset((pygame.K_PLUS,)): {C64_KEYS.PLUS},
-    frozenset((pygame.K_MINUS,)): {C64_KEYS.MINUS},
-    frozenset((pygame.K_QUOTE,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_7},
-    frozenset((pygame.K_PERIOD,)): {C64_KEYS.PERIOD},
-    frozenset((pygame.K_COMMA,)): {C64_KEYS.COMMA},
+KEYMAPS = {
+    "it": {
+        frozenset((pygame.K_LSHIFT, pygame.K_PLUS)): {C64_KEYS.ASTERISK},  # *
+        frozenset((pygame.K_LSHIFT, pygame.K_0)): {C64_KEYS.EQUAL},  # =
+        frozenset((pygame.K_LSHIFT, pygame.K_7)): {C64_KEYS.SLASH},  # /
+        frozenset((pygame.K_LSHIFT, pygame.K_QUOTE)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SLASH},  # ?
+        frozenset((pygame.K_LSHIFT, pygame.K_PERIOD)): {C64_KEYS.COLON},  # :
+        frozenset((pygame.K_LSHIFT, pygame.K_COMMA)): {C64_KEYS.SEMICOLON},  # ;
+        frozenset((pygame.K_LSHIFT, pygame.K_3)): {C64_KEYS.POUND},  # £
+        frozenset((pygame.K_LSHIFT, pygame.K_LESS)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.PERIOD},  # >
+        frozenset((pygame.K_RSHIFT, pygame.K_PLUS)): {C64_KEYS.ASTERISK},  # *
+        frozenset((pygame.K_RSHIFT, pygame.K_0)): {C64_KEYS.EQUAL},  # =
+        frozenset((pygame.K_RSHIFT, pygame.K_7)): {C64_KEYS.SLASH},  # /
+        frozenset((pygame.K_RSHIFT, pygame.K_QUOTE)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SLASH},  # ?
+        frozenset((pygame.K_RSHIFT, pygame.K_PERIOD)): {C64_KEYS.COLON},  # :
+        frozenset((pygame.K_RSHIFT, pygame.K_COMMA)): {C64_KEYS.SEMICOLON},  # ;
+        frozenset((pygame.K_RSHIFT, pygame.K_3)): {C64_KEYS.POUND},  # £
+        frozenset((pygame.K_RSHIFT, pygame.K_LESS)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.PERIOD},  # >
+        frozenset((pygame.K_RALT, 224)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_3},  # #
+        frozenset((pygame.K_RALT, 242)): {C64_KEYS.AT},  # @
+        frozenset((pygame.K_RALT, 232)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.COLON},  # [
+        frozenset((pygame.K_RALT, pygame.K_PLUS)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SEMICOLON},  # ]
+        frozenset((pygame.K_LESS,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.COMMA},  # <
+        frozenset((pygame.K_PAGEUP,)): {C64_KEYS.UP_ARROW},  #
+        frozenset((pygame.K_BACKSLASH,)): {C64_KEYS.LEFT_ARROW},
+        frozenset((pygame.K_PLUS,)): {C64_KEYS.PLUS},
+        frozenset((pygame.K_MINUS,)): {C64_KEYS.MINUS},
+        frozenset((pygame.K_QUOTE,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_7},
+        frozenset((pygame.K_PERIOD,)): {C64_KEYS.PERIOD},
+        frozenset((pygame.K_COMMA,)): {C64_KEYS.COMMA},
+    },
+    "en": {
+        frozenset((pygame.K_LSHIFT, pygame.K_2)): {C64_KEYS.AT, },  # @
+        frozenset((pygame.K_LSHIFT, pygame.K_6)): {},  # dead ^
+        frozenset((pygame.K_LSHIFT, pygame.K_7)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_6},  # &
+        frozenset((pygame.K_LSHIFT, pygame.K_8)): {C64_KEYS.ASTERISK},  # *
+        frozenset((pygame.K_LSHIFT, pygame.K_9)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_8},  # (
+        frozenset((pygame.K_LSHIFT, pygame.K_0)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_9},  # )
+        frozenset((pygame.K_LSHIFT, pygame.K_MINUS)): {},  # dead _
+        frozenset((pygame.K_LSHIFT, pygame.K_EQUALS)): {C64_KEYS.PLUS},  # +
+        frozenset((pygame.K_LSHIFT, pygame.K_QUOTE,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_2},  # "
+        frozenset((pygame.K_LSHIFT, pygame.K_LESS,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.PERIOD},  # >
+        frozenset((pygame.K_LSHIFT, pygame.K_SEMICOLON,)): {C64_KEYS.COLON},  # :
 
+        frozenset((pygame.K_RSHIFT, pygame.K_2)): {C64_KEYS.AT, },  # @
+        frozenset((pygame.K_RSHIFT, pygame.K_6)): {},  # dead ^
+        frozenset((pygame.K_RSHIFT, pygame.K_7)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_6},  # &
+        frozenset((pygame.K_RSHIFT, pygame.K_8)): {C64_KEYS.ASTERISK},  # *
+        frozenset((pygame.K_RSHIFT, pygame.K_9)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_8},  # (
+        frozenset((pygame.K_RSHIFT, pygame.K_0)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_9},  # )
+        frozenset((pygame.K_RSHIFT, pygame.K_MINUS)): {},  # dead _
+        frozenset((pygame.K_RSHIFT, pygame.K_EQUALS)): {C64_KEYS.PLUS},  # +
+        frozenset((pygame.K_RSHIFT, pygame.K_QUOTE,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_2},  # "
+        frozenset((pygame.K_RSHIFT, pygame.K_LESS,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.PERIOD},  # >
+        frozenset((pygame.K_RSHIFT, pygame.K_SEMICOLON,)): {C64_KEYS.COLON},  # :
+
+        frozenset((pygame.K_LESS,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.COMMA},  # <
+        frozenset((pygame.K_COMMA,)): {C64_KEYS.COMMA},  # ,
+        frozenset((pygame.K_PERIOD,)): {C64_KEYS.PERIOD},  # .
+        frozenset((pygame.K_SLASH,)): {C64_KEYS.SLASH},  # /
+        frozenset((pygame.K_SEMICOLON,)): {C64_KEYS.SEMICOLON},  # ;
+        frozenset((pygame.K_QUOTE,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_7},  # '
+        frozenset((pygame.K_BACKSLASH,)): {C64_KEYS.POUND},  # £
+        frozenset((pygame.K_LEFTBRACKET,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.COLON},  # [
+        frozenset((pygame.K_RIGHTBRACKET,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.SEMICOLON},  # ]
+        frozenset((pygame.K_EQUALS,)): {C64_KEYS.EQUAL},  # ]
+        frozenset((pygame.K_MINUS,)): {C64_KEYS.MINUS},  # ]
+        frozenset((pygame.K_BACKQUOTE,)): {C64_KEYS.LEFT_ARROW},  # <--
+        frozenset((pygame.K_BACKSLASH,)): {C64_KEYS.POUND},  # £
+        frozenset((pygame.K_QUOTE,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.NUMBER_7},  # '
+    }
+}
+
+KEYBOARD = KEYMAPS[config.KEYMAP]
+KEYBOARD.update({
     # Common keys
     frozenset((pygame.K_LEFT,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.CRSR_LR},
     frozenset((pygame.K_UP,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.CRSR_UD},
@@ -579,6 +625,7 @@ KEYBOARD = {
     frozenset((pygame.K_INSERT,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.INS_DEL},
     frozenset((pygame.K_RETURN,)): {C64_KEYS.RETURN},
     frozenset((pygame.K_HOME,)): {C64_KEYS.CLEAR_HOME},
+    frozenset((pygame.K_PAGEUP,)): {C64_KEYS.UP_ARROW},  # ^
     frozenset((pygame.K_ESCAPE,)): {C64_KEYS.RUN_STOP},
 
     frozenset((pygame.K_LSHIFT,)): {C64_KEYS.LEFT_SHIFT},
@@ -650,4 +697,4 @@ KEYBOARD = {
     frozenset((pygame.K_F6,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.F5_F6},
     frozenset((pygame.K_F7,)): {C64_KEYS.F7_F8},
     frozenset((pygame.K_F8,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.F7_F8},
-}
+})
