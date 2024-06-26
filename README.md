@@ -23,55 +23,98 @@ virtualenv venv -p python3
 pip install -r requirements.txt
 ```
 
-Then download basic, kernal and chargen into `roms/` folder.
+ROMS are not included here: download basic, kernal and chargen into `roms/` folder.
 
 ## Usage
 
 ### Running the emulator
 
 ```shell
-python READY..py```
+python READY..py
 ```
 
 ### Options
 
 ```shell
-> python READY..py --help
+python READY..py --help
 ```
 ```
-usage: READY..py [-h] [-s {raster,simple,text,virtual,numpy}] [-d DISK] [-c]
+usage: READY..py [-h] [-s {raster,virtual,fast}] [-d DISK] [-c] [-t LOADSTATE]
 
 An educational C=64 emulator.
 
 options:
   -h, --help            show this help message and exit
-  -s {raster,simple,text,virtual,numpy}, --screen {raster,simple,text,virtual,numpy}
+  -s {raster,virtual,fast}, --screen {raster,virtual,fast}
                         Screen driver
   -d DISK, --disk DISK  Disk (t64)
   -c, --console         Show screen in console (chars only)
+  -t LOADSTATE, --loadstate LOADSTATE
+                        Load state from file
+```
+
+### Configuration
+
+See `config.py` for available parameters:
+
+```
+# Path to ROM files
+ROMS_FOLDER = "roms"
+
+# Path to testing ROM files
+TESTING_ROMS_FOLDER = "tests/roms"
+
+# Default screen driver
+# - raster: full simulation, slower
+# - fast: partial simulation, faster
+# - virtual: headless
+SCREEN = "fast"
+# SCREEN = "raster"
+
+# Shorten cold start
+QUICK_BOOT = True
+
+# Keymap
+# KEYMAP = "en"
+KEYMAP = "it"
 ```
 
 ### Keyboard mapping
 
+#### Default keys
 ```
-- \ : <LEFT ARROW>
+- PAGE_DOWN: <RESTORE>
+- PAGE_UP: <UP_ARROW>
 - ESC: <RUN/STOP>
-- BACKSPACE: <DEL>
-- INS: <INS> (<SHIFT+DEL>)
+- BACKSPACE, CANC: <INS/DEL>
 - HOME: <HOME>
-- PAGE_UP: <RESTORE>
 - LEFT_ALT: <C=>
+- LEFT_CTRL: <CTRL>
 ```
 
-Special keys
+#### Bonus keys
 
 ```
-- F10 paste (text)
+- LEFT: <SHIFT+CRSR_LR>
+- UP: <SHIFT+CRSR_UD>
+- INS: <INS> (<SHIFT+INS/DEL>)
+```
+
+#### Special keys
+
+```
+- F10 paste
 - F11 enter monitor
 - F12 reset
 - RIGHT_ALT + P: PLAY on datassette
 - RIGHT_ALT + S: STOP on datassette
 ```
+
+#### Keymaps
+
+Available keymaps: it, en.
+
+(Definitions in `constants.py`, contributions welcome)
 
 ### Monitor
 

@@ -55,7 +55,6 @@ def main():
             print("\033[H\033[2J", end="")
 
         if config.QUICK_BOOT:
-            # Shorten boot routine
             c64.memory.roms["kernal"][0x1D69] = 159
         c64.run(0xFCE2)
 
