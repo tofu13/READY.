@@ -5,7 +5,7 @@ from hardware.cia import CIA, CIA_A
 from hardware.memory import Memory
 
 
-@pytest.fixture
+@pytest.fixture()
 def memory():
     # Dont need ROMS
     memory = Memory()
@@ -16,12 +16,12 @@ def memory():
     return memory
 
 
-@pytest.fixture
+@pytest.fixture()
 def cia(memory) -> CIA:
     return CIA(memory)
 
 
-@pytest.fixture
+@pytest.fixture()
 def cia_a(memory):
     return CIA_A(memory)
 
@@ -62,7 +62,7 @@ def test_CIA_tod(cia):
     assert cia.tod == (0, 0, 0, 0)
 
 
-@pytest.mark.parametrize("pressed, column, expected", [
+@pytest.mark.parametrize(("pressed", "column", "expected"), [
     (set(), 0x00, 0x00),
     ({pygame.K_DELETE}, 0x01, 0x01),
     ({pygame.K_RETURN}, 0x01, 0x02),

@@ -184,8 +184,8 @@ class CIA_A(CIA):
             self.timer_A_latch = value * 256 + self.timer_A_latch % 256
         elif address == 0xDC0D:
             # TODO: set interrupt sources
-            source = bool(value & 0b10000000)
-            source  # Stub -- remove
+            # source = bool(value & 0b10000000)
+            pass
 
         elif address == 0xDC0E:
             # Bit 0: 0 = Stop timer; 1 = Start timer

@@ -6,7 +6,7 @@ from hardware.memory import Memory
 from hardware.screen import VIC_II
 
 
-@pytest.fixture
+@pytest.fixture()
 def memory():
     memory = Memory(roms=roms.ROMS(config.TESTING_ROMS_FOLDER))
     memory.cpu_write(0x00, 0x07)
@@ -14,7 +14,7 @@ def memory():
     return memory
 
 
-@pytest.fixture
+@pytest.fixture()
 def vic_ii(memory):
     return VIC_II(memory)
 

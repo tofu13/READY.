@@ -1,4 +1,5 @@
 import dataclasses
+
 import numpy as np
 
 from .constants import BITRANGE, CLOCKS_PER_FRAME, VIDEO_SIZE
@@ -213,8 +214,8 @@ class RasterScreen(VIC_II):
         if self.raster_x < VIDEO_SIZE[0] and self.raster_y < VIDEO_SIZE[1]:
             # Raster is in the visible area
             raster_x__8 = self.raster_x // 8
-            if (24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250):
-                if self._frame_on or 1:
+            if 24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250:
+                if self._frame_on:
                     # Raster is in the display area
                     # Bad lines
                     if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):

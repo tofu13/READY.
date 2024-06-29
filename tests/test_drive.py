@@ -4,7 +4,8 @@ from hardware import disk_drive
 
 TEST_DISK_IMAGE = "tests/test_image.d64"
 
-@pytest.fixture
+
+@pytest.fixture()
 def my_drive() -> disk_drive.Drive:
     drive = disk_drive.Drive()
     drive.set_imagefile(TEST_DISK_IMAGE)

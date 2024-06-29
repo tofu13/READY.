@@ -4,7 +4,7 @@ from hardware.constants import ASSEMBLER_REGEXES
 from hardware.monitor import convert, parse_assembly
 
 
-@pytest.mark.parametrize("argument, addressing, value", [
+@pytest.mark.parametrize(("argument", "addressing", "value"), [
     ("#$10", "IMM", "$10"),
     ("#$FF", "IMM", "$FF"),
     ("#FF", "IMM", "FF"),
@@ -68,7 +68,7 @@ def test_assembler_regexes(argument, addressing, value):
         assert addressing is None
 
 
-@pytest.mark.parametrize("value, expected", [
+@pytest.mark.parametrize(("value", "expected"), [
     ("$1A", 26),
     ("2c", 44),
     ("&112", 74),
@@ -85,7 +85,7 @@ def test_convert(value, expected):
     assert convert(value) == expected
 
 
-@pytest.mark.parametrize("line, expected", [
+@pytest.mark.parametrize(("line", "expected"), [
     ("ADC #$1A", [0x69, 0x1A]),
     ("ADC $1A", [0x65, 0x1A]),
     ("ADC $1A,X", [0x75, 0x1A]),

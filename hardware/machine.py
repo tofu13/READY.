@@ -6,9 +6,15 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import CLOCKS_PER_PERFORMANCE_REFRESH, CLOCKS_PER_CONSOLE_REFRESH, SCREEN_CHARCODE, \
-    CLOCKS_PER_EVENT_SERVING, PETSCII, VIDEO_SIZE, \
-    PALETTE
+from hardware.constants import (
+    CLOCKS_PER_CONSOLE_REFRESH,
+    CLOCKS_PER_EVENT_SERVING,
+    CLOCKS_PER_PERFORMANCE_REFRESH,
+    PALETTE,
+    PETSCII,
+    SCREEN_CHARCODE,
+    VIDEO_SIZE,
+)
 
 
 class PatchMixin:
@@ -51,7 +57,7 @@ class PatchMixin:
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
-        address = self.cpu._combine(self.cpu.X, self.cpu.Y)
+        address = self.cpu.make_address(self.cpu.X, self.cpu.Y)
         length = self.cpu.A
         self.filename = self.memory[address: address + length]
         print(f"set filename to: {self.filename}")
@@ -349,15 +355,15 @@ class Machine(PatchMixin):
         """
         # Bypass normal memory write, this is hardwired
         if status:
-            self.memory[0x01] = self.memory[0x01] & 0b11101111
+            self.memory[0x01] &= 0b11101111
         else:
-            self.memory[0x01] = self.memory[0x01] | 0b00010000
+            self.memory[0x01] |= 0b00010000
 
     def screendump(self) -> str:
         dump = ""
         base = self.screen.video_matrix_base_address
         data = self.memory.get_slice(base, base + 1000)
-        data_char = list(map(lambda x: SCREEN_CHARCODE.get(x % 128, "."), data))
+        data_char = [SCREEN_CHARCODE.get(x % 128, ".") for x in data]
         for row in range(25):
             dump += "".join(data_char[row * 40: (row + 1) * 40 - 1]) + "\n"
         return dump

@@ -1,12 +1,11 @@
 import pytest
 
-from hardware.memory import Memory
-from hardware import roms
-
 import config
+from hardware import roms
+from hardware.memory import Memory
 
 
-@pytest.fixture
+@pytest.fixture()
 def memory() -> Memory:
     return Memory()
 
@@ -26,9 +25,9 @@ def memory_with_roms() -> Memory:
 
 
 def test_cpu_ports(memory_with_roms):
-    assert memory_with_roms._hiram is True
-    assert memory_with_roms._loram is True
-    assert memory_with_roms._io is True
+    assert memory_with_roms.hiram_port is True
+    assert memory_with_roms.loram_port is True
+    assert memory_with_roms.io_port is True
 
     # Make only hiram port writable
     memory_with_roms.cpu_write(0x00, 0x01)
@@ -36,15 +35,15 @@ def test_cpu_ports(memory_with_roms):
     # Try to reset all ports
     memory_with_roms.cpu_write(0x01, 0x00)
 
-    assert memory_with_roms._hiram is False
-    assert memory_with_roms._loram is True
-    assert memory_with_roms._io is True
+    assert memory_with_roms.hiram_port is False
+    assert memory_with_roms.loram_port is True
+    assert memory_with_roms.io_port is True
 
     # Restore ports
     memory_with_roms.cpu_write(0x01, 0x07)
-    assert memory_with_roms._hiram is True
-    assert memory_with_roms._loram is True
-    assert memory_with_roms._io is True
+    assert memory_with_roms.hiram_port is True
+    assert memory_with_roms.loram_port is True
+    assert memory_with_roms.io_port is True
 
 
 def test_memory_cell(memory):
@@ -103,12 +102,12 @@ def test_read_watcher(memory_with_roms):
 
 def test_write_watcher(memory_with_roms):
     def write_watcher(address, value):
-        raise Exception
+        raise AssertionError()
 
     memory_with_roms.write_watchers.append((0xD000, 0XDFFF, write_watcher))
 
     # Assert watcher is called
-    with pytest.raises(Exception):
+    with pytest.raises(AssertionError):
         memory_with_roms.cpu_write(0xD020, 42)
 
 
@@ -135,7 +134,7 @@ def test_dump(memory_with_roms):
             "$C000:  20 21 22 23  24 25 26 27  28 29 2A 2B  2C 2D 2E 2F    !\"#$%&\'()*+,-./\n")
 
 
-@pytest.mark.parametrize("mem, disassembled", [
+@pytest.mark.parametrize(("mem", "disassembled"), [
     ([0x52], ("52         ??? ", 1)),
     ([0x18], ("18         CLC ", 1)),
     ([0xA9, 0x42], ("A9 42      LDA #$42", 2)),

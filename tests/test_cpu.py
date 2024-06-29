@@ -6,7 +6,7 @@ from hardware.memory import Memory
 from hardware.roms import ROMS
 
 
-@pytest.fixture
+@pytest.fixture()
 def cpu() -> CPU:
     return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)))
 
@@ -25,7 +25,7 @@ def test_cpu_defaults(cpu):
     assert cpu.F['Z'] is False
     assert cpu.F['C'] is False
 
-    assert cpu._pack_status_register() == 0b00100100
+    assert cpu.pack_status_register() == 0b00100100
     assert str(cpu) == "0000  00         BRK           - A:00 X:00 Y:00 SP:FF ..-..I.."
 
 
@@ -88,7 +88,8 @@ def test_cpu_nmi(cpu):
     cpu.nmi()
     assert cpu.PC == 0xBA2E  # Value from testing roms
 
-@pytest.mark.parametrize("value, N, Z", [
+
+@pytest.mark.parametrize(('value', 'N', 'Z'), [
     (0x00, False, True),
     (0x01, False, False),
     (0x7F, False, False),
@@ -97,13 +98,13 @@ def test_cpu_nmi(cpu):
     (0xFF, True, False),
 ])
 def test_cpu_setNZ(cpu, value, N, Z):
-    cpu._setNZ(value)
+    cpu.setNZ(value)
     assert cpu.F["N"] is N
     assert cpu.F["Z"] is Z
 
 
 def test_cpu_combine(cpu):
-    assert cpu._combine(0x34, 0x12) == 0x1234
+    assert cpu.make_address(0x34, 0x12) == 0x1234
 
 
 def test_cpu_save_state(cpu):
@@ -117,14 +118,14 @@ def test_cpu_save_state(cpu):
         'Z': True,
         'C': True,
     }
-    cpu._save_state()
+    cpu.save_state()
 
     assert cpu.pop() == 0b1101111
     assert cpu.pop() == 0x34
     assert cpu.pop() == 0x12
 
 
-@pytest.mark.parametrize("method, expected, advance", [
+@pytest.mark.parametrize(('method', 'expected', 'advance'), [
     ("IMP", None, 0),
     ("IMM", 0XC000, 1),
     ("REL", 0X02, 1),

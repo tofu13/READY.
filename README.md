@@ -7,7 +7,7 @@ A special thank to the numberless sources of information found on the web.
 
 ## Installation
 
-Python >= 3.8 is required.
+Python >= 3.10 is required.
 On GNU/Linux `xsel` or `xclip` packages are required in order to paste text.
 
 ```shell
