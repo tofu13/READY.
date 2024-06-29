@@ -6,7 +6,7 @@ from hardware.memory import Memory
 from hardware.roms import ROMS
 
 
-@pytest.fixture
+@pytest.fixture()
 def cpu() -> CPU:
     return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)))
 
@@ -88,7 +88,8 @@ def test_cpu_nmi(cpu):
     cpu.nmi()
     assert cpu.PC == 0xBA2E  # Value from testing roms
 
-@pytest.mark.parametrize("value, N, Z", [
+
+@pytest.mark.parametrize(('value', 'N', 'Z'), [
     (0x00, False, True),
     (0x01, False, False),
     (0x7F, False, False),
@@ -124,7 +125,7 @@ def test_cpu_save_state(cpu):
     assert cpu.pop() == 0x12
 
 
-@pytest.mark.parametrize("method, expected, advance", [
+@pytest.mark.parametrize(('method', 'expected', 'advance'), [
     ("IMP", None, 0),
     ("IMM", 0XC000, 1),
     ("REL", 0X02, 1),

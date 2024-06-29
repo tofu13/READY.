@@ -6,7 +6,7 @@ import config
 import hardware
 
 
-@pytest.fixture
+@pytest.fixture()
 def c64():
     roms = hardware.roms.ROMS(config.TESTING_ROMS_FOLDER)
     memory = hardware.memory.Memory(roms=roms)

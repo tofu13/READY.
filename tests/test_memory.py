@@ -5,7 +5,7 @@ from hardware import roms
 from hardware.memory import Memory
 
 
-@pytest.fixture
+@pytest.fixture()
 def memory() -> Memory:
     return Memory()
 
@@ -134,7 +134,7 @@ def test_dump(memory_with_roms):
             "$C000:  20 21 22 23  24 25 26 27  28 29 2A 2B  2C 2D 2E 2F    !\"#$%&\'()*+,-./\n")
 
 
-@pytest.mark.parametrize("mem, disassembled", [
+@pytest.mark.parametrize(("mem", "disassembled"), [
     ([0x52], ("52         ??? ", 1)),
     ([0x18], ("18         CLC ", 1)),
     ([0xA9, 0x42], ("A9 42      LDA #$42", 2)),
