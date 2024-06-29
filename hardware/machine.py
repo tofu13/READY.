@@ -6,9 +6,15 @@ import pygame.event
 import pyperclip
 
 import hardware.memory
-from hardware.constants import CLOCKS_PER_PERFORMANCE_REFRESH, CLOCKS_PER_CONSOLE_REFRESH, SCREEN_CHARCODE, \
-    CLOCKS_PER_EVENT_SERVING, PETSCII, VIDEO_SIZE, \
-    PALETTE
+from hardware.constants import (
+    CLOCKS_PER_CONSOLE_REFRESH,
+    CLOCKS_PER_EVENT_SERVING,
+    CLOCKS_PER_PERFORMANCE_REFRESH,
+    PALETTE,
+    PETSCII,
+    SCREEN_CHARCODE,
+    VIDEO_SIZE,
+)
 
 
 class PatchMixin:

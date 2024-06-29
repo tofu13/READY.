@@ -1,7 +1,7 @@
 import cmd
 from typing import Optional
 
-from hardware.constants import INVERSE_OPCODES, ASSEMBLER_REGEXES
+from hardware.constants import ASSEMBLER_REGEXES, INVERSE_OPCODES
 
 
 class Monitor(cmd.Cmd):

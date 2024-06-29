@@ -1,4 +1,4 @@
-from hardware.constants import SCREEN_CHARCODE, OPCODES
+from hardware.constants import OPCODES, SCREEN_CHARCODE
 
 
 class Memory:
@@ -25,12 +25,12 @@ class Memory:
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
         if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
-            return self.roms['basic'][address - 0xA000]
+            return self.roms["basic"][address - 0xA000]
         elif 0xE000 <= address <= 0xFFFF and self._hiram:
-            return self.roms['kernal'][address - 0xE000]
+            return self.roms["kernal"][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
             if not self._io and (self._hiram or self._loram):
-                return self.roms['chargen'][address - 0xD000]
+                return self.roms["chargen"][address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
@@ -45,7 +45,9 @@ class Memory:
             mask = self.ram[0x00]
             self.ram[0x01] = ((255 - mask) & self.ram[0x01]) | (mask & value)
             # Update internal flags
-            self._io, self._loram, self._hiram = map(bool, map(int, f"{self.ram[0x01] & 0x7:03b}"))
+            self._io, self._loram, self._hiram = map(
+                bool, map(int, f"{self.ram[0x01] & 0x7:03b}")
+            )
             return
 
         for start, end, callback in self.write_watchers:
@@ -58,7 +60,7 @@ class Memory:
 
     def vic_read(self, address: int) -> int:
         """Returns memory content as seen by VIC-II"""
-        memory_bank = (3 - (self[0xDD00] & 0b11) << 14)
+        memory_bank = 3 - (self[0xDD00] & 0b11) << 14
 
         # CHARGEN ROM is visible in banks 0 and 2 at $1000-1FFF
         if memory_bank in {0x0000, 0x8000} and 0x1000 <= address < 0x2000:
@@ -72,11 +74,11 @@ class Memory:
         Return big endian word (16-bit address)
         """
         if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
-            lo, hi = self.roms['basic'][address - 0xA000: address - 0xA000 + 2]
+            lo, hi = self.roms["basic"][address - 0xA000 : address - 0xA000 + 2]
         elif 0xE000 <= address <= 0xFFFF and self._hiram:
-            lo, hi = self.roms['kernal'][address - 0xE000: address - 0xE000 + 2]
+            lo, hi = self.roms["kernal"][address - 0xE000 : address - 0xE000 + 2]
         else:
-            lo, hi = self.ram[address: address + 2]
+            lo, hi = self.ram[address : address + 2]
         return hi * 256 + lo
 
     def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
@@ -98,7 +100,9 @@ class Memory:
         out = ""
         for row in range(start, end, step):
             data = [self.cpu_read(i) for i in range(start, end)]
-            data_hex = [f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)]
+            data_hex = [
+                f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)
+            ]
             data_char = map(lambda x: SCREEN_CHARCODE.get(x, "."), data)
 
             out += f"${row:04X}: "
@@ -162,8 +166,10 @@ class Memory:
             arg = ""
             step = 1
         # Compose line
-        output += f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}" \
-                  f"{'   ' * (4 - step)}{instruction} {arg}"
+        output += (
+            f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}"
+            f"{'   ' * (4 - step)}{instruction} {arg}"
+        )
 
         return output, step
 

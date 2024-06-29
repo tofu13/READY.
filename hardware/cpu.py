@@ -1,4 +1,4 @@
-from .constants import OPCODES, BITRANGE
+from .constants import BITRANGE, OPCODES
 
 
 # noinspection PyPep8Naming
@@ -10,24 +10,47 @@ class CPU:
     Y = 0x00
     PC = 0x0000
     SP = 0xFF
-    F = {'N': False, 'V': False, '-': True, 'B': False, 'D': False, 'I': True, 'Z': False, 'C': False}
+    F = {
+        "N": False,
+        "V": False,
+        "-": True,
+        "B": False,
+        "D": False,
+        "I": True,
+        "Z": False,
+        "C": False,
+    }
 
-    def __init__(self, memory, A: int = 0, X: int = 0, Y: int = 0, PC: int = 0x0000, SP: int = 0xFF):
+    def __init__(
+        self,
+        memory,
+        A: int = 0,
+        X: int = 0,
+        Y: int = 0,
+        PC: int = 0x0000,
+        SP: int = 0xFF,
+    ):
         self.memory = memory
 
         self.indent = 0
         self._debug = False
 
-        self.addressing_methods = {name: getattr(self, name) for name in dir(self) if name.startswith("addressing")}
+        self.addressing_methods = {
+            name: getattr(self, name)
+            for name in dir(self)
+            if name.startswith("addressing")
+        }
 
         self._cycles_left = 0
 
     def __str__(self):
         st = "".join(symbol if flag else "." for symbol, flag in self.F.items())
         assembly, _ = self.memory.disassemble(self.PC)
-        return (f"{self.PC:04X}  "
-                f"{assembly}{' ' * (24 - len(assembly))} - "
-                f"A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}")
+        return (
+            f"{self.PC:04X}  "
+            f"{assembly}{' ' * (24 - len(assembly))} - "
+            f"A:{self.A:02X} X:{self.X:02X} Y:{self.Y:02X} SP:{self.SP:02X} {st}"
+        )
 
     def push(self, value):
         """
@@ -79,14 +102,16 @@ class CPU:
             try:
                 getattr(self, instruction)(address)
             except Exception as e:
-                print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
+                print(
+                    f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}"
+                )
                 raise e
 
     def irq(self):
         """
         Handle IRQ
         """
-        if not self.F['I']:
+        if not self.F["I"]:
             self.F["I"] = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self._save_state()
             self.PC = self.memory.read_address(0xFFFE)
@@ -105,8 +130,8 @@ class CPU:
         :param value:
         :return: None
         """
-        self.F['N'] = value >= 0x80 or value < 0
-        self.F['Z'] = value == 0
+        self.F["N"] = value >= 0x80 or value < 0
+        self.F["Z"] = value == 0
 
     @staticmethod
     def _combine(low, high):
@@ -138,7 +163,7 @@ class CPU:
         Save processor status before IRQ or NMI
         """
         self.push(self.PC >> 8)
-        self.push(self.PC & 0XFF)
+        self.push(self.PC & 0xFF)
         self.push(self._pack_status_register())
 
     # region Addressing methods
@@ -154,8 +179,8 @@ class CPU:
         return address
 
     def addressing_REL(self):
-        # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective 
-        # address. 
+        # An 8-bit signed offset is provided. This value is added to the program counter (PC) to find the effective
+        # address.
         address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return address if address < 127 else address - 256
@@ -173,47 +198,53 @@ class CPU:
         return address
 
     def addressing_ABS_X(self):
-        # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is 
-        # added (with carry). 
+        # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is
+        # added (with carry).
         address = self.memory.read_address(self.PC)
         self.PC += 2
         return address + self.X
 
     def addressing_ABS_Y(self):
-        # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is 
-        # added (with carry). 
+        # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is
+        # added (with carry).
         address = self.memory.read_address(self.PC)
         self.PC += 2
         return address + self.Y
 
     def addressing_ZP_X(self):
-        # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows, 
-        # the address wraps around within the zero page). 
+        # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows,
+        # the address wraps around within the zero page).
         base_address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return (base_address + self.X) & 0xFF
 
     def addressing_ZP_Y(self):
-        # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows, 
-        # the address wraps around within the zero page). 
+        # An 8-bit address is provided, to which the Y register is added (without carry - if the addition overflows,
+        # the address wraps around within the zero page).
         base_address = self.memory.cpu_read(self.PC)
         self.PC += 1
         return (base_address + self.Y) & 0xFF
 
     def addressing_IND(self):
         # Data is accessed using a pointer. The 16-bit address of the pointer is given in the two bytes following the
-        # opcode. 
+        # opcode.
         # Note: replicate bug when address is on page boundary
-        lo, hi = self.memory.cpu_read(self.PC), (
-            self.memory.cpu_read(self.PC + 1) if self.PC & 0xFF != 0xFF else self.memory.cpu_read(self.PC & 0xFF00))
+        lo, hi = (
+            self.memory.cpu_read(self.PC),
+            (
+                self.memory.cpu_read(self.PC + 1)
+                if self.PC & 0xFF != 0xFF
+                else self.memory.cpu_read(self.PC & 0xFF00)
+            ),
+        )
         self.PC += 2
         address = self._combine(lo, hi)
         return self.memory.read_address(address)
 
     def addressing_X_IND(self):
-        # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows, 
-        # the address wraps around within page 0). The resulting address is used as a pointer to the data being 
-        # accessed. 
+        # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows,
+        # the address wraps around within page 0). The resulting address is used as a pointer to the data being
+        # accessed.
         base = self.memory.cpu_read(self.PC) + self.X
         self.PC += 1
         return self.memory.read_address(self.memory.cpu_read(base))
@@ -227,11 +258,13 @@ class CPU:
 
     # region Instructions
     def ADC(self, address):
-        result = self.A + self.memory.cpu_read(address) + self.F['C']
+        result = self.A + self.memory.cpu_read(address) + self.F["C"]
         self._setNZ(result & 0xFF)
-        self.F['C'] = result > 0xFF
+        self.F["C"] = result > 0xFF
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = bool((self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80)
+        self.F["V"] = bool(
+            (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
+        )
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -244,7 +277,7 @@ class CPU:
             value = self.A
         else:
             value = self.memory.cpu_read(address)
-        self.F['C'] = value >= 0x80
+        self.F["C"] = value >= 0x80
         result = (value << 1) & 0xFF
         self._setNZ(result)
         if address is None:
@@ -253,75 +286,75 @@ class CPU:
             self.memory.cpu_write(address, result)
 
     def BRK(self, address):
-        self.F['B'] = True
+        self.F["B"] = True
 
     def BPL(self, address):
-        if not self.F['N']:
+        if not self.F["N"]:
             self.PC += address
 
     def BMI(self, address):
-        if self.F['N']:
+        if self.F["N"]:
             self.PC += address
 
     def BVC(self, address):
-        if not self.F['V']:
+        if not self.F["V"]:
             self.PC += address
 
     def BVS(self, address):
-        if self.F['V']:
+        if self.F["V"]:
             self.PC += address
 
     def BCC(self, address):
-        if not self.F['C']:
+        if not self.F["C"]:
             self.PC += address
 
     def BCS(self, address):
-        if self.F['C']:
+        if self.F["C"]:
             self.PC += address
 
     def BNE(self, address):
-        if not self.F['Z']:
+        if not self.F["Z"]:
             self.PC += address
 
     def BEQ(self, address):
-        if self.F['Z']:
+        if self.F["Z"]:
             self.PC += address
 
     def BIT(self, address):
         value = self.memory.cpu_read(address)
         self._setNZ(value & self.A)
-        self.F['N'] = value >= 0x80
-        self.F['V'] = bool(value & 0x40)
+        self.F["N"] = value >= 0x80
+        self.F["V"] = bool(value & 0x40)
 
     def CLC(self, address):
-        self.F['C'] = False
+        self.F["C"] = False
 
     def CLD(self, address):
-        self.F['D'] = False
+        self.F["D"] = False
 
     def CLI(self, address):
-        self.F['I'] = False
+        self.F["I"] = False
 
     def CLV(self, address):
-        self.F['V'] = False
+        self.F["V"] = False
 
     def CMP(self, address):
         result = self.A - self.memory.cpu_read(address)
-        self.F['C'] = result >= 0
+        self.F["C"] = result >= 0
         if result < 0:
             result += 255
         self._setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
-        self.F['C'] = result >= 0
+        self.F["C"] = result >= 0
         if result < 0:
             result += 255
         self._setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
-        self.F['C'] = result >= 0
+        self.F["C"] = result >= 0
         if result < 0:
             result += 255
         self._setNZ(result)
@@ -384,7 +417,7 @@ class CPU:
             value = self.A
         else:
             value = self.memory.cpu_read(address)
-        self.F['C'] = value & 0x01
+        self.F["C"] = value & 0x01
         result = value >> 1
         self._setNZ(result)
         if address is None:
@@ -419,9 +452,9 @@ class CPU:
         else:
             value = self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value << 1) | self.F['C']) & 0xFF
+        result = ((value << 1) | self.F["C"]) & 0xFF
         self._setNZ(result)
-        self.F['C'] = _carrytemp
+        self.F["C"] = _carrytemp
         if address is None:
             self.A = result
         else:
@@ -433,9 +466,9 @@ class CPU:
         else:
             value = self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value >> 1) | self.F['C'] << 7) & 0xFF
+        result = ((value >> 1) | self.F["C"] << 7) & 0xFF
         self._setNZ(result)
-        self.F['C'] = _carrytemp
+        self.F["C"] = _carrytemp
         if address is None:
             self.A = result
         else:
@@ -454,21 +487,23 @@ class CPU:
         self.indent -= 1
 
     def SBC(self, address):
-        result = self.A - self.memory.cpu_read(address) - (1 - self.F['C'])
+        result = self.A - self.memory.cpu_read(address) - (1 - self.F["C"])
         self._setNZ(result & 0xFF)
-        self.F['C'] = result >= 0x00
+        self.F["C"] = result >= 0x00
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F['V'] = bool((self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80)
+        self.F["V"] = bool(
+            (self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80
+        )
         self.A = result & 0xFF
 
     def SEC(self, address):
-        self.F['C'] = True
+        self.F["C"] = True
 
     def SED(self, address):
-        self.F['D'] = True
+        self.F["D"] = True
 
     def SEI(self, address):
-        self.F['I'] = True
+        self.F["I"] = True
 
     def STA(self, address):
         self.memory.cpu_write(address, self.A)

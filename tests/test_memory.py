@@ -1,9 +1,8 @@
 import pytest
 
-from hardware.memory import Memory
-from hardware import roms
-
 import config
+from hardware import roms
+from hardware.memory import Memory
 
 
 @pytest.fixture

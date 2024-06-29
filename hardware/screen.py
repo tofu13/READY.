@@ -1,4 +1,5 @@
 import dataclasses
+
 import numpy as np
 
 from .constants import BITRANGE, CLOCKS_PER_FRAME, VIDEO_SIZE
