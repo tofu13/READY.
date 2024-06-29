@@ -102,12 +102,12 @@ def test_read_watcher(memory_with_roms):
 
 def test_write_watcher(memory_with_roms):
     def write_watcher(address, value):
-        raise Exception
+        raise AssertionError()
 
     memory_with_roms.write_watchers.append((0xD000, 0XDFFF, write_watcher))
 
     # Assert watcher is called
-    with pytest.raises(Exception):
+    with pytest.raises(AssertionError):
         memory_with_roms.cpu_write(0xD020, 42)
 
 
