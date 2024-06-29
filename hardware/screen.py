@@ -215,7 +215,7 @@ class RasterScreen(VIC_II):
             # Raster is in the visible area
             raster_x__8 = self.raster_x // 8
             if (24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250):
-                if self._frame_on or 1:
+                if self._frame_on:
                     # Raster is in the display area
                     # Bad lines
                     if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):

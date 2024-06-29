@@ -273,10 +273,7 @@ class CPU:
         self.A = result
 
     def ASL(self, address):
-        if address is None:
-            value = self.A
-        else:
-            value = self.memory.cpu_read(address)
+        value = self.A if address is None else self.memory.cpu_read(address)
         self.F["C"] = value >= 0x80
         result = (value << 1) & 0xFF
         self._setNZ(result)
@@ -413,10 +410,7 @@ class CPU:
         self._setNZ(self.Y)
 
     def LSR(self, address):
-        if address is None:
-            value = self.A
-        else:
-            value = self.memory.cpu_read(address)
+        value = self.A if address is None else self.memory.cpu_read(address)
         self.F["C"] = value & 0x01
         result = value >> 1
         self._setNZ(result)
@@ -447,10 +441,7 @@ class CPU:
         self.F = self._unpack_status_register(self.pop())
 
     def ROL(self, address):
-        if address is None:
-            value = self.A
-        else:
-            value = self.memory.cpu_read(address)
+        value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
         result = ((value << 1) | self.F["C"]) & 0xFF
         self._setNZ(result)
@@ -461,10 +452,7 @@ class CPU:
             self.memory.cpu_write(address, result)
 
     def ROR(self, address):
-        if address is None:
-            value = self.A
-        else:
-            value = self.memory.cpu_read(address)
+        value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value & 0x01
         result = ((value >> 1) | self.F["C"] << 7) & 0xFF
         self._setNZ(result)

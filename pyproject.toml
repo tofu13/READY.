@@ -22,6 +22,7 @@ select = [
     "E4", "E7", "E9", # pycodestyle
     "F", # pyflake
     "I", # isort
+    # "SIM",  # simplify
 ]
 ignore = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
