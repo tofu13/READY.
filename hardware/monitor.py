@@ -99,14 +99,14 @@ class Monitor(cmd.Cmd):
             address = convert(line.split(maxsplit=1)[0])
             if address is not None:
                 self.machine.breakpoints.add(address)
-        print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
+        print("\n".join((f"${x:04X}" for x in self.machine.breakpoints)))
 
     def do_del(self, line):
         if line:
             address = convert(line.split(maxsplit=1)[0])
             if address is not None:
                 self.machine.breakpoints.discard(address)
-        print("\n".join(map(lambda x: f"${x:04X}", self.machine.breakpoints)))
+        print("\n".join((f"${x:04X}" for x in self.machine.breakpoints)))
 
     def do_trace(self, line):
         """

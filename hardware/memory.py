@@ -8,7 +8,7 @@ class Memory:
         to/from RAM, ROMS, I/O.
         """
         self.ram = ram if ram is not None else bytearray(65536)
-        self.roms = roms.contents if roms is not None else dict()
+        self.roms = roms.contents if roms is not None else {}
 
         self.read_watchers = []
         self.write_watchers = []
@@ -103,7 +103,7 @@ class Memory:
             data_hex = [
                 f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)
             ]
-            data_char = map(lambda x: SCREEN_CHARCODE.get(x, "."), data)
+            data_char = (SCREEN_CHARCODE.get(x, ".") for x in data)
 
             out += f"${row:04X}: "
             if as_chars:

@@ -363,7 +363,7 @@ class Machine(PatchMixin):
         dump = ""
         base = self.screen.video_matrix_base_address
         data = self.memory.get_slice(base, base + 1000)
-        data_char = list(map(lambda x: SCREEN_CHARCODE.get(x % 128, "."), data))
+        data_char = [SCREEN_CHARCODE.get(x % 128, ".") for x in data]
         for row in range(25):
             dump += "".join(data_char[row * 40: (row + 1) * 40 - 1]) + "\n"
         return dump

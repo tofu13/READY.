@@ -24,6 +24,7 @@ select = [
     "I", # isort
     # "SIM",  # simplify
     # "B",  # bugbear
+    # "C4" # comprehensions
 ]
 ignore = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"

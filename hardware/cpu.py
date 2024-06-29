@@ -150,7 +150,7 @@ class CPU:
         return result
 
     def _unpack_status_register(self, value):
-        result = dict()
+        result = {}
         for i, flag in enumerate(self.F.keys()):
             result[flag] = bool(value & BITRANGE[i][1])
         return result
