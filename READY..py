@@ -9,7 +9,8 @@ def main():
         description="An educational C=64 emulator."
     )
     parser.add_argument("-s", "--screen", action='store',
-                        help="Screen driver", default=config.SCREEN,
+                        help=f"Screen driver (default: {config.SCREEN})",
+                        default=config.SCREEN,
                         choices=["raster", "virtual", "fast"])
     parser.add_argument("-d", "--disk", action='store',
                         help="Disk (t64)", default="", type=str)
@@ -55,6 +56,7 @@ def main():
             print("\033[H\033[2J", end="")
 
         if config.QUICK_BOOT:
+            # Skip most lookup for ram start -> fast cold start
             c64.memory.roms["kernal"][0x1D69] = 159
         c64.run(0xFCE2)
 
