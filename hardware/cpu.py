@@ -113,18 +113,18 @@ class CPU:
         """
         if not self.F["I"]:
             self.F["I"] = True  # Do ignore other IRQ while serving. Re-enable after RTI
-            self._save_state()
+            self.save_state()
             self.PC = self.memory.read_address(0xFFFE)
 
     def nmi(self):
         """
         Handle NMI
         """
-        self._save_state()
+        self.save_state()
         self.PC = self.memory.read_address(0xFFFA)
 
     # Utils
-    def _setNZ(self, value):
+    def setNZ(self, value):
         """
         Set N and Z status flags according to value
         :param value:
@@ -134,7 +134,7 @@ class CPU:
         self.F["Z"] = value == 0
 
     @staticmethod
-    def _combine(low, high):
+    def make_address(low, high):
         """
         Returns a 16 bit value by combining low and high bytes LITTLE ENDIAN
         :param low: The low byte
@@ -143,28 +143,25 @@ class CPU:
         """
         return high << 8 | low
 
-    def _pack_status_register(self):
+    def pack_status_register(self):
         result = 0
         for i, flag in enumerate(self.F.values()):
             result += BITRANGE[i][1] * flag
         return result
 
-    def _unpack_status_register(self, value):
+    def unpack_status_register(self, value):
         result = {}
         for i, flag in enumerate(self.F.keys()):
             result[flag] = bool(value & BITRANGE[i][1])
         return result
 
-    def _not_implemented(self, address):
-        raise NotImplementedError
-
-    def _save_state(self):
+    def save_state(self):
         """
         Save processor status before IRQ or NMI
         """
         self.push(self.PC >> 8)
         self.push(self.PC & 0xFF)
-        self.push(self._pack_status_register())
+        self.push(self.pack_status_register())
 
     # region Addressing methods
     @staticmethod
@@ -238,7 +235,7 @@ class CPU:
             ),
         )
         self.PC += 2
-        address = self._combine(lo, hi)
+        address = self.make_address(lo, hi)
         return self.memory.read_address(address)
 
     def addressing_X_IND(self):
@@ -259,7 +256,7 @@ class CPU:
     # region Instructions
     def ADC(self, address):
         result = self.A + self.memory.cpu_read(address) + self.F["C"]
-        self._setNZ(result & 0xFF)
+        self.setNZ(result & 0xFF)
         self.F["C"] = result > 0xFF
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         self.F["V"] = bool(
@@ -269,14 +266,14 @@ class CPU:
 
     def AND(self, address):
         result = self.A & self.memory.cpu_read(address)
-        self._setNZ(result)
+        self.setNZ(result)
         self.A = result
 
     def ASL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         self.F["C"] = value >= 0x80
         result = (value << 1) & 0xFF
-        self._setNZ(result)
+        self.setNZ(result)
         if address is None:
             self.A = result
         else:
@@ -319,7 +316,7 @@ class CPU:
 
     def BIT(self, address):
         value = self.memory.cpu_read(address)
-        self._setNZ(value & self.A)
+        self.setNZ(value & self.A)
         self.F["N"] = value >= 0x80
         self.F["V"] = bool(value & 0x40)
 
@@ -340,52 +337,52 @@ class CPU:
         self.F["C"] = result >= 0
         if result < 0:
             result += 255
-        self._setNZ(result)
+        self.setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
         self.F["C"] = result >= 0
         if result < 0:
             result += 255
-        self._setNZ(result)
+        self.setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
         self.F["C"] = result >= 0
         if result < 0:
             result += 255
-        self._setNZ(result)
+        self.setNZ(result)
 
     def DEC(self, address):
         result = (self.memory.cpu_read(address) - 1) & 0xFF
         self.memory.cpu_write(address, result)
-        self._setNZ(result)
+        self.setNZ(result)
 
     def DEX(self, address):
         self.X = (self.X - 1) & 0xFF
-        self._setNZ(self.X)
+        self.setNZ(self.X)
 
     def DEY(self, address):
         self.Y = (self.Y - 1) & 0xFF
-        self._setNZ(self.Y)
+        self.setNZ(self.Y)
 
     def EOR(self, address):
         result = self.A ^ self.memory.cpu_read(address)
-        self._setNZ(result)
+        self.setNZ(result)
         self.A = result
 
     def INC(self, address):
         value = (self.memory.cpu_read(address) + 1) & 0xFF
         self.memory.cpu_write(address, value)
-        self._setNZ(value)
+        self.setNZ(value)
 
     def INX(self, address):
         self.X = (self.X + 1) & 0xFF
-        self._setNZ(self.X)
+        self.setNZ(self.X)
 
     def INY(self, address):
         self.Y = (self.Y + 1) & 0xFF
-        self._setNZ(self.Y)
+        self.setNZ(self.Y)
 
     def JMP(self, address):
         self.PC = address
@@ -399,21 +396,21 @@ class CPU:
 
     def LDA(self, address):
         self.A = self.memory.cpu_read(address)
-        self._setNZ(self.A)
+        self.setNZ(self.A)
 
     def LDX(self, address):
         self.X = self.memory.cpu_read(address)
-        self._setNZ(self.X)
+        self.setNZ(self.X)
 
     def LDY(self, address):
         self.Y = self.memory.cpu_read(address)
-        self._setNZ(self.Y)
+        self.setNZ(self.Y)
 
     def LSR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         self.F["C"] = value & 0x01
         result = value >> 1
-        self._setNZ(result)
+        self.setNZ(result)
         if address is None:
             self.A = result
         else:
@@ -424,27 +421,27 @@ class CPU:
 
     def ORA(self, address):
         result = self.A | self.memory.cpu_read(address)
-        self._setNZ(result)
+        self.setNZ(result)
         self.A = result
 
     def PHA(self, address):
         self.push(self.A)
 
     def PHP(self, address):
-        self.push(self._pack_status_register())
+        self.push(self.pack_status_register())
 
     def PLA(self, address):
         self.A = self.pop()
-        self._setNZ(self.A)
+        self.setNZ(self.A)
 
     def PLP(self, address):
-        self.F = self._unpack_status_register(self.pop())
+        self.F = self.unpack_status_register(self.pop())
 
     def ROL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
         result = ((value << 1) | self.F["C"]) & 0xFF
-        self._setNZ(result)
+        self.setNZ(result)
         self.F["C"] = _carrytemp
         if address is None:
             self.A = result
@@ -455,7 +452,7 @@ class CPU:
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value & 0x01
         result = ((value >> 1) | self.F["C"] << 7) & 0xFF
-        self._setNZ(result)
+        self.setNZ(result)
         self.F["C"] = _carrytemp
         if address is None:
             self.A = result
@@ -464,7 +461,7 @@ class CPU:
 
     def RTI(self, Address):
         # TODO: untested
-        self.F = self._unpack_status_register(self.pop())
+        self.F = self.unpack_status_register(self.pop())
         value = self.pop() + (self.pop() << 8)
         self.PC = value
         self.F["I"] = False  # Re-enable interrupts after serving
@@ -476,7 +473,7 @@ class CPU:
 
     def SBC(self, address):
         result = self.A - self.memory.cpu_read(address) - (1 - self.F["C"])
-        self._setNZ(result & 0xFF)
+        self.setNZ(result & 0xFF)
         self.F["C"] = result >= 0x00
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         self.F["V"] = bool(
@@ -504,25 +501,25 @@ class CPU:
 
     def TAX(self, address):
         self.X = self.A
-        self._setNZ(self.A)
+        self.setNZ(self.A)
 
     def TAY(self, address):
         self.Y = self.A
-        self._setNZ(self.A)
+        self.setNZ(self.A)
 
     def TSX(self, adrress):
         self.X = self.SP
-        self._setNZ(self.X)
+        self.setNZ(self.X)
 
     def TXA(self, address):
         self.A = self.X
-        self._setNZ(self.X)
+        self.setNZ(self.X)
 
     def TXS(self, address):
         self.SP = self.X
 
     def TYA(self, address):
         self.A = self.Y
-        self._setNZ(self.Y)
+        self.setNZ(self.Y)
 
     # endregion

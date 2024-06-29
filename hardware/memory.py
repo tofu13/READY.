@@ -1,3 +1,5 @@
+from typing import Optional
+
 from hardware.constants import OPCODES, SCREEN_CHARCODE
 
 
@@ -14,7 +16,7 @@ class Memory:
         self.write_watchers = []
 
         # Internals
-        self._io, self._loram, self._hiram = True, True, True
+        self.io_port, self.loram_port, self.hiram_port = True, True, True
 
     def __getitem__(self, item):
         return self.ram[item]
@@ -24,12 +26,12 @@ class Memory:
 
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
-        if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
+        if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
             return self.roms["basic"][address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF and self._hiram:
+        elif 0xE000 <= address <= 0xFFFF and self.hiram_port:
             return self.roms["kernal"][address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
-            if not self._io and (self._hiram or self._loram):
+            if not self.io_port and (self.hiram_port or self.loram_port):
                 return self.roms["chargen"][address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
@@ -45,7 +47,7 @@ class Memory:
             mask = self.ram[0x00]
             self.ram[0x01] = ((255 - mask) & self.ram[0x01]) | (mask & value)
             # Update internal flags
-            self._io, self._loram, self._hiram = map(
+            self.io_port, self.loram_port, self.hiram_port = map(
                 bool, map(int, f"{self.ram[0x01] & 0x7:03b}")
             )
             return
@@ -73,15 +75,20 @@ class Memory:
         Optimized consecutive reads
         Return big endian word (16-bit address)
         """
-        if 0xA000 <= address <= 0xBFFF and self._hiram and self._loram:
+        if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
             lo, hi = self.roms["basic"][address - 0xA000 : address - 0xA000 + 2]
-        elif 0xE000 <= address <= 0xFFFF and self._hiram:
+        elif 0xE000 <= address <= 0xFFFF and self.hiram_port:
             lo, hi = self.roms["kernal"][address - 0xE000 : address - 0xE000 + 2]
         else:
             lo, hi = self.ram[address : address + 2]
         return hi * 256 + lo
 
-    def dump(self, start: int = None, end: int = None, as_chars: bool = False) -> str:
+    def dump(
+        self,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        as_chars: bool = False,
+    ) -> str:
         """
         Return a textual representation of memory from start to end
         :param as_chars:
@@ -92,9 +99,8 @@ class Memory:
         if start is None:
             start = 0x0000
             end = 0xFFFF
-        else:
-            if end is None:
-                end = start + 0x0100
+        elif end is None:
+            end = start + 0x0100
         step = 0x28 if as_chars else 0x10
 
         out = ""

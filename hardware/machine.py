@@ -57,7 +57,7 @@ class PatchMixin:
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
-        address = self.cpu._combine(self.cpu.X, self.cpu.Y)
+        address = self.cpu.make_address(self.cpu.X, self.cpu.Y)
         length = self.cpu.A
         self.filename = self.memory[address: address + length]
         print(f"set filename to: {self.filename}")
@@ -355,9 +355,9 @@ class Machine(PatchMixin):
         """
         # Bypass normal memory write, this is hardwired
         if status:
-            self.memory[0x01] = self.memory[0x01] & 0b11101111
+            self.memory[0x01] &= 0b11101111
         else:
-            self.memory[0x01] = self.memory[0x01] | 0b00010000
+            self.memory[0x01] |= 0b00010000
 
     def screendump(self) -> str:
         dump = ""

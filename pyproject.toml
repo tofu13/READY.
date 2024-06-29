@@ -24,8 +24,14 @@ select = [
     "I", # isort
     # "SIM",  # simplify
     # "B",  # bugbear
-    # "C4" # comprehensions
-    # "PT"  # pytest
+    # "C4", # comprehensions
+    # "PT",  # pytest
+    # "SLF",  # self
+    # "PTH",  # pathlib
+    # "NPY",  # numpy
+    # "PERF",  # perflint
+    # "FURB",  # refurb
+    # "RUF",  # ruff
 ]
 ignore = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
