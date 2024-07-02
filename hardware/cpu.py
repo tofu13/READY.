@@ -493,11 +493,8 @@ class CPU:
             self.memory.cpu_write(address, result)
 
     def RTI(self, Address):
-        # TODO: untested
         self.unpack_status_register(self.pop())
-        # TODO: refactor using make_address
-        value = self.pop() + (self.pop() << 8)
-        self.PC = value
+        self.PC = self.make_address(self.pop(), self.pop())
         self.flag_I = False  # Re-enable interrupts after serving
 
     def RTS(self, address):
