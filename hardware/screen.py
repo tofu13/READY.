@@ -37,6 +37,15 @@ class VIC_II:
     """
     Abstraction of VIC-II and its registers
     """
+    __slots__ = ['memory', 'irq_raster_line_lsb', 'irq_raster_line_msb',
+                 'irq_raster_enabled', 'irq_sprite_background_collision_enabled',
+                 'irq_sprite_sprite_collision_enabled', 'irq_lightpen_enabled',
+                 'irq_status_register', 'extended_background', 'bitmap_mode', 'DEN',
+                 'RSEL', 'Y_SCROLL', 'multicolor_mode', 'CSEL', 'X_SCROLL',
+                 'video_matrix_base_address', 'character_generator_base_address',
+                 'border_color', 'background_color', 'background_color_1',
+                 'background_color_2', 'background_color_3', 'sprite_multicolor_1',
+                 'sprite_multicolor_2', 'sprites', '_register_cache']
 
     def __init__(self, memory):
         self.memory = memory
@@ -186,6 +195,9 @@ class VIC_II:
                 return self._register_cache[other]
 
 class RasterScreen(VIC_II):
+    __slots__ = ["raster_x", "raster_y", "char_buffer", "color_buffer",
+                 "frame", "dataframe", "_frame_on", ]
+
     CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
 
     SCAN_AREA = [504, 312]
@@ -269,6 +281,7 @@ class VirtualScreen(VIC_II):
     No display
     """
 
+    __slots__ = []
     def clock(self, clock_counter: int):
         pass
 
@@ -282,7 +295,7 @@ class FastScreen(VIC_II):
     Screen driver using numpy
     Text only, fast
     """
-
+    __slots__ = ["font_cache"]
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.font_cache = self.cache_fonts()
