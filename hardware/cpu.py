@@ -31,6 +31,7 @@ class CPU:
         Y: int = 0,
         PC: int = 0x0000,
         SP: int = 0xFF,
+            SR: int = 0b00100100,
     ):
         self.memory = memory
 
@@ -39,13 +40,7 @@ class CPU:
         self.Y = Y
         self.PC = PC
         self.SP = SP
-        self.flag_N = False
-        self.flag_V = False
-        self.flag_B = False
-        self.flag_D = False
-        self.flag_I = True
-        self.flag_Z = False
-        self.flag_C = False
+        self.unpack_status_register(SR)
 
         self.indent = 0
         self._debug = False
