@@ -3,20 +3,25 @@ from .constants import BITVALUES, OPCODES
 
 # noinspection PyPep8Naming
 class CPU:
-    # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
-    memory = None
-    A = 0x00
-    X = 0x00
-    Y = 0x00
-    PC = 0x0000
-    SP = 0xFF
-    flag_N: bool = False
-    flag_V: bool = False
-    flag_B: bool = False
-    flag_D: bool = False
-    flag_I: bool = True
-    flag_Z: bool = False
-    flag_C: bool = False
+    __slots__ = [
+        "A",
+        "X",
+        "Y",
+        "PC",
+        "SP",
+        "flag_N",
+        "flag_V",
+        "flag_B",
+        "flag_D",
+        "flag_I",
+        "flag_Z",
+        "flag_C",
+        "memory",
+        "indent",
+        "_debug",
+        "_cycles_left",
+        "addressing_methods",
+    ]
 
     def __init__(
         self,
@@ -29,13 +34,35 @@ class CPU:
     ):
         self.memory = memory
 
+        self.A = A
+        self.X = X
+        self.Y = Y
+        self.PC = PC
+        self.SP = SP
+        self.flag_N = False
+        self.flag_V = False
+        self.flag_B = False
+        self.flag_D = False
+        self.flag_I = True
+        self.flag_Z = False
+        self.flag_C = False
+
         self.indent = 0
         self._debug = False
 
         self.addressing_methods = {
-            name: getattr(self, name)
-            for name in dir(self)
-            if name.startswith("addressing")
+            "addressing_IMP": self.addressing_IMP,
+            "addressing_IMM": self.addressing_IMM,
+            "addressing_REL": self.addressing_REL,
+            "addressing_ABS": self.addressing_ABS,
+            "addressing_ZP": self.addressing_ZP,
+            "addressing_ABS_X": self.addressing_ABS_X,
+            "addressing_ABS_Y": self.addressing_ABS_Y,
+            "addressing_ZP_X": self.addressing_ZP_X,
+            "addressing_ZP_Y": self.addressing_ZP_Y,
+            "addressing_IND": self.addressing_IND,
+            "addressing_X_IND": self.addressing_X_IND,
+            "addressing_IND_Y": self.addressing_IND_Y,
         }
 
         self._cycles_left = 0
