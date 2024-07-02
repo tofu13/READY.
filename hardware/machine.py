@@ -373,7 +373,7 @@ def DefaultMachine() -> Machine:
     import hardware
     from config import ROMS_FOLDER
     roms = hardware.roms.ROMS(ROMS_FOLDER)
-    memory = hardware.memory.BytearrayMemory(65536, roms)
+    memory = hardware.memory.Memory(65536, roms)
     return Machine(
         memory,
         hardware.cpu.CPU(memory),
