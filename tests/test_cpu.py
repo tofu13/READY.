@@ -17,13 +17,13 @@ def test_cpu_defaults(cpu):
     assert cpu.Y == 0
     assert cpu.PC == 0x0000
     assert cpu.SP == 0xFF
-    assert (cpu.F['N']) is False
-    assert cpu.F['V'] is False
-    assert cpu.F['B'] is False
-    assert cpu.F['D'] is False
-    assert cpu.F['I'] is True
-    assert cpu.F['Z'] is False
-    assert cpu.F['C'] is False
+    assert cpu.flag_N is False
+    assert cpu.flag_V is False
+    assert cpu.flag_B is False
+    assert cpu.flag_D is False
+    assert cpu.flag_I is True
+    assert cpu.flag_Z is False
+    assert cpu.flag_C is False
 
     assert cpu.pack_status_register() == 0b00100100
     assert str(cpu) == "0000  00         BRK           - A:00 X:00 Y:00 SP:FF ..-..I.."
@@ -35,16 +35,13 @@ def test_cpu_registers(cpu):
     cpu.Y = 0xFF
     cpu.PC = 0XFFFF
     cpu.SP = 0X00
-    cpu.F = {
-        'N': True,
-        'V': True,
-        '-': True,  # Bad
-        'B': True,
-        'D': True,
-        'I': False,
-        'Z': True,
-        'C': True,
-    }
+    cpu.flag_N = True
+    cpu.flag_V = True
+    cpu.flag_B = True
+    cpu.flag_D = True
+    cpu.flag_I = False
+    cpu.flag_Z = True
+    cpu.flag_C = True
 
     assert str(cpu) == "FFFF  00         BRK           - A:FF X:FF Y:FF SP:00 NV-BD.ZC"
 
@@ -73,13 +70,13 @@ def test_cpu_fetch(cpu):
 
 def test_cpu_irq(cpu):
     cpu.PC = 0xC000
-    cpu.F['I'] = True
+    cpu.flag_I = True
     cpu.irq()
-    assert cpu.F['I'] is True
+    assert cpu.flag_I is True
 
-    cpu.F['I'] = False
+    cpu.flag_I = False
     cpu.irq()
-    assert cpu.F['I'] is True
+    assert cpu.flag_I is True
     assert cpu.PC == 0x6810  # Value from testing roms
 
 
@@ -99,8 +96,8 @@ def test_cpu_nmi(cpu):
 ])
 def test_cpu_setNZ(cpu, value, N, Z):
     cpu.setNZ(value)
-    assert cpu.F["N"] is N
-    assert cpu.F["Z"] is Z
+    assert cpu.flag_N is N
+    assert cpu.flag_Z is Z
 
 
 def test_cpu_combine(cpu):
@@ -109,18 +106,17 @@ def test_cpu_combine(cpu):
 
 def test_cpu_save_state(cpu):
     cpu.PC = 0x1234
-    cpu.F = {
-        'N': True,
-        'V': True,
-        'B': True,
-        'D': True,
-        'I': False,
-        'Z': True,
-        'C': True,
-    }
+    cpu.flag_N = True
+    cpu.flag_V = True
+    cpu.flag_B = True
+    cpu.flag_D = True
+    cpu.flag_I = False
+    cpu.flag_Z = True
+    cpu.flag_C = True
+
     cpu.save_state()
 
-    assert cpu.pop() == 0b1101111
+    assert cpu.pop() == 0b11111011
     assert cpu.pop() == 0x34
     assert cpu.pop() == 0x12
 

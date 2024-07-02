@@ -46,10 +46,10 @@ COLORS = [0x000000,
 
 PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 
-BITVALUES = [k ** 2 for k in range(8)]
+BITVALUES = [2 ** k for k in range(8)]
 BITRANGE = [(7 - k, 2 ** k) for k in range(8)]
 
-OPCODES = {
+OPCODE_MAP = {
     0x00: ("BRK", "addressing_IMP", 7),
     0x01: ("ORA", "addressing_X_IND", 6),
     0x02: (None, "", 0),
@@ -323,7 +323,9 @@ OPCODES = {
     0xff: (None, "", 0),
 }
 
-INVERSE_OPCODES = {(mnemonic, addressing): opcode for opcode, (mnemonic, addressing, _) in OPCODES.items()}
+OPCODES = tuple(OPCODE_MAP.values())
+INVERSE_OPCODES = {(mnemonic, addressing): opcode for opcode, (mnemonic, addressing, _)
+                   in OPCODE_MAP.items()}
 
 ASSEMBLER_REGEXES = {
     re.compile(r"^#([$&+%]?[0123456789ABCDEF]{1,8})$", re.I): "IMM",
