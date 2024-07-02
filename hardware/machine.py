@@ -69,15 +69,44 @@ class PatchMixin:
 
 
 class Machine(PatchMixin):
-    def __init__(self,
-                 memory: hardware.memory.Memory,
-                 cpu: hardware.cpu.CPU,
-                 screen: hardware.screen.VIC_II,
-                 ciaA,
-                 diskdrive=None,
-                 console=False
-                 ):
+    __slots__ = [
+        "memory",
+        "cpu",
+        "screen",
+        "ciaA",
+        "diskdrive",
+        "console",
+        "monitor_active",
+        "signal",
+        "nmi",
+        "input_buffer",
+        "CAPTION",
+        "paste_buffer",
+        "patches",
+        "serial_device_number",
+        "keys_pressed",
+        "caps_lock",
+        "breakpoints",
+        "tracepoints",
+        "_clock_counter",
+        "_cumulative_perf_timer",
+        "_current_fps",
+        # Unpickables
+        "monitor",
+        "display",
+        "pygame_clock",
+        "outfile",
+    ]
 
+    def __init__(
+            self,
+            memory: hardware.memory.Memory,
+            cpu: hardware.cpu.CPU,
+            screen: hardware.screen.VIC_II,
+            ciaA,
+            diskdrive=None,
+            console=False,
+    ):
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
@@ -150,20 +179,23 @@ class Machine(PatchMixin):
         self.outfile = open("OUTFILE", "wb")  # TODO: handle this
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        # Drop attributes that will be re-created from scratch after loading
-        for attribute in [
-            "monitor",
-            "display",
-            "pygame_clock",
-            "outfile",
-        ]:
-            if attribute in state:
-                del state[attribute]
+        state = {
+            key: getattr(self, key)
+            for key in self.__slots__
+            # Skip attributes that will be re-created from scratch after loading
+            if key
+               not in [
+                   "monitor",
+                   "display",
+                   "pygame_clock",
+                   "outfile",
+               ]
+        }
         return state
 
     def __setstate__(self, state):
-        self.__dict__ = state
+        for key, value in state.items():
+            setattr(self, key, value)
         self.post_init()
         self.monitor_active = False  # Exit monitor after loading
 
