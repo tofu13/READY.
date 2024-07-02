@@ -4,6 +4,21 @@ from .constants import BITVALUES, KEYBOARD
 
 
 class CIA:
+    __slots__ = [
+        "memory",
+        "timer_A",
+        "timer_B",
+        "timer_A_latch",
+        "timer_B_latch",
+        "timer_A_start",
+        "timer_B_start",
+        "timer_A_underflow",
+        "timer_A_restart_after_underflow",
+        "timer_B_underflow",
+        "timer_B_restart_after_underflow",
+        "tod_zero",
+    ]
+
     def __init__(self, memory):
         self.memory = memory
         self.timer_A = 0x0000
@@ -74,11 +89,10 @@ class CIA:
 
 
 class CIA_A(CIA):
+    __slots__ = ["pipe", "keys_pressed"]
+
     def __init__(self, memory):
         super().__init__(memory)
-        self.pipe = None
-        self.keyboard_row = 0
-        self.keyboard_col = 0
 
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
@@ -164,7 +178,7 @@ class CIA_A(CIA):
                         0,
                         self.irq_occured,
                     ),
-                    BITVALUES
+                    BITVALUES,
                 )
             )
             # Flags will be cleared after reading the register!
@@ -206,6 +220,7 @@ class CIA_A(CIA):
 
 
 class CIA_B(CIA):
+    __slots__ = []
     memory = None
 
     def init(self):
