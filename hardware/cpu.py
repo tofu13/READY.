@@ -1,4 +1,4 @@
-from .constants import BITRANGE, OPCODES
+from .constants import BITVALUES, OPCODES
 
 
 # noinspection PyPep8Naming
@@ -10,16 +10,13 @@ class CPU:
     Y = 0x00
     PC = 0x0000
     SP = 0xFF
-    F = {
-        "N": False,
-        "V": False,
-        "-": True,
-        "B": False,
-        "D": False,
-        "I": True,
-        "Z": False,
-        "C": False,
-    }
+    flag_N: bool = False
+    flag_V: bool = False
+    flag_B: bool = False
+    flag_D: bool = False
+    flag_I: bool = True
+    flag_Z: bool = False
+    flag_C: bool = False
 
     def __init__(
         self,
@@ -44,7 +41,22 @@ class CPU:
         self._cycles_left = 0
 
     def __str__(self):
-        st = "".join(symbol if flag else "." for symbol, flag in self.F.items())
+        st = "".join(
+            symbol if flag else "."
+            for symbol, flag in zip(
+                "NV-BDIZC",
+                [
+                    self.flag_N,
+                    self.flag_V,
+                    True,
+                    self.flag_B,
+                    self.flag_D,
+                    self.flag_I,
+                    self.flag_Z,
+                    self.flag_C,
+                ],
+            )
+        )
         assembly, _ = self.memory.disassemble(self.PC)
         return (
             f"{self.PC:04X}  "
@@ -111,8 +123,8 @@ class CPU:
         """
         Handle IRQ
         """
-        if not self.F["I"]:
-            self.F["I"] = True  # Do ignore other IRQ while serving. Re-enable after RTI
+        if not self.flag_I:
+            self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self.save_state()
             self.PC = self.memory.read_address(0xFFFE)
 
@@ -130,8 +142,8 @@ class CPU:
         :param value:
         :return: None
         """
-        self.F["N"] = value >= 0x80 or value < 0
-        self.F["Z"] = value == 0
+        self.flag_N = value >= 0x80 or value < 0
+        self.flag_Z = value == 0
 
     @staticmethod
     def make_address(low, high):
@@ -145,15 +157,36 @@ class CPU:
 
     def pack_status_register(self):
         result = 0
-        for i, flag in enumerate(self.F.values()):
-            result += BITRANGE[i][1] * flag
+        for i, flag in enumerate(
+            [
+                self.flag_C,
+                self.flag_Z,
+                self.flag_I,
+                self.flag_D,
+                self.flag_B,
+                True,
+                self.flag_V,
+                self.flag_N,
+            ]
+        ):
+            result += BITVALUES[i] * flag
         return result
 
     def unpack_status_register(self, value):
-        result = {}
-        for i, flag in enumerate(self.F.keys()):
-            result[flag] = bool(value & BITRANGE[i][1])
-        return result
+        for i, flag in enumerate(
+            [
+                "flag_C",
+                "flag_Z",
+                "flag_I",
+                "flag_D",
+                "flag_B",
+                None,
+                "flag_V",
+                "flag_N",
+            ]
+        ):
+            if flag is not None:
+                setattr(self, flag, bool(value & BITVALUES[i]))
 
     def save_state(self):
         """
@@ -255,11 +288,11 @@ class CPU:
 
     # region Instructions
     def ADC(self, address):
-        result = self.A + self.memory.cpu_read(address) + self.F["C"]
+        result = self.A + self.memory.cpu_read(address) + self.flag_C
         self.setNZ(result & 0xFF)
-        self.F["C"] = result > 0xFF
+        self.flag_C = result > 0xFF
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F["V"] = bool(
+        self.flag_V = bool(
             (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
         )
         self.A = result & 0xFF
@@ -271,7 +304,7 @@ class CPU:
 
     def ASL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
-        self.F["C"] = value >= 0x80
+        self.flag_C = value >= 0x80
         result = (value << 1) & 0xFF
         self.setNZ(result)
         if address is None:
@@ -283,72 +316,72 @@ class CPU:
         self.F["B"] = True
 
     def BPL(self, address):
-        if not self.F["N"]:
+        if not self.flag_N:
             self.PC += address
 
     def BMI(self, address):
-        if self.F["N"]:
+        if self.flag_N:
             self.PC += address
 
     def BVC(self, address):
-        if not self.F["V"]:
+        if not self.flag_V:
             self.PC += address
 
     def BVS(self, address):
-        if self.F["V"]:
+        if self.flag_V:
             self.PC += address
 
     def BCC(self, address):
-        if not self.F["C"]:
+        if not self.flag_C:
             self.PC += address
 
     def BCS(self, address):
-        if self.F["C"]:
+        if self.flag_C:
             self.PC += address
 
     def BNE(self, address):
-        if not self.F["Z"]:
+        if not self.flag_Z:
             self.PC += address
 
     def BEQ(self, address):
-        if self.F["Z"]:
+        if self.flag_Z:
             self.PC += address
 
     def BIT(self, address):
         value = self.memory.cpu_read(address)
         self.setNZ(value & self.A)
-        self.F["N"] = value >= 0x80
-        self.F["V"] = bool(value & 0x40)
+        self.flag_N = value >= 0x80
+        self.flag_V = bool(value & 0x40)
 
     def CLC(self, address):
-        self.F["C"] = False
+        self.flag_C = False
 
     def CLD(self, address):
-        self.F["D"] = False
+        self.flag_D = False
 
     def CLI(self, address):
-        self.F["I"] = False
+        self.flag_I = False
 
     def CLV(self, address):
-        self.F["V"] = False
+        self.flag_V = False
 
     def CMP(self, address):
         result = self.A - self.memory.cpu_read(address)
-        self.F["C"] = result >= 0
+        self.flag_C = result >= 0
         if result < 0:
             result += 255
         self.setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
-        self.F["C"] = result >= 0
+        self.flag_C = result >= 0
         if result < 0:
             result += 255
         self.setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
-        self.F["C"] = result >= 0
+        self.flag_C = result >= 0
         if result < 0:
             result += 255
         self.setNZ(result)
@@ -408,7 +441,7 @@ class CPU:
 
     def LSR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
-        self.F["C"] = value & 0x01
+        self.flag_C = value & 0x01
         result = value >> 1
         self.setNZ(result)
         if address is None:
@@ -435,14 +468,14 @@ class CPU:
         self.setNZ(self.A)
 
     def PLP(self, address):
-        self.F = self.unpack_status_register(self.pop())
+        self.unpack_status_register(self.pop())
 
     def ROL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value << 1) | self.F["C"]) & 0xFF
+        result = ((value << 1) | self.flag_C) & 0xFF
         self.setNZ(result)
-        self.F["C"] = _carrytemp
+        self.flag_C = _carrytemp
         if address is None:
             self.A = result
         else:
@@ -451,9 +484,9 @@ class CPU:
     def ROR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value >> 1) | self.F["C"] << 7) & 0xFF
+        result = ((value >> 1) | self.flag_C << 7) & 0xFF
         self.setNZ(result)
-        self.F["C"] = _carrytemp
+        self.flag_C = _carrytemp
         if address is None:
             self.A = result
         else:
@@ -461,10 +494,11 @@ class CPU:
 
     def RTI(self, Address):
         # TODO: untested
-        self.F = self.unpack_status_register(self.pop())
+        self.unpack_status_register(self.pop())
+        # TODO: refactor using make_address
         value = self.pop() + (self.pop() << 8)
         self.PC = value
-        self.F["I"] = False  # Re-enable interrupts after serving
+        self.flag_I = False  # Re-enable interrupts after serving
 
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
@@ -472,23 +506,23 @@ class CPU:
         self.indent -= 1
 
     def SBC(self, address):
-        result = self.A - self.memory.cpu_read(address) - (1 - self.F["C"])
+        result = self.A - self.memory.cpu_read(address) - (1 - self.flag_C)
         self.setNZ(result & 0xFF)
-        self.F["C"] = result >= 0x00
+        self.flag_C = result >= 0x00
         # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.F["V"] = bool(
+        self.flag_V = bool(
             (self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80
         )
         self.A = result & 0xFF
 
     def SEC(self, address):
-        self.F["C"] = True
+        self.flag_C = True
 
     def SED(self, address):
-        self.F["D"] = True
+        self.flag_D = True
 
     def SEI(self, address):
-        self.F["I"] = True
+        self.flag_I = True
 
     def STA(self, address):
         self.memory.cpu_write(address, self.A)
