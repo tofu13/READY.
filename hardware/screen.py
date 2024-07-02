@@ -19,10 +19,7 @@ class Sprite:
 
     @property
     def coordinates(self):
-        return (
-            self.x + (256 if self.msb_x else 0),
-            self.y
-        )
+        return (self.x + (256 if self.msb_x else 0), self.y)
 
     @property
     def X(self):
@@ -37,15 +34,36 @@ class VIC_II:
     """
     Abstraction of VIC-II and its registers
     """
-    __slots__ = ['memory', 'irq_raster_line_lsb', 'irq_raster_line_msb',
-                 'irq_raster_enabled', 'irq_sprite_background_collision_enabled',
-                 'irq_sprite_sprite_collision_enabled', 'irq_lightpen_enabled',
-                 'irq_status_register', 'extended_background', 'bitmap_mode', 'DEN',
-                 'RSEL', 'Y_SCROLL', 'multicolor_mode', 'CSEL', 'X_SCROLL',
-                 'video_matrix_base_address', 'character_generator_base_address',
-                 'border_color', 'background_color', 'background_color_1',
-                 'background_color_2', 'background_color_3', 'sprite_multicolor_1',
-                 'sprite_multicolor_2', 'sprites', '_register_cache']
+
+    __slots__ = [
+        "memory",
+        "irq_raster_line_lsb",
+        "irq_raster_line_msb",
+        "irq_raster_enabled",
+        "irq_sprite_background_collision_enabled",
+        "irq_sprite_sprite_collision_enabled",
+        "irq_lightpen_enabled",
+        "irq_status_register",
+        "extended_background",
+        "bitmap_mode",
+        "DEN",
+        "RSEL",
+        "Y_SCROLL",
+        "multicolor_mode",
+        "CSEL",
+        "X_SCROLL",
+        "video_matrix_base_address",
+        "character_generator_base_address",
+        "border_color",
+        "background_color",
+        "background_color_1",
+        "background_color_2",
+        "background_color_3",
+        "sprite_multicolor_1",
+        "sprite_multicolor_2",
+        "sprites",
+        "_register_cache",
+    ]
 
     def __init__(self, memory):
         self.memory = memory
@@ -79,8 +97,8 @@ class VIC_II:
 
         self.sprites = [Sprite() for _ in range(8)]
 
-        self.memory.write_watchers.append((0xD000, 0XD3FF, self.write_registers))
-        self.memory.read_watchers.append((0xD000, 0XD3FF, self.read_registers))
+        self.memory.write_watchers.append((0xD000, 0xD3FF, self.write_registers))
+        self.memory.read_watchers.append((0xD000, 0xD3FF, self.read_registers))
 
         self._register_cache = bytearray(0x40)
 
@@ -123,7 +141,7 @@ class VIC_II:
             case 0x16:
                 self.multicolor_mode = bool(value & 0b10000)
                 self.CSEL = bool(value & 0b1000)
-                self.X_SCROLL = value & 0xb111
+                self.X_SCROLL = value & 0xB111
             case 0x17:
                 for i in range(8):
                     self.sprites[i].expand_y = bool(value & BITRANGE[i][1])
@@ -194,9 +212,17 @@ class VIC_II:
             case other:
                 return self._register_cache[other]
 
+
 class RasterScreen(VIC_II):
-    __slots__ = ["raster_x", "raster_y", "char_buffer", "color_buffer",
-                 "frame", "dataframe", "_frame_on", ]
+    __slots__ = [
+        "raster_x",
+        "raster_y",
+        "char_buffer",
+        "color_buffer",
+        "frame",
+        "dataframe",
+        "_frame_on",
+    ]
 
     CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
 
@@ -219,8 +245,9 @@ class RasterScreen(VIC_II):
         self._frame_on = self.DEN
 
         self.frame = np.zeros(VIDEO_SIZE, dtype="uint8")
-        self.dataframe = np.empty(shape=(VIDEO_SIZE[0] // 8 + 1, VIDEO_SIZE[1], 3),
-                                  dtype="uint8")  # +1 cause partial byte @ 403
+        self.dataframe = np.empty(
+            shape=(VIDEO_SIZE[0] // 8 + 1, VIDEO_SIZE[1], 3), dtype="uint8"
+        )  # +1 cause partial byte @ 403
 
     def clock(self, clock_counter: int):
         if self.raster_x < VIDEO_SIZE[0] and self.raster_y < VIDEO_SIZE[1]:
@@ -231,31 +258,56 @@ class RasterScreen(VIC_II):
                     # Raster is in the display area
                     # Bad lines
                     if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):
-                        char_pointer = self.video_matrix_base_address + (self.raster_y - 51) // 8 * 40
-                        color_pointer = 0XD800 + (self.raster_y - 51) // 8 * 40
+                        char_pointer = (
+                                self.video_matrix_base_address
+                                + (self.raster_y - 51) // 8 * 40
+                        )
+                        color_pointer = 0xD800 + (self.raster_y - 51) // 8 * 40
 
                         # TODO: optimize these reads
                         self.char_buffer = bytearray(
-                            self.memory.vic_read(i) for i in range(char_pointer, char_pointer + 40))
+                            self.memory.vic_read(i)
+                            for i in range(char_pointer, char_pointer + 40)
+                        )
                         self.color_buffer = bytearray(
-                            self.memory.vic_read(i) for i in range(color_pointer, color_pointer + 40))
+                            self.memory.vic_read(i)
+                            for i in range(color_pointer, color_pointer + 40)
+                        )
 
                     char = self.char_buffer[(self.raster_x - 24) // 8]
                     color = self.color_buffer[raster_x__8 - 24 // 8]
                     pixels = self.memory.vic_read(
-                        self.character_generator_base_address + char * 8 + (self.raster_y - 51) % 8)
+                        self.character_generator_base_address
+                        + char * 8
+                        + (self.raster_y - 51) % 8
+                    )
 
                     # TODO: XY SCROLL
-                    self.dataframe[raster_x__8, self.raster_y] = [pixels, self.background_color, color]
+                    self.dataframe[raster_x__8, self.raster_y] = [
+                        pixels,
+                        self.background_color,
+                        color,
+                    ]
 
                     # Narrow border
                     # TODO: use flip-flop
-                    if self.raster_y < self.FIRST_LINE[self.RSEL] or self.raster_y > self.LAST_LINE[self.RSEL]:
+                    if (
+                            self.raster_y < self.FIRST_LINE[self.RSEL]
+                            or self.raster_y > self.LAST_LINE[self.RSEL]
+                    ):
                         # TODO: draw partial horizontal border
-                        self.dataframe[raster_x__8, self.raster_y] = [0, self.border_color, 0]
+                        self.dataframe[raster_x__8, self.raster_y] = [
+                            0,
+                            self.border_color,
+                            0,
+                        ]
                 else:
                     # Blank frame
-                    self.dataframe[raster_x__8, self.raster_y] = [0, self.border_color, 0]
+                    self.dataframe[raster_x__8, self.raster_y] = [
+                        0,
+                        self.border_color,
+                        0,
+                    ]
             else:
                 # Border
                 self.dataframe[raster_x__8, self.raster_y] = [0, self.border_color, 0]
@@ -267,13 +319,14 @@ class RasterScreen(VIC_II):
             if self.raster_y >= self.SCAN_AREA[1]:
                 self.raster_y = 0
                 self._frame_on = self.DEN
-                return (np.where(
+                return np.where(
                     # For each bit == pixel
                     np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
                     # If zero its background color
                     np.repeat(self.dataframe[:, :, 1], 8, axis=0),
                     # If one its foreground color
-                    np.repeat(self.dataframe[:, :, 2], 8, axis=0)))
+                    np.repeat(self.dataframe[:, :, 2], 8, axis=0),
+                )
 
 
 class VirtualScreen(VIC_II):
@@ -282,6 +335,7 @@ class VirtualScreen(VIC_II):
     """
 
     __slots__ = []
+
     def clock(self, clock_counter: int):
         pass
 
@@ -295,7 +349,9 @@ class FastScreen(VIC_II):
     Screen driver using numpy
     Text only, fast
     """
+
     __slots__ = ["font_cache"]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.font_cache = self.cache_fonts()
@@ -316,7 +372,12 @@ class FastScreen(VIC_II):
 
             if self.DEN:
                 char_base = self.video_matrix_base_address
-                charcodes = np.array([self.memory.vic_read(i) for i in range(char_base, char_base + 1000)])
+                charcodes = np.array(
+                    [
+                        self.memory.vic_read(i)
+                        for i in range(char_base, char_base + 1000)
+                    ]
+                )
                 colors = np.array(self.memory[0xD800: 0xD800 + 1000])
                 chars = (
                     # Compose frame pixels
