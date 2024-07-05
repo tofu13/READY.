@@ -44,6 +44,10 @@ class VIC_II:
         "irq_sprite_sprite_collision_enabled",
         "irq_lightpen_enabled",
         "irq_status_register",
+        "irq_raster_occured",
+        "irq_sprite_background_collision_occured",
+        "irq_sprite_sprite_collision_occured",
+        "irq_lightpen_occured",
         "extended_background",
         "bitmap_mode",
         "DEN",
@@ -76,6 +80,10 @@ class VIC_II:
         self.irq_sprite_sprite_collision_enabled: bool = False
         self.irq_lightpen_enabled: bool = False
         self.irq_status_register = 0
+        self.irq_raster_occured: bool = False
+        self.irq_sprite_background_collision_occured: bool = False
+        self.irq_sprite_sprite_collision_occured: bool = False
+        self.irq_lightpen_occured: bool = False
 
         self.extended_background = False
         self.bitmap_mode = False
@@ -148,6 +156,16 @@ class VIC_II:
             case 0x18:
                 self.video_matrix_base_address = (value & 0b11110000) << 6
                 self.character_generator_base_address = (value & 0b00001110) << 10
+            case 0x19:
+                # Ack irqs
+                if value & 0b0001:
+                    self.irq_raster_occured = False
+                if value & 0b0010:
+                    self.irq_sprite_background_collision_occured = False
+                if value & 0b0100:
+                    self.irq_sprite_sprite_collision_occured = False
+                if value & 0b1000:
+                    self.irq_lightpen_occured = False
             case 0x1A:
                 self.irq_lightpen_enabled = bool(value & 0b1000)
                 self.irq_sprite_sprite_collision_enabled = bool(value & 0b0100)
@@ -193,7 +211,20 @@ class VIC_II:
                 return 0
             case 0x19:
                 # Interrupts
-                return 0 | 0b01110000  # (disconnected bits are 1 on read)
+                interrupts_status = 0
+                if self.irq_raster_occured:
+                    interrupts_status |= 0b0001
+                if self.irq_sprite_background_collision_occured:
+                    interrupts_status |= 0b0010
+                if self.irq_sprite_sprite_collision_occured:
+                    interrupts_status |= 0b0100
+                if self.irq_lightpen_occured:
+                    interrupts_status |= 0b1000
+                if interrupts_status:
+                    interrupts_status |= 0b10000000  # Any interrupt occured
+                return (
+                        interrupts_status | 0b01110000
+                )  # (disconnected bits are 1 on read)
             case 0x1E:
                 # Sprite sprite collision
                 return 0

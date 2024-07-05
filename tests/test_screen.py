@@ -136,3 +136,20 @@ def test_VIC_II_irq(memory, vic_ii):
     assert vic_ii.irq_sprite_background_collision_enabled is False
     assert vic_ii.irq_sprite_sprite_collision_enabled is False
     assert vic_ii.irq_lightpen_enabled is False
+
+    assert memory.cpu_read(0xD019) == 0b01110000
+    # Directly set irqs
+    vic_ii.irq_raster_occured = True
+    assert memory.cpu_read(0xD019) == 0b11110001
+    vic_ii.irq_sprite_background_collision_occured = True
+    assert memory.cpu_read(0xD019) == 0b11110011
+    vic_ii.irq_sprite_sprite_collision_occured = True
+    assert memory.cpu_read(0xD019) == 0b11110111
+    vic_ii.irq_lightpen_occured = True
+    assert memory.cpu_read(0xD019) == 0b11111111
+
+    # Clear irqs
+    memory.cpu_write(0xD019, 0b0001)
+    assert memory.cpu_read(0xD019) == 0b11111110
+    memory.cpu_write(0xD019, 0b1111)
+    assert memory.cpu_read(0xD019) == 0b01110000
