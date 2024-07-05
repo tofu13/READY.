@@ -270,7 +270,7 @@ class RasterScreen(VIC_II):
                             for i in range(char_pointer, char_pointer + 40)
                         )
                         self.color_buffer = bytearray(
-                            self.memory.vic_read(i)
+                            self.memory[i]  # Direct read from fixed color ram
                             for i in range(color_pointer, color_pointer + 40)
                         )
 
