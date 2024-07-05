@@ -106,6 +106,7 @@ class Machine(PatchMixin):
             ciaA,
             diskdrive=None,
             console=False,
+            autorun=False,
     ):
         self.memory = memory
         self.cpu = cpu
@@ -136,7 +137,7 @@ class Machine(PatchMixin):
         self._cumulative_perf_timer = 0.0
         self._current_fps = 0.0
 
-        self.paste_buffer = []
+        self.paste_buffer = list("load\"*\",8,1\nrun\n") if autorun else []
 
         # self.cpu.breakpoints.add(0xF4C4)
 
