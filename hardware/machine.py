@@ -235,7 +235,7 @@ class Machine(PatchMixin):
             patch()
 
         # Run VIC-II
-        frame = self.screen.clock(self._clock_counter)
+        frame, irq = self.screen.clock(self._clock_counter)
 
         # Display complete frame
         if frame is not None:
@@ -256,8 +256,11 @@ class Machine(PatchMixin):
         # Run CPU
         self.cpu.clock()
 
-        # Run CIA A, handle interrupt if any
-        if self.ciaA.clock(self.keys_pressed):
+        # Run CIA A
+        irq |= self.ciaA.clock(self.keys_pressed)
+
+        # Handle irq if any
+        if irq:
             self.cpu.irq()
 
         self._clock_counter += 1

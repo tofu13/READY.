@@ -48,6 +48,7 @@ class VIC_II:
         "irq_sprite_background_collision_occured",
         "irq_sprite_sprite_collision_occured",
         "irq_lightpen_occured",
+        "raster_y",
         "extended_background",
         "bitmap_mode",
         "DEN",
@@ -79,11 +80,13 @@ class VIC_II:
         self.irq_sprite_background_collision_enabled: bool = False
         self.irq_sprite_sprite_collision_enabled: bool = False
         self.irq_lightpen_enabled: bool = False
-        self.irq_status_register = 0
+        self.irq_status_register: int = 0
         self.irq_raster_occured: bool = False
         self.irq_sprite_background_collision_occured: bool = False
         self.irq_sprite_sprite_collision_occured: bool = False
         self.irq_lightpen_occured: bool = False
+
+        self.raster_y: int = 0
 
         self.extended_background = False
         self.bitmap_mode = False
@@ -117,6 +120,21 @@ class VIC_II:
     def irq_raster_line(self):
         return self.irq_raster_line_lsb + (0x100 if self.irq_raster_line_msb else 0)
 
+    @property
+    def any_irq_occured(self) -> bool:
+        return any((self.irq_raster_occured,
+                    self.irq_sprite_background_collision_occured,
+                    self.irq_sprite_sprite_collision_occured,
+                    self.irq_lightpen_occured
+                    ))
+
+    @property
+    def any_irq_enabled(self) -> bool:
+        return any((self.irq_raster_enabled,
+                    self.irq_sprite_background_collision_enabled,
+                    self.irq_sprite_sprite_collision_enabled,
+                    self.irq_lightpen_enabled
+                    ))
     def clock(self, clock_counter: int):
         pass
 
@@ -167,10 +185,10 @@ class VIC_II:
                 if value & 0b1000:
                     self.irq_lightpen_occured = False
             case 0x1A:
-                self.irq_lightpen_enabled = bool(value & 0b1000)
-                self.irq_sprite_sprite_collision_enabled = bool(value & 0b0100)
-                self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
                 self.irq_raster_enabled = bool(value & 0b0001)
+                self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
+                self.irq_sprite_sprite_collision_enabled = bool(value & 0b0100)
+                self.irq_lightpen_enabled = bool(value & 0b1000)
             case 0x1B:
                 for i in range(8):
                     self.sprites[i].priority = bool(value & BITRANGE[i][1])
@@ -201,8 +219,13 @@ class VIC_II:
         address &= 0x3F
         match address:
             # Dynamic registers
+            case 0x11:
+                # Dynamically set bit #7 = bit raster_y bit #8
+                # Other bits are cached
+                return ((self.raster_y & 0x0100) >> 1) | (
+                            self._register_cache[0x11] & 0x7F)
             case 0x12:
-                return 0
+                return self.raster_y & 0xFF
             case 0x13:
                 # Light pen X (MSB only, 2 pixel resolution)
                 return 0
@@ -247,7 +270,6 @@ class VIC_II:
 class RasterScreen(VIC_II):
     __slots__ = [
         "raster_x",
-        "raster_y",
         "char_buffer",
         "color_buffer",
         "frame",
@@ -268,8 +290,8 @@ class RasterScreen(VIC_II):
     def __init__(self, memory):
         super().__init__(memory)
 
-        self.raster_x = 0
         self.raster_y = 0
+        self.raster_x: int = 0
         self.char_buffer = bytearray([1] * 40)
         self.color_buffer = bytearray([0] * 40)
 
@@ -347,17 +369,20 @@ class RasterScreen(VIC_II):
         if self.raster_x > self.SCAN_AREA[0]:
             self.raster_x = 0
             self.raster_y += 1
+            # FIXME; very rough raster irq
+            self.irq_raster_occured = self.irq_raster_line == self.raster_y
             if self.raster_y >= self.SCAN_AREA[1]:
                 self.raster_y = 0
                 self._frame_on = self.DEN
-                return np.where(
+                return (np.where(
                     # For each bit == pixel
                     np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
                     # If zero its background color
                     np.repeat(self.dataframe[:, :, 1], 8, axis=0),
                     # If one its foreground color
                     np.repeat(self.dataframe[:, :, 2], 8, axis=0),
-                )
+                ), self.any_irq_enabled and self.irq_raster_occured)
+        return (None, self.any_irq_enabled and self.irq_raster_occured)
 
 
 class VirtualScreen(VIC_II):
@@ -369,10 +394,6 @@ class VirtualScreen(VIC_II):
 
     def clock(self, clock_counter: int):
         pass
-
-    @property
-    def raster_y(self):
-        return 0
 
 
 class FastScreen(VIC_II):
