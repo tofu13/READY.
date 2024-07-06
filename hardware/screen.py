@@ -48,6 +48,7 @@ class VIC_II:
         "irq_sprite_background_collision_occured",
         "irq_sprite_sprite_collision_occured",
         "irq_lightpen_occured",
+        "any_irq_enabled",
         "raster_y",
         "extended_background",
         "bitmap_mode",
@@ -86,6 +87,7 @@ class VIC_II:
         self.irq_sprite_sprite_collision_occured: bool = False
         self.irq_lightpen_occured: bool = False
 
+        self.any_irq_enabled: bool = False
         self.raster_y: int = 0
 
         self.extended_background = False
@@ -128,13 +130,6 @@ class VIC_II:
                     self.irq_lightpen_occured
                     ))
 
-    @property
-    def any_irq_enabled(self) -> bool:
-        return any((self.irq_raster_enabled,
-                    self.irq_sprite_background_collision_enabled,
-                    self.irq_sprite_sprite_collision_enabled,
-                    self.irq_lightpen_enabled
-                    ))
     def clock(self, clock_counter: int):
         pass
 
@@ -189,6 +184,8 @@ class VIC_II:
                 self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
                 self.irq_sprite_sprite_collision_enabled = bool(value & 0b0100)
                 self.irq_lightpen_enabled = bool(value & 0b1000)
+
+                self.any_irq_enabled = bool(value & 0b1111)
             case 0x1B:
                 for i in range(8):
                     self.sprites[i].priority = bool(value & BITRANGE[i][1])
