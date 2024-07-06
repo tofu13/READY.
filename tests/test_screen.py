@@ -3,7 +3,7 @@ import pytest
 import config
 from hardware import roms
 from hardware.memory import Memory
-from hardware.screen import VIC_II
+from hardware.screen import VIC_II, RasterScreen
 
 
 @pytest.fixture()
@@ -17,6 +17,11 @@ def memory():
 @pytest.fixture()
 def vic_ii(memory):
     return VIC_II(memory)
+
+
+@pytest.fixture()
+def vic_ii_raster(memory):
+    return RasterScreen(memory)
 
 
 def test_vic_ii(vic_ii):
@@ -136,3 +141,62 @@ def test_VIC_II_irq(memory, vic_ii):
     assert vic_ii.irq_sprite_background_collision_enabled is False
     assert vic_ii.irq_sprite_sprite_collision_enabled is False
     assert vic_ii.irq_lightpen_enabled is False
+
+    assert memory.cpu_read(0xD019) == 0b01110000
+    assert vic_ii.any_irq_occured is False
+    # Directly set irqs
+    vic_ii.irq_raster_occured = True
+    assert vic_ii.any_irq_occured is True
+    assert memory.cpu_read(0xD019) == 0b11110001
+    vic_ii.irq_sprite_background_collision_occured = True
+    assert memory.cpu_read(0xD019) == 0b11110011
+    vic_ii.irq_sprite_sprite_collision_occured = True
+    assert memory.cpu_read(0xD019) == 0b11110111
+    vic_ii.irq_lightpen_occured = True
+    assert memory.cpu_read(0xD019) == 0b11111111
+
+    # Clear irqs
+    memory.cpu_write(0xD019, 0b0001)
+    assert memory.cpu_read(0xD019) == 0b11111110
+    assert vic_ii.any_irq_occured is True
+    memory.cpu_write(0xD019, 0b1111)
+    assert memory.cpu_read(0xD019) == 0b01110000
+    assert vic_ii.any_irq_occured is False
+
+
+def test_VIC_II_raster_irq_occurs(memory, vic_ii_raster):
+    # Set raster line
+    memory.cpu_write(0xD012, 0x10)
+    assert vic_ii_raster.irq_raster_line == 0x010
+
+    memory.cpu_write(0xD011, 0x80)
+    assert vic_ii_raster.irq_raster_line == 0x110
+
+    memory.cpu_write(0xD011, 0x00)
+    assert vic_ii_raster.irq_raster_line == 0x010
+
+    assert vic_ii_raster.irq_raster_occured is False
+    while not vic_ii_raster.irq_raster_occured:
+        _, irq_line = vic_ii_raster.clock(0)
+
+    # Irq disabled -> irq signal is false
+    assert irq_line is False
+    assert memory.cpu_read(0xD019) & 0b0001
+    assert vic_ii_raster.any_irq_occured
+
+    # Ack irq
+    memory.cpu_write(0xd019, 0b0001)
+    assert vic_ii_raster.irq_raster_occured is False
+    assert vic_ii_raster.any_irq_occured is False
+
+
+def test_VIC_II_raster_irq_line(memory, vic_ii_raster):
+    memory.cpu_write(0xD012, 0x10)
+    assert vic_ii_raster.irq_raster_line == 0x010
+
+    # Enable raster irq
+    memory.cpu_write(0xD01A, 0x01)
+    while not vic_ii_raster.irq_raster_occured:
+        _, irq_line = vic_ii_raster.clock(0)
+    # irq has been signalled
+    assert irq_line is True

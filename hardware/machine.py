@@ -7,6 +7,7 @@ import pyperclip
 
 import hardware.memory
 from hardware.constants import (
+    CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER,
     CLOCKS_PER_CONSOLE_REFRESH,
     CLOCKS_PER_EVENT_SERVING,
     CLOCKS_PER_PERFORMANCE_REFRESH,
@@ -69,15 +70,45 @@ class PatchMixin:
 
 
 class Machine(PatchMixin):
-    def __init__(self,
-                 memory: hardware.memory.Memory,
-                 cpu: hardware.cpu.CPU,
-                 screen: hardware.screen.VIC_II,
-                 ciaA,
-                 diskdrive=None,
-                 console=False
-                 ):
+    __slots__ = [
+        "memory",
+        "cpu",
+        "screen",
+        "ciaA",
+        "diskdrive",
+        "console",
+        "monitor_active",
+        "signal",
+        "nmi",
+        "input_buffer",
+        "CAPTION",
+        "paste_buffer",
+        "patches",
+        "serial_device_number",
+        "keys_pressed",
+        "caps_lock",
+        "breakpoints",
+        "tracepoints",
+        "_clock_counter",
+        "_cumulative_perf_timer",
+        "_current_fps",
+        # Unpickables
+        "monitor",
+        "display",
+        "pygame_clock",
+        "outfile",
+    ]
 
+    def __init__(
+            self,
+            memory: hardware.memory.Memory,
+            cpu: hardware.cpu.CPU,
+            screen: hardware.screen.VIC_II,
+            ciaA,
+            diskdrive=None,
+            console=False,
+            autorun=False,
+    ):
         self.memory = memory
         self.cpu = cpu
         self.screen = screen
@@ -107,7 +138,7 @@ class Machine(PatchMixin):
         self._cumulative_perf_timer = 0.0
         self._current_fps = 0.0
 
-        self.paste_buffer = []
+        self.paste_buffer = list("load\"*\",8,1\nrun\n") if autorun else []
 
         # self.cpu.breakpoints.add(0xF4C4)
 
@@ -137,33 +168,40 @@ class Machine(PatchMixin):
         Second stage init, for proper loading of saved state
         """
         if not isinstance(self.screen, hardware.screen.VirtualScreen):
-            self.display = pygame.display.set_mode(VIDEO_SIZE, depth=8, flags=pygame.SCALED)
+            self.display = pygame.display.set_mode(
+                VIDEO_SIZE, depth=8, flags=pygame.SCALED
+            )
             pygame.event.set_blocked(None)
-            pygame.event.set_allowed([
-                pygame.QUIT,
-                pygame.WINDOWCLOSE,
-                pygame.KEYDOWN,
-                pygame.KEYUP,
-            ])
+            pygame.event.set_allowed(
+                [
+                    pygame.QUIT,
+                    pygame.WINDOWCLOSE,
+                    pygame.KEYDOWN,
+                    pygame.KEYUP,
+                ]
+            )
             self.pygame_clock = pygame.time.Clock()
         self.monitor = hardware.monitor.Monitor(self)
         self.outfile = open("OUTFILE", "wb")  # TODO: handle this
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        # Drop attributes that will be re-created from scratch after loading
-        for attribute in [
-            "monitor",
-            "display",
-            "pygame_clock",
-            "outfile",
-        ]:
-            if attribute in state:
-                del state[attribute]
+        state = {
+            key: getattr(self, key)
+            for key in self.__slots__
+            # Skip attributes that will be re-created from scratch after loading
+            if key
+               not in [
+                   "monitor",
+                   "display",
+                   "pygame_clock",
+                   "outfile",
+               ]
+        }
         return state
 
     def __setstate__(self, state):
-        self.__dict__ = state
+        for key, value in state.items():
+            setattr(self, key, value)
         self.post_init()
         self.monitor_active = False  # Exit monitor after loading
 
@@ -198,18 +236,19 @@ class Machine(PatchMixin):
             patch()
 
         # Run VIC-II
-        frame = self.screen.clock(self._clock_counter)
+        frame, irq = self.screen.clock(self._clock_counter)
 
         # Display complete frame
         if frame is not None:
             if not isinstance(frame, pygame.Surface):
                 frame = pygame.surfarray.make_surface(frame)
-                frame.set_palette(PALETTE
-                                  # [
-                                  # pygame.Color(0,0,0),
-                                  # pygame.Color(255,255,255),
-                                  # ]
-                                  )
+                frame.set_palette(
+                    PALETTE
+                    # [
+                    # pygame.Color(0,0,0),
+                    # pygame.Color(255,255,255),
+                    # ]
+                )
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
             # Get FPS
@@ -218,8 +257,11 @@ class Machine(PatchMixin):
         # Run CPU
         self.cpu.clock()
 
-        # Run CIA A, handle interrupt if any
-        if self.ciaA.clock(self.keys_pressed):
+        # Run CIA A
+        irq |= self.ciaA.clock(self.keys_pressed)
+
+        # Handle irq if any
+        if irq:
             self.cpu.irq()
 
         self._clock_counter += 1
@@ -246,8 +288,13 @@ class Machine(PatchMixin):
         if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
-                self.CAPTION.format(self.pygame_clock.get_fps(),
-                                    CLOCKS_PER_PERFORMANCE_REFRESH / 10000 / self._cumulative_perf_timer))
+                self.CAPTION.format(
+                    self.pygame_clock.get_fps(),
+                    CLOCKS_PER_PERFORMANCE_REFRESH
+                    / 10000
+                    / self._cumulative_perf_timer,
+                )
+            )
             self._cumulative_perf_timer = 0.0
 
     def manage_events(self):
@@ -256,14 +303,17 @@ class Machine(PatchMixin):
         Do housekeeping
         """
         # Paste text
-        if self.paste_buffer and self.memory[0xC6] == 0:
-            # Inject char into empty keyboard buffer
+        while (
+                self.paste_buffer
+                and self.memory[0xC6] < CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER
+        ):
+            # Inject char into keyboard buffer
             char = self.paste_buffer.pop(0)
             petscii_code = PETSCII.get(char.lower())
             if petscii_code is None:
                 print(f"WARNING: character {char} not in PETSCII")
             else:
-                self.memory[0x277] = petscii_code
+                self.memory[0x277 + self.memory[0xC6]] = petscii_code
                 # Update buffer length
                 self.memory[0xC6] += 1
 
@@ -287,7 +337,8 @@ class Machine(PatchMixin):
                     except pyperclip.PyperclipException:
                         print(
                             "Can't paste: xsel or xclip system packages not found. "
-                            "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error")
+                            "See https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error"
+                        )
 
                 # Hardware events
                 elif event.key == pygame.K_p and event.mod & pygame.KMOD_RCTRL:
@@ -316,11 +367,11 @@ class Machine(PatchMixin):
 
     @classmethod
     def from_file(cls, filename):
-        with open(filename, 'rb') as f:
+        with open(filename, "rb") as f:
             return pickle.load(f)
 
     def restore(self, filename):  # TODO drop
-        with open(filename, 'rb') as f:
+        with open(filename, "rb") as f:
             self.cpu.A = pickle.load(f)
             self.cpu.X = pickle.load(f)
             self.cpu.Y = pickle.load(f)
@@ -332,11 +383,11 @@ class Machine(PatchMixin):
             self.memory.set_slice(0, pickle.load(f))
 
     def save(self, filename):
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             pickle.dump(self, f)
 
     def load(self, filename, base, format_cbm=False):
-        with open(filename, 'rb') as f:
+        with open(filename, "rb") as f:
             # First two bytes are base address for loading into memory (little endian)
             lo, hi = f.read(2)
             if format_cbm:
@@ -372,11 +423,12 @@ class Machine(PatchMixin):
 def DefaultMachine() -> Machine:
     import hardware
     from config import ROMS_FOLDER
+
     roms = hardware.roms.ROMS(ROMS_FOLDER)
-    memory = hardware.memory.BytearrayMemory(65536, roms)
+    memory = hardware.memory.Memory(65536, roms)
     return Machine(
         memory,
         hardware.cpu.CPU(memory),
         hardware.screen.RasterScreen(memory),
-        hardware.cia.CIA_A(memory)
+        hardware.cia.CIA_A(memory),
     )

@@ -18,6 +18,7 @@ def main():
                         help="Show screen in console (chars only)", default=False)
     parser.add_argument("-t", "--loadstate", action='store',
                         help="Load state from file", default=False)
+    parser.add_argument("-ar", "--autorun", action='store_true', help="Autorun *")
     args = parser.parse_args()
 
     if args.loadstate:
@@ -49,6 +50,7 @@ def main():
             ciaA=cia_a,
             diskdrive=diskdrive,
             console=args.console,
+            autorun=args.autorun,
         )
 
         if args.console:

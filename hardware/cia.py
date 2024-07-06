@@ -38,7 +38,8 @@ class CIA:
 
         self.tod_zero = perf_counter()
 
-    def clock(self, *args):
+    def clock(self):
+        # see note on derived classes
         if self.timer_A_start:
             self.timer_A -= 1
             if self.timer_A < 0:
@@ -104,10 +105,22 @@ class CIA_A(CIA):
         Execute CIA stuff
         :return: signals [irq, nmi, reset, quit]
         """
-        # Save key pressed
+        # Save keys pressed
         self.keys_pressed = keys_pressed
 
-        super().clock()
+        # super() is very slow :(
+        # CIA.clock(self) is slow
+        # Since practicality beats purity, code duplication here
+        if self.timer_A_start:
+            self.timer_A -= 1
+            if self.timer_A < 0:
+                self.timer_A_underflow = True
+                if self.timer_A_restart_after_underflow:
+                    self.timer_A_load()
+                else:
+                    self.timer_A = 0  # Unsure which value to set
+                    self.timer_A_start = False
+
         return self.irq_occured
 
     def get_registers(self, address, value):
@@ -188,8 +201,6 @@ class CIA_A(CIA):
         return value
 
     def set_registers(self, address, value):
-        if address != 0xDC00:
-            print(f"Cia write {address:04X} {value:02X}")
         if address == 0xDC04:
             "Set lo byte of timer_A"
             self.timer_A_latch = self.timer_A_latch // 256 + value

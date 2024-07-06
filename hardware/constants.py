@@ -17,6 +17,8 @@ CLOCKS_PER_CONSOLE_REFRESH = 50000  # Clock cycles between console screen (when 
 CLOCKS_PER_FRAME = 18656  # Clock cycles between frame update (non-raster screen drivers)
 CLOCKS_PER_PERFORMANCE_REFRESH = 250000  # CLocks cycles between refresh of FPS/perf values
 
+CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER = 10  # How many chars to inject into buffer at once
+
 ROMSLIST = [
     # (File)Name, begin address, end address, bit of bank switch register (R6510)
     ("basic", 0xA000, 0xBFFF, 0),

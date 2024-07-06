@@ -329,7 +329,7 @@ class CPU:
             self.memory.cpu_write(address, result)
 
     def BRK(self, address):
-        self.F["B"] = True
+        self.flag_B = True
 
     def BPL(self, address):
         if not self.flag_N:

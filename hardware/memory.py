@@ -4,6 +4,16 @@ from hardware.constants import OPCODES, SCREEN_CHARCODE
 
 
 class Memory:
+    __slots__ = [
+        "ram",
+        "roms",
+        "read_watchers",
+        "write_watchers",
+        "io_port",
+        "loram_port",
+        "hiram_port",
+    ]
+
     def __init__(self, ram=None, roms=None):
         """
         Memory class that implements PLA for routing reads and write
@@ -178,14 +188,3 @@ class Memory:
         )
 
         return output, step
-
-
-class BytearrayMemory(Memory, bytearray):
-    """
-    A memory class where data is stored into a bytearray
-    """
-
-    def __init__(self, size: int, roms=None):
-        super().__init__(size)
-        if roms is not None:
-            self.roms = roms.contents
