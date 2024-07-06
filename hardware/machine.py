@@ -7,6 +7,7 @@ import pyperclip
 
 import hardware.memory
 from hardware.constants import (
+    CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER,
     CLOCKS_PER_CONSOLE_REFRESH,
     CLOCKS_PER_EVENT_SERVING,
     CLOCKS_PER_PERFORMANCE_REFRESH,
@@ -302,14 +303,17 @@ class Machine(PatchMixin):
         Do housekeeping
         """
         # Paste text
-        if self.paste_buffer and self.memory[0xC6] == 0:
-            # Inject char into empty keyboard buffer
+        while (
+                self.paste_buffer
+                and self.memory[0xC6] < CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER
+        ):
+            # Inject char into keyboard buffer
             char = self.paste_buffer.pop(0)
             petscii_code = PETSCII.get(char.lower())
             if petscii_code is None:
                 print(f"WARNING: character {char} not in PETSCII")
             else:
-                self.memory[0x277] = petscii_code
+                self.memory[0x277 + self.memory[0xC6]] = petscii_code
                 # Update buffer length
                 self.memory[0xC6] += 1
 
