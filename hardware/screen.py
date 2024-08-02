@@ -337,11 +337,11 @@ class RasterScreen(VIC_II):
                     )
 
                     # TODO: XY SCROLL
-                    self.dataframe[raster_x__8, self.raster_y] = [
+                    self.dataframe[raster_x__8, self.raster_y] = (
                         pixels,
                         self.background_color,
                         color,
-                    ]
+                    )
 
                     # Narrow border
                     # TODO: use flip-flop
@@ -350,21 +350,17 @@ class RasterScreen(VIC_II):
                             or self.raster_y > self.LAST_LINE[self.RSEL]
                     ):
                         # TODO: draw partial horizontal border
-                        self.dataframe[raster_x__8, self.raster_y] = [
+                        self.dataframe[raster_x__8, self.raster_y] = (
                             0,
                             self.border_color,
                             0,
-                        ]
+                        )
                 else:
                     # Blank frame
-                    self.dataframe[raster_x__8, self.raster_y] = [
-                        0,
-                        self.border_color,
-                        0,
-                    ]
+                    self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
             else:
                 # Border
-                self.dataframe[raster_x__8, self.raster_y] = [0, self.border_color, 0]
+                self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
 
         self.raster_x += 8
         if self.raster_x > self.SCAN_AREA[0]:
