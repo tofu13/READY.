@@ -240,15 +240,8 @@ class Machine(PatchMixin):
 
         # Display complete frame
         if frame is not None:
-            if not isinstance(frame, pygame.Surface):
-                frame = pygame.surfarray.make_surface(frame)
-                frame.set_palette(
-                    PALETTE
-                    # [
-                    # pygame.Color(0,0,0),
-                    # pygame.Color(255,255,255),
-                    # ]
-                )
+            frame = pygame.surfarray.make_surface(frame)
+            frame.set_palette(PALETTE)
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
             # Get FPS
