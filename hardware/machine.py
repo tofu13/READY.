@@ -14,6 +14,7 @@ from hardware.constants import (
     PALETTE,
     PETSCII,
     SCREEN_CHARCODE,
+    SIGNALS,
     VIDEO_SIZE,
 )
 
@@ -125,7 +126,7 @@ class Machine(PatchMixin):
         # Assert datassette stopped
         self.set_datassette_button_status(False)
 
-        self.signal = None
+        self.signal = SIGNALS.NONE
         self.nmi = False
 
         self.input_buffer = ""
@@ -270,12 +271,12 @@ class Machine(PatchMixin):
             self.cpu.nmi()
             self.nmi = False
 
-        if self.signal == "RESET":
+        if self.signal is SIGNALS.RESET:
             self.cpu.reset(PC=0xFCE2)
-            self.signal = None
-        elif self.signal == "MONITOR":
+            self.signal = SIGNALS.NONE
+        elif self.signal is SIGNALS.MONITOR:
             self.monitor_active = True
-            self.signal = None
+            self.signal = SIGNALS.NONE
 
         self._cumulative_perf_timer += time.perf_counter()
         if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
@@ -310,7 +311,7 @@ class Machine(PatchMixin):
                 # Update buffer length
                 self.memory[0xC6] += 1
 
-        signal = None
+        signal = SIGNALS.NONE
         nmi = False
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -320,9 +321,9 @@ class Machine(PatchMixin):
 
                 # Also scan special keys
                 elif event.key == pygame.K_F12:
-                    signal = "RESET"
+                    signal = SIGNALS.RESET
                 elif event.key == pygame.K_F11:
-                    signal = "MONITOR"
+                    signal = SIGNALS.MONITOR
                 elif event.key == pygame.K_F10:
                     # F10 -> paste text
                     try:

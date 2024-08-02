@@ -475,6 +475,12 @@ SCREEN_CHARCODE = {
 }
 
 
+class SIGNALS(enum.Enum):
+    NONE = enum.auto()
+    RESET = enum.auto()
+    MONITOR = enum.auto()
+
+
 class C64_KEYS(enum.Enum):
     INS_DEL = (0x01, 0x01)
     RETURN = (0x01, 0x02)
