@@ -124,11 +124,14 @@ class VIC_II:
 
     @property
     def any_irq_occured(self) -> bool:
-        return any((self.irq_raster_occured,
-                    self.irq_sprite_background_collision_occured,
-                    self.irq_sprite_sprite_collision_occured,
-                    self.irq_lightpen_occured
-                    ))
+        return any(
+            (
+                self.irq_raster_occured,
+                self.irq_sprite_background_collision_occured,
+                self.irq_sprite_sprite_collision_occured,
+                self.irq_lightpen_occured,
+            )
+        )
 
     def clock(self, clock_counter: int):
         pass
@@ -220,7 +223,8 @@ class VIC_II:
                 # Dynamically set bit #7 = bit raster_y bit #8
                 # Other bits are cached
                 return ((self.raster_y & 0x0100) >> 1) | (
-                            self._register_cache[0x11] & 0x7F)
+                        self._register_cache[0x11] & 0x7F
+                )
             case 0x12:
                 return self.raster_y & 0xFF
             case 0x13:
@@ -371,14 +375,17 @@ class RasterScreen(VIC_II):
             if self.raster_y >= self.SCAN_AREA[1]:
                 self.raster_y = 0
                 self._frame_on = self.DEN
-                return (np.where(
-                    # For each bit == pixel
-                    np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
-                    # If zero its background color
-                    np.repeat(self.dataframe[:, :, 1], 8, axis=0),
-                    # If one its foreground color
-                    np.repeat(self.dataframe[:, :, 2], 8, axis=0),
-                ), self.any_irq_enabled and self.irq_raster_occured)
+                return (
+                    np.where(
+                        # For each bit == pixel
+                        np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
+                        # If zero its background color
+                        np.repeat(self.dataframe[:, :, 1], 8, axis=0),
+                        # If one its foreground color
+                        np.repeat(self.dataframe[:, :, 2], 8, axis=0),
+                    ),
+                    self.any_irq_enabled and self.irq_raster_occured,
+                )
         return (None, self.any_irq_enabled and self.irq_raster_occured)
 
 

@@ -10,5 +10,5 @@ class ROMS:
 
     def load(self, roms_folder):
         for name, _begin, _end, _bank_bit in ROMSLIST:
-            with open(os.path.join(roms_folder, name), 'rb') as rom:
+            with open(os.path.join(roms_folder, name), "rb") as rom:
                 self.contents[name] = bytearray(rom.read())

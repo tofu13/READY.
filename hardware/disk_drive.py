@@ -59,6 +59,8 @@ class Drive:
 
             return buffer
         else:
-            with d64.DiskImage(self.image_file) as image, image.path(
-                    filename).open() as in_file:
+            with (
+                d64.DiskImage(self.image_file) as image,
+                image.path(filename).open() as in_file,
+            ):
                 return in_file.read()

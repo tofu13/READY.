@@ -279,7 +279,11 @@ def parse_assembly(args: list[str], current_address: int) -> list[int]:
         #        data.append(value)
         if args[0].upper() in ("BCC", "BCS", "BEQ", "BMI", "BNE", "BPL", "BVC", "BVS"):
             value = convert(args[1])
-            if value is not None and (opcode := INVERSE_OPCODES.get((mnemonic, "addressing_REL"))) is not None:
+            if (
+                    value is not None
+                    and (opcode := INVERSE_OPCODES.get((mnemonic, "addressing_REL")))
+                    is not None
+            ):
                 data.append(opcode)
                 jump = value - current_address - 2  # -2 'cauze PC already stepped
                 # TODO: check jump in range -128 + 127
@@ -291,7 +295,11 @@ def parse_assembly(args: list[str], current_address: int) -> list[int]:
                     if value[0] > 0x0100:
                         # This is the case when value is an address (16 bits)
                         value = [value[0] % 0x0100, value[0] // 0x0100]
-                    if (opcode := INVERSE_OPCODES.get((mnemonic, f"addressing_{addressing}"))) is not None:
+                    if (
+                            opcode := INVERSE_OPCODES.get(
+                                (mnemonic, f"addressing_{addressing}")
+                            )
+                    ) is not None:
                         data.append(opcode)
                         data.extend(value)
                     break

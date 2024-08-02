@@ -130,9 +130,7 @@ class CPU:
         try:
             getattr(self, instruction)(address)
         except Exception as e:
-            print(
-                f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}"
-            )
+            print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
             raise e
 
     def irq(self):
