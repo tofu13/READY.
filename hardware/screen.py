@@ -2,7 +2,19 @@ import dataclasses
 
 import numpy as np
 
-from .constants import BITRANGE, CLOCKS_PER_FRAME, VIDEO_SIZE
+from .constants import (
+    BITRANGE,
+    CLOCKS_PER_FRAME,
+    FIRST_COLUMN,
+    FIRST_LINE,
+    LAST_COLUMN,
+    LAST_LINE,
+    SCAN_AREA_H,
+    SCAN_AREA_V,
+    VIDEO_SIZE,
+    VIDEO_SIZE_H,
+    VIDEO_SIZE_V,
+)
 
 
 @dataclasses.dataclass(slots=True)
@@ -278,16 +290,6 @@ class RasterScreen(VIC_II):
         "_frame_on",
     ]
 
-    CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
-
-    SCAN_AREA = [504, 312]
-
-    FIRST_COLUMN = [31, 24]
-    LAST_COLUMN = [334, 343]
-
-    FIRST_LINE = [55, 51]
-    LAST_LINE = [246, 250]
-
     def __init__(self, memory):
         super().__init__(memory)
 
@@ -300,11 +302,11 @@ class RasterScreen(VIC_II):
 
         self.frame = np.zeros(VIDEO_SIZE, dtype="uint8")
         self.dataframe = np.empty(
-            shape=(VIDEO_SIZE[0] // 8 + 1, VIDEO_SIZE[1], 3), dtype="uint8"
+            shape=(VIDEO_SIZE_H // 8 + 1, VIDEO_SIZE_V, 3), dtype="uint8"
         )  # +1 cause partial byte @ 403
 
     def clock(self, clock_counter: int):
-        if self.raster_x < VIDEO_SIZE[0] and self.raster_y < VIDEO_SIZE[1]:
+        if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
             raster_x__8 = self.raster_x // 8
             if 24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250:
@@ -346,8 +348,8 @@ class RasterScreen(VIC_II):
                     # Narrow border
                     # TODO: use flip-flop
                     if (
-                            self.raster_y < self.FIRST_LINE[self.RSEL]
-                            or self.raster_y > self.LAST_LINE[self.RSEL]
+                            self.raster_y < FIRST_LINE[self.RSEL]
+                            or self.raster_y > LAST_LINE[self.RSEL]
                     ):
                         # TODO: draw partial horizontal border
                         self.dataframe[raster_x__8, self.raster_y] = (
@@ -363,12 +365,12 @@ class RasterScreen(VIC_II):
                 self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
 
         self.raster_x += 8
-        if self.raster_x > self.SCAN_AREA[0]:
+        if self.raster_x > SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
             # FIXME; very rough raster irq
             self.irq_raster_occured = self.irq_raster_line == self.raster_y
-            if self.raster_y >= self.SCAN_AREA[1]:
+            if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
                 self._frame_on = self.DEN
                 return (
