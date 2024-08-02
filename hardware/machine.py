@@ -91,7 +91,7 @@ class Machine(PatchMixin):
         "breakpoints",
         "tracepoints",
         "_clock_counter",
-        "_cumulative_perf_timer",
+        "_last_perf_timer",
         "_current_fps",
         # Unpickables
         "monitor",
@@ -136,7 +136,7 @@ class Machine(PatchMixin):
 
         # pygame.display.set_caption(self.CAPTION)
 
-        self._cumulative_perf_timer = 0.0
+        self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
 
         self.paste_buffer = list('load"*",8,1\nrun\n') if autorun else []
@@ -220,7 +220,6 @@ class Machine(PatchMixin):
         """
         Run a single step of all devices
         """
-        self._cumulative_perf_timer -= time.perf_counter()
         # Activate monitor on breakpoints
         if self.breakpoints:
             self.monitor_active |= self.cpu.PC in self.breakpoints
@@ -277,18 +276,18 @@ class Machine(PatchMixin):
             self.cpu.nmi()
             self.nmi = False
 
-        self._cumulative_perf_timer += time.perf_counter()
         if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
+            _perf_timer = time.perf_counter()
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
                 self.CAPTION.format(
                     self.pygame_clock.get_fps(),
                     CLOCKS_PER_PERFORMANCE_REFRESH
                     / 10000
-                    / self._cumulative_perf_timer,
+                    / (_perf_timer - self._last_perf_timer)
                 )
             )
-            self._cumulative_perf_timer = 0.0
+            self._last_perf_timer = _perf_timer
 
     def manage_events(self):
         """
