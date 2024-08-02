@@ -261,6 +261,12 @@ class Machine(PatchMixin):
         self._clock_counter += 1
         if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
             self.signal, self.nmi = self.manage_events()
+            if self.signal is SIGNALS.RESET:
+                self.cpu.reset(PC=0xFCE2)
+                self.signal = SIGNALS.NONE
+            elif self.signal is SIGNALS.MONITOR:
+                self.monitor_active = True
+                self.signal = SIGNALS.NONE
 
         if self.console and self._clock_counter % CLOCKS_PER_CONSOLE_REFRESH == 0:
             # Send screen to console
@@ -270,13 +276,6 @@ class Machine(PatchMixin):
         if self.nmi:
             self.cpu.nmi()
             self.nmi = False
-
-        if self.signal is SIGNALS.RESET:
-            self.cpu.reset(PC=0xFCE2)
-            self.signal = SIGNALS.NONE
-        elif self.signal is SIGNALS.MONITOR:
-            self.monitor_active = True
-            self.signal = SIGNALS.NONE
 
         self._cumulative_perf_timer += time.perf_counter()
         if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
