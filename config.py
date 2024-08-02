@@ -8,8 +8,8 @@ TESTING_ROMS_FOLDER = "tests/roms"
 # - raster: full simulation, slower
 # - fast: partial simulation, faster
 # - virtual: headless
-SCREEN = "fast"
-# SCREEN = "raster"
+# SCREEN = "fast"
+SCREEN = "raster"
 
 # Shorten cold start
 QUICK_BOOT = True

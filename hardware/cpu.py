@@ -31,7 +31,7 @@ class CPU:
         Y: int = 0,
         PC: int = 0x0000,
         SP: int = 0xFF,
-            SR: int = 0b00100100,
+        SR: int = 0b00100100,
     ):
         self.memory = memory
 
@@ -130,9 +130,7 @@ class CPU:
         try:
             getattr(self, instruction)(address)
         except Exception as e:
-            print(
-                f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}"
-            )
+            print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
             raise e
 
     def irq(self):

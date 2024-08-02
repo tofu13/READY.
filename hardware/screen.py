@@ -2,7 +2,19 @@ import dataclasses
 
 import numpy as np
 
-from .constants import BITRANGE, CLOCKS_PER_FRAME, VIDEO_SIZE
+from .constants import (
+    BITRANGE,
+    CLOCKS_PER_FRAME,
+    #FIRST_COLUMN,
+    FIRST_LINE,
+    #LAST_COLUMN,
+    LAST_LINE,
+    SCAN_AREA_H,
+    SCAN_AREA_V,
+    VIDEO_SIZE,
+    VIDEO_SIZE_H,
+    VIDEO_SIZE_V,
+)
 
 
 @dataclasses.dataclass(slots=True)
@@ -48,6 +60,7 @@ class VIC_II:
         "irq_sprite_background_collision_occured",
         "irq_sprite_sprite_collision_occured",
         "irq_lightpen_occured",
+        "any_irq_enabled",
         "raster_y",
         "extended_background",
         "bitmap_mode",
@@ -86,6 +99,7 @@ class VIC_II:
         self.irq_sprite_sprite_collision_occured: bool = False
         self.irq_lightpen_occured: bool = False
 
+        self.any_irq_enabled: bool = False
         self.raster_y: int = 0
 
         self.extended_background = False
@@ -122,19 +136,15 @@ class VIC_II:
 
     @property
     def any_irq_occured(self) -> bool:
-        return any((self.irq_raster_occured,
-                    self.irq_sprite_background_collision_occured,
-                    self.irq_sprite_sprite_collision_occured,
-                    self.irq_lightpen_occured
-                    ))
+        return any(
+            (
+                self.irq_raster_occured,
+                self.irq_sprite_background_collision_occured,
+                self.irq_sprite_sprite_collision_occured,
+                self.irq_lightpen_occured,
+            )
+        )
 
-    @property
-    def any_irq_enabled(self) -> bool:
-        return any((self.irq_raster_enabled,
-                    self.irq_sprite_background_collision_enabled,
-                    self.irq_sprite_sprite_collision_enabled,
-                    self.irq_lightpen_enabled
-                    ))
     def clock(self, clock_counter: int):
         pass
 
@@ -189,6 +199,8 @@ class VIC_II:
                 self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
                 self.irq_sprite_sprite_collision_enabled = bool(value & 0b0100)
                 self.irq_lightpen_enabled = bool(value & 0b1000)
+
+                self.any_irq_enabled = bool(value & 0b1111)
             case 0x1B:
                 for i in range(8):
                     self.sprites[i].priority = bool(value & BITRANGE[i][1])
@@ -223,7 +235,8 @@ class VIC_II:
                 # Dynamically set bit #7 = bit raster_y bit #8
                 # Other bits are cached
                 return ((self.raster_y & 0x0100) >> 1) | (
-                            self._register_cache[0x11] & 0x7F)
+                    self._register_cache[0x11] & 0x7F
+                )
             case 0x12:
                 return self.raster_y & 0xFF
             case 0x13:
@@ -246,7 +259,7 @@ class VIC_II:
                 if interrupts_status:
                     interrupts_status |= 0b10000000  # Any interrupt occured
                 return (
-                        interrupts_status | 0b01110000
+                    interrupts_status | 0b01110000
                 )  # (disconnected bits are 1 on read)
             case 0x1E:
                 # Sprite sprite collision
@@ -277,16 +290,6 @@ class RasterScreen(VIC_II):
         "_frame_on",
     ]
 
-    CAPTION = "Commodore 64 (Raster) {:.1f} FPS"
-
-    SCAN_AREA = [504, 312]
-
-    FIRST_COLUMN = [31, 24]
-    LAST_COLUMN = [334, 343]
-
-    FIRST_LINE = [55, 51]
-    LAST_LINE = [246, 250]
-
     def __init__(self, memory):
         super().__init__(memory)
 
@@ -299,11 +302,11 @@ class RasterScreen(VIC_II):
 
         self.frame = np.zeros(VIDEO_SIZE, dtype="uint8")
         self.dataframe = np.empty(
-            shape=(VIDEO_SIZE[0] // 8 + 1, VIDEO_SIZE[1], 3), dtype="uint8"
+            shape=(VIDEO_SIZE_H // 8 + 1, VIDEO_SIZE_V, 3), dtype="uint8"
         )  # +1 cause partial byte @ 403
 
     def clock(self, clock_counter: int):
-        if self.raster_x < VIDEO_SIZE[0] and self.raster_y < VIDEO_SIZE[1]:
+        if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
             raster_x__8 = self.raster_x // 8
             if 24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250:
@@ -312,8 +315,8 @@ class RasterScreen(VIC_II):
                     # Bad lines
                     if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):
                         char_pointer = (
-                                self.video_matrix_base_address
-                                + (self.raster_y - 51) // 8 * 40
+                            self.video_matrix_base_address
+                            + (self.raster_y - 51) // 8 * 40
                         )
                         color_pointer = 0xD800 + (self.raster_y - 51) // 8 * 40
 
@@ -336,52 +339,51 @@ class RasterScreen(VIC_II):
                     )
 
                     # TODO: XY SCROLL
-                    self.dataframe[raster_x__8, self.raster_y] = [
+                    self.dataframe[raster_x__8, self.raster_y] = (
                         pixels,
                         self.background_color,
                         color,
-                    ]
+                    )
 
                     # Narrow border
                     # TODO: use flip-flop
                     if (
-                            self.raster_y < self.FIRST_LINE[self.RSEL]
-                            or self.raster_y > self.LAST_LINE[self.RSEL]
+                        self.raster_y < FIRST_LINE[self.RSEL]
+                        or self.raster_y > LAST_LINE[self.RSEL]
                     ):
                         # TODO: draw partial horizontal border
-                        self.dataframe[raster_x__8, self.raster_y] = [
+                        self.dataframe[raster_x__8, self.raster_y] = (
                             0,
                             self.border_color,
                             0,
-                        ]
+                        )
                 else:
                     # Blank frame
-                    self.dataframe[raster_x__8, self.raster_y] = [
-                        0,
-                        self.border_color,
-                        0,
-                    ]
+                    self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
             else:
                 # Border
-                self.dataframe[raster_x__8, self.raster_y] = [0, self.border_color, 0]
+                self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
 
         self.raster_x += 8
-        if self.raster_x > self.SCAN_AREA[0]:
+        if self.raster_x > SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
             # FIXME; very rough raster irq
             self.irq_raster_occured = self.irq_raster_line == self.raster_y
-            if self.raster_y >= self.SCAN_AREA[1]:
+            if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
                 self._frame_on = self.DEN
-                return (np.where(
-                    # For each bit == pixel
-                    np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
-                    # If zero its background color
-                    np.repeat(self.dataframe[:, :, 1], 8, axis=0),
-                    # If one its foreground color
-                    np.repeat(self.dataframe[:, :, 2], 8, axis=0),
-                ), self.any_irq_enabled and self.irq_raster_occured)
+                return (
+                    np.where(
+                        # For each bit == pixel
+                        np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
+                        # If zero its background color
+                        np.repeat(self.dataframe[:, :, 1], 8, axis=0),
+                        # If one its foreground color
+                        np.repeat(self.dataframe[:, :, 2], 8, axis=0),
+                    ),
+                    self.any_irq_enabled and self.irq_raster_occured,
+                )
         return (None, self.any_irq_enabled and self.irq_raster_occured)
 
 
@@ -412,7 +414,7 @@ class FastScreen(VIC_II):
         cache = []
         chargen = self.memory.roms["chargen"]
         for i in range(512):
-            matrix = chargen[i * 8: (i + 1) * 8]
+            matrix = chargen[i * 8 : (i + 1) * 8]
             font_array = np.array(matrix, dtype="uint8")
             font = np.unpackbits(font_array).reshape(8, 8).T
             cache.append(font)
@@ -430,7 +432,7 @@ class FastScreen(VIC_II):
                         for i in range(char_base, char_base + 1000)
                     ]
                 )
-                colors = np.array(self.memory[0xD800: 0xD800 + 1000])
+                colors = np.array(self.memory[0xD800 : 0xD800 + 1000])
                 chars = (
                     # Compose frame pixels
                     np.hstack(
@@ -450,8 +452,5 @@ class FastScreen(VIC_II):
                 chars = np.where(chars == 0, self.background_color, chars)
                 frame[24:344, 51:251] = chars
             self.memory[0xD012] = 0  # This lets the system boot (see $FF5E)
-            return frame
-
-    @property
-    def raster_y(self):
-        return 0
+            return frame, False
+        return None, False

@@ -14,11 +14,14 @@ from hardware.constants import (
     PALETTE,
     PETSCII,
     SCREEN_CHARCODE,
+    SIGNALS,
     VIDEO_SIZE,
 )
 
 
 class PatchMixin:
+    __slots__ = ["filename", "byteprovider"]
+
     def patch_IECIN(self):
         print("Serial patch IECIN")
         print(self.cpu.A)  # self.cpu.A = 0x42
@@ -60,7 +63,7 @@ class PatchMixin:
     def patch_SETNAM(self):
         address = self.cpu.make_address(self.cpu.X, self.cpu.Y)
         length = self.cpu.A
-        self.filename = self.memory[address: address + length]
+        self.filename = self.memory[address : address + length]
         print(f"set filename to: {self.filename}")
 
     def patch_SETLFS(self):
@@ -90,7 +93,7 @@ class Machine(PatchMixin):
         "breakpoints",
         "tracepoints",
         "_clock_counter",
-        "_cumulative_perf_timer",
+        "_last_perf_timer",
         "_current_fps",
         # Unpickables
         "monitor",
@@ -100,14 +103,14 @@ class Machine(PatchMixin):
     ]
 
     def __init__(
-            self,
-            memory: hardware.memory.Memory,
-            cpu: hardware.cpu.CPU,
-            screen: hardware.screen.VIC_II,
-            ciaA,
-            diskdrive=None,
-            console=False,
-            autorun=False,
+        self,
+        memory: hardware.memory.Memory,
+        cpu: hardware.cpu.CPU,
+        screen: hardware.screen.VIC_II,
+        ciaA,
+        diskdrive=None,
+        console=False,
+        autorun=False,
     ):
         self.memory = memory
         self.cpu = cpu
@@ -125,7 +128,7 @@ class Machine(PatchMixin):
         # Assert datassette stopped
         self.set_datassette_button_status(False)
 
-        self.signal = None
+        self.signal = SIGNALS.NONE
         self.nmi = False
 
         self.input_buffer = ""
@@ -135,10 +138,10 @@ class Machine(PatchMixin):
 
         # pygame.display.set_caption(self.CAPTION)
 
-        self._cumulative_perf_timer = 0.0
+        self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
 
-        self.paste_buffer = list("load\"*\",8,1\nrun\n") if autorun else []
+        self.paste_buffer = list('load"*",8,1\nrun\n') if autorun else []
 
         # self.cpu.breakpoints.add(0xF4C4)
 
@@ -190,12 +193,12 @@ class Machine(PatchMixin):
             for key in self.__slots__
             # Skip attributes that will be re-created from scratch after loading
             if key
-               not in [
-                   "monitor",
-                   "display",
-                   "pygame_clock",
-                   "outfile",
-               ]
+            not in [
+                "monitor",
+                "display",
+                "pygame_clock",
+                "outfile",
+            ]
         }
         return state
 
@@ -219,7 +222,6 @@ class Machine(PatchMixin):
         """
         Run a single step of all devices
         """
-        self._cumulative_perf_timer -= time.perf_counter()
         # Activate monitor on breakpoints
         if self.breakpoints:
             self.monitor_active |= self.cpu.PC in self.breakpoints
@@ -240,15 +242,8 @@ class Machine(PatchMixin):
 
         # Display complete frame
         if frame is not None:
-            if not isinstance(frame, pygame.Surface):
-                frame = pygame.surfarray.make_surface(frame)
-                frame.set_palette(
-                    PALETTE
-                    # [
-                    # pygame.Color(0,0,0),
-                    # pygame.Color(255,255,255),
-                    # ]
-                )
+            frame = pygame.surfarray.make_surface(frame)
+            frame.set_palette(PALETTE)
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
             # Get FPS
@@ -267,6 +262,12 @@ class Machine(PatchMixin):
         self._clock_counter += 1
         if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
             self.signal, self.nmi = self.manage_events()
+            if self.signal is SIGNALS.RESET:
+                self.cpu.reset(PC=0xFCE2)
+                self.signal = SIGNALS.NONE
+            elif self.signal is SIGNALS.MONITOR:
+                self.monitor_active = True
+                self.signal = SIGNALS.NONE
 
         if self.console and self._clock_counter % CLOCKS_PER_CONSOLE_REFRESH == 0:
             # Send screen to console
@@ -277,25 +278,18 @@ class Machine(PatchMixin):
             self.cpu.nmi()
             self.nmi = False
 
-        if self.signal == "RESET":
-            self.cpu.reset(PC=0xFCE2)
-            self.signal = None
-        elif self.signal == "MONITOR":
-            self.monitor_active = True
-            self.signal = None
-
-        self._cumulative_perf_timer += time.perf_counter()
         if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
+            _perf_timer = time.perf_counter()
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
                 self.CAPTION.format(
                     self.pygame_clock.get_fps(),
                     CLOCKS_PER_PERFORMANCE_REFRESH
                     / 10000
-                    / self._cumulative_perf_timer,
+                    / (_perf_timer - self._last_perf_timer),
                 )
             )
-            self._cumulative_perf_timer = 0.0
+            self._last_perf_timer = _perf_timer
 
     def manage_events(self):
         """
@@ -304,8 +298,8 @@ class Machine(PatchMixin):
         """
         # Paste text
         while (
-                self.paste_buffer
-                and self.memory[0xC6] < CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER
+            self.paste_buffer
+            and self.memory[0xC6] < CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER
         ):
             # Inject char into keyboard buffer
             char = self.paste_buffer.pop(0)
@@ -317,7 +311,7 @@ class Machine(PatchMixin):
                 # Update buffer length
                 self.memory[0xC6] += 1
 
-        signal = None
+        signal = SIGNALS.NONE
         nmi = False
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -327,9 +321,9 @@ class Machine(PatchMixin):
 
                 # Also scan special keys
                 elif event.key == pygame.K_F12:
-                    signal = "RESET"
+                    signal = SIGNALS.RESET
                 elif event.key == pygame.K_F11:
-                    signal = "MONITOR"
+                    signal = SIGNALS.MONITOR
                 elif event.key == pygame.K_F10:
                     # F10 -> paste text
                     try:
@@ -416,7 +410,7 @@ class Machine(PatchMixin):
         data = self.memory.get_slice(base, base + 1000)
         data_char = [SCREEN_CHARCODE.get(x % 128, ".") for x in data]
         for row in range(25):
-            dump += "".join(data_char[row * 40: (row + 1) * 40 - 1]) + "\n"
+            dump += "".join(data_char[row * 40 : (row + 1) * 40 - 1]) + "\n"
         return dump
 
 
