@@ -447,8 +447,5 @@ class FastScreen(VIC_II):
                 chars = np.where(chars == 0, self.background_color, chars)
                 frame[24:344, 51:251] = chars
             self.memory[0xD012] = 0  # This lets the system boot (see $FF5E)
-            return frame
-
-    @property
-    def raster_y(self):
-        return 0
+            return frame, False
+        return None, False
