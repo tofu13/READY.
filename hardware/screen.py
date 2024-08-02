@@ -5,9 +5,9 @@ import numpy as np
 from .constants import (
     BITRANGE,
     CLOCKS_PER_FRAME,
-    FIRST_COLUMN,
+    #FIRST_COLUMN,
     FIRST_LINE,
-    LAST_COLUMN,
+    #LAST_COLUMN,
     LAST_LINE,
     SCAN_AREA_H,
     SCAN_AREA_V,
@@ -235,7 +235,7 @@ class VIC_II:
                 # Dynamically set bit #7 = bit raster_y bit #8
                 # Other bits are cached
                 return ((self.raster_y & 0x0100) >> 1) | (
-                        self._register_cache[0x11] & 0x7F
+                    self._register_cache[0x11] & 0x7F
                 )
             case 0x12:
                 return self.raster_y & 0xFF
@@ -259,7 +259,7 @@ class VIC_II:
                 if interrupts_status:
                     interrupts_status |= 0b10000000  # Any interrupt occured
                 return (
-                        interrupts_status | 0b01110000
+                    interrupts_status | 0b01110000
                 )  # (disconnected bits are 1 on read)
             case 0x1E:
                 # Sprite sprite collision
@@ -315,8 +315,8 @@ class RasterScreen(VIC_II):
                     # Bad lines
                     if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):
                         char_pointer = (
-                                self.video_matrix_base_address
-                                + (self.raster_y - 51) // 8 * 40
+                            self.video_matrix_base_address
+                            + (self.raster_y - 51) // 8 * 40
                         )
                         color_pointer = 0xD800 + (self.raster_y - 51) // 8 * 40
 
@@ -348,8 +348,8 @@ class RasterScreen(VIC_II):
                     # Narrow border
                     # TODO: use flip-flop
                     if (
-                            self.raster_y < FIRST_LINE[self.RSEL]
-                            or self.raster_y > LAST_LINE[self.RSEL]
+                        self.raster_y < FIRST_LINE[self.RSEL]
+                        or self.raster_y > LAST_LINE[self.RSEL]
                     ):
                         # TODO: draw partial horizontal border
                         self.dataframe[raster_x__8, self.raster_y] = (
@@ -414,7 +414,7 @@ class FastScreen(VIC_II):
         cache = []
         chargen = self.memory.roms["chargen"]
         for i in range(512):
-            matrix = chargen[i * 8: (i + 1) * 8]
+            matrix = chargen[i * 8 : (i + 1) * 8]
             font_array = np.array(matrix, dtype="uint8")
             font = np.unpackbits(font_array).reshape(8, 8).T
             cache.append(font)
@@ -432,7 +432,7 @@ class FastScreen(VIC_II):
                         for i in range(char_base, char_base + 1000)
                     ]
                 )
-                colors = np.array(self.memory[0xD800: 0xD800 + 1000])
+                colors = np.array(self.memory[0xD800 : 0xD800 + 1000])
                 chars = (
                     # Compose frame pixels
                     np.hstack(

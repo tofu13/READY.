@@ -69,8 +69,8 @@ COLORS = [
 
 PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 
-BITVALUES = [2 ** k for k in range(8)]
-BITRANGE = [(7 - k, 2 ** k) for k in range(8)]
+BITVALUES = [2**k for k in range(8)]
+BITRANGE = [(7 - k, 2**k) for k in range(8)]
 
 OPCODE_MAP = {
     0x00: ("BRK", "addressing_IMP", 7),

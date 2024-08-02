@@ -63,7 +63,7 @@ class PatchMixin:
     def patch_SETNAM(self):
         address = self.cpu.make_address(self.cpu.X, self.cpu.Y)
         length = self.cpu.A
-        self.filename = self.memory[address: address + length]
+        self.filename = self.memory[address : address + length]
         print(f"set filename to: {self.filename}")
 
     def patch_SETLFS(self):
@@ -103,14 +103,14 @@ class Machine(PatchMixin):
     ]
 
     def __init__(
-            self,
-            memory: hardware.memory.Memory,
-            cpu: hardware.cpu.CPU,
-            screen: hardware.screen.VIC_II,
-            ciaA,
-            diskdrive=None,
-            console=False,
-            autorun=False,
+        self,
+        memory: hardware.memory.Memory,
+        cpu: hardware.cpu.CPU,
+        screen: hardware.screen.VIC_II,
+        ciaA,
+        diskdrive=None,
+        console=False,
+        autorun=False,
     ):
         self.memory = memory
         self.cpu = cpu
@@ -193,12 +193,12 @@ class Machine(PatchMixin):
             for key in self.__slots__
             # Skip attributes that will be re-created from scratch after loading
             if key
-               not in [
-                   "monitor",
-                   "display",
-                   "pygame_clock",
-                   "outfile",
-               ]
+            not in [
+                "monitor",
+                "display",
+                "pygame_clock",
+                "outfile",
+            ]
         }
         return state
 
@@ -286,7 +286,7 @@ class Machine(PatchMixin):
                     self.pygame_clock.get_fps(),
                     CLOCKS_PER_PERFORMANCE_REFRESH
                     / 10000
-                    / (_perf_timer - self._last_perf_timer)
+                    / (_perf_timer - self._last_perf_timer),
                 )
             )
             self._last_perf_timer = _perf_timer
@@ -298,8 +298,8 @@ class Machine(PatchMixin):
         """
         # Paste text
         while (
-                self.paste_buffer
-                and self.memory[0xC6] < CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER
+            self.paste_buffer
+            and self.memory[0xC6] < CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER
         ):
             # Inject char into keyboard buffer
             char = self.paste_buffer.pop(0)
@@ -410,7 +410,7 @@ class Machine(PatchMixin):
         data = self.memory.get_slice(base, base + 1000)
         data_char = [SCREEN_CHARCODE.get(x % 128, ".") for x in data]
         for row in range(25):
-            dump += "".join(data_char[row * 40: (row + 1) * 40 - 1]) + "\n"
+            dump += "".join(data_char[row * 40 : (row + 1) * 40 - 1]) + "\n"
         return dump
 
 

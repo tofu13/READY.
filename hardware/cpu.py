@@ -31,7 +31,7 @@ class CPU:
         Y: int = 0,
         PC: int = 0x0000,
         SP: int = 0xFF,
-            SR: int = 0b00100100,
+        SR: int = 0b00100100,
     ):
         self.memory = memory
 
