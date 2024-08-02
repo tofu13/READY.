@@ -20,6 +20,8 @@ from hardware.constants import (
 
 
 class PatchMixin:
+    __slots__ = ["filename", "byteprovider"]
+
     def patch_IECIN(self):
         print("Serial patch IECIN")
         print(self.cpu.A)  # self.cpu.A = 0x42
