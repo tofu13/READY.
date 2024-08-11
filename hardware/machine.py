@@ -275,7 +275,7 @@ class Machine(PatchMixin):
         if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
             self.signal, self.nmi = self.manage_events()
             if self.signal is SIGNALS.RESET:
-                self.cpu.reset(PC=0xFCE2)
+                self.cpu.PC = 0xFCE2
                 self.signal = SIGNALS.NONE
             elif self.signal is SIGNALS.MONITOR:
                 self.monitor_active = True
