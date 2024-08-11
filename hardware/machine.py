@@ -20,7 +20,7 @@ from hardware.constants import (
 
 
 class PatchMixin:
-    __slots__ = ["filename", "byteprovider"]
+    __slots__ = ["filename", "filesize", "byteprovider"]
 
     def patch_IECIN(self):
         print("Serial patch IECIN")
@@ -31,9 +31,22 @@ class PatchMixin:
         print(f"KERNAL patch LSTNSA: A={self.cpu.A}")
 
     def patch_OPEN(self):
-        print(f"Serial patch openfile: A={self.cpu.A}, Y={self.cpu.Y}")
+        def provider(self):
+            """
+            Generator on the open file
+            Yields (data, EOF)
+            EOF is True when the last byte is reached
+            """
+            contents = self.diskdrive.read(self.filename)
+            size = len(contents)
+            pos = 0
+            while True:
+                byte = contents[pos]
+                pos += 1
+                yield byte, pos == size
 
-        self.byteprovider = (byte for byte in self.diskdrive.read(self.filename))
+        print(f"Serial patch openfile: A={self.cpu.A}, Y={self.cpu.Y}")
+        self.byteprovider = provider(self)
 
     def patch_LISTEN(self):
         print(f"KERNAL patch LISTEN: A={self.cpu.A}")
@@ -51,12 +64,11 @@ class PatchMixin:
         # SAQ: ok salva. Ora distingui l'apertura del file dai dati
 
     def patch_RDBYTE(self):  # fix name
-        try:
-            self.cpu.A = next(self.byteprovider)
-        except StopIteration:
+        self.cpu.A, eof = next(self.byteprovider)
+        if eof:
             self.memory[0x90] |= 0x40
-        else:
-            self.memory[0x90] &= 0xBF
+        # else:
+        #    self.memory[0x90] &= 0xBF
         # print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
         self.cpu.PC = 0xEE84
 
@@ -141,7 +153,7 @@ class Machine(PatchMixin):
         self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
 
-        self.paste_buffer = list('load"*",8,1\nrun\n') if autorun else []
+        self.paste_buffer = list('load "*",8,1\nrun:\n') if autorun else []
 
         # self.cpu.breakpoints.add(0xF4C4)
 
@@ -263,7 +275,7 @@ class Machine(PatchMixin):
         if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
             self.signal, self.nmi = self.manage_events()
             if self.signal is SIGNALS.RESET:
-                self.cpu.reset(PC=0xFCE2)
+                self.cpu.PC = 0xFCE2
                 self.signal = SIGNALS.NONE
             elif self.signal is SIGNALS.MONITOR:
                 self.monitor_active = True

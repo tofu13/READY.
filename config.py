@@ -11,7 +11,7 @@ TESTING_ROMS_FOLDER = "tests/roms"
 # SCREEN = "fast"
 SCREEN = "raster"
 
-# Shorten cold start
+# Shorten cold start and reset
 QUICK_BOOT = True
 
 # Keymap

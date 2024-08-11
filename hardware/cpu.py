@@ -331,34 +331,42 @@ class CPU:
 
     def BPL(self, address):
         if not self.flag_N:
+            self._cycles_left += 1
             self.PC += address
 
     def BMI(self, address):
         if self.flag_N:
+            self._cycles_left += 1
             self.PC += address
 
     def BVC(self, address):
         if not self.flag_V:
+            self._cycles_left += 1
             self.PC += address
 
     def BVS(self, address):
         if self.flag_V:
+            self._cycles_left += 1
             self.PC += address
 
     def BCC(self, address):
         if not self.flag_C:
+            self._cycles_left += 1
             self.PC += address
 
     def BCS(self, address):
         if self.flag_C:
+            self._cycles_left += 1
             self.PC += address
 
     def BNE(self, address):
         if not self.flag_Z:
+            self._cycles_left += 1
             self.PC += address
 
     def BEQ(self, address):
         if self.flag_Z:
+            self._cycles_left += 1
             self.PC += address
 
     def BIT(self, address):

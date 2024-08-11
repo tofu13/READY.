@@ -43,7 +43,7 @@ def test_cpu_registers(cpu):
     cpu.flag_Z = True
     cpu.flag_C = True
 
-    assert str(cpu) == "FFFF  00         BRK           - A:FF X:FF Y:FF SP:00 NV-BD.ZC"
+    assert str(cpu) == "FFFF  68         PLA           - A:FF X:FF Y:FF SP:00 NV-BD.ZC"
 
 
 def test_cpu_stack(cpu):

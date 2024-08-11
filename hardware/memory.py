@@ -135,56 +135,59 @@ class Memory:
         :return:
         """
         output = ""
-        instruction, mode, _ = OPCODES[self[address]]
+        instruction, mode, _ = OPCODES[self.cpu_read(address)]
 
         # Skip data bytes (or invalid opcodes)
         instruction = instruction or "???"
 
-        if mode == "addressing_IMP":
-            arg = ""
-            step = 1
-        elif mode == "addressing_ABS":
-            arg = f"${self[address + 2]:02X}{self[address + 1]:02X}"
-            step = 3
-        elif mode == "addressing_ABS_X":
-            arg = f"${self[address + 2]:02X}{self[address + 1]:02X},X"
-            step = 3
-        elif mode == "addressing_ABS_Y":
-            arg = f"${self[address + 2]:02X}{self[address + 1]:02X},Y"
-            step = 3
-        elif mode == "addressing_REL":
-            delta = self[address + 1]
-            arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
-            step = 2
-        elif mode == "addressing_IMM":
-            arg = f"#${self[address + 1]:02X}"
-            step = 2
-        elif mode == "addressing_ZP":
-            arg = f"${self[address + 1]:02X}"
-            step = 2
-        elif mode == "addressing_ZP_X":
-            arg = f"${self[address + 1]:02X},X"
-            step = 2
-        elif mode == "addressing_ZP_Y":
-            arg = f"${self[address + 1]:02X},Y"
-            step = 2
-        elif mode == "addressing_IND":
-            arg = f"(${self[address + 2]:02X}{self[address + 1]:02X})"
-            step = 3
-        elif mode == "addressing_X_IND":
-            arg = f"(${self[address + 1]:02X},X)"
-            step = 2
-        elif mode == "addressing_IND_Y":
-            arg = f"(${self[address + 1]:02X}),Y"
-            step = 2
-        else:
-            # Skip invalid addressing mode
-            arg = ""
-            step = 1
+        match mode:
+            case "addressing_IMP":
+                arg = ""
+                steps = 1
+            case "addressing_ABS":
+                arg = (
+                    f"${self.cpu_read(address + 2):02X}{self.cpu_read(address + 1):02X}"
+                )
+                steps = 3
+            case "addressing_ABS_X":
+                arg = f"${self.cpu_read(address + 2):02X}{self.cpu_read(address + 1):02X},X"
+                steps = 3
+            case "addressing_ABS_Y":
+                arg = f"${self.cpu_read(address + 2):02X}{self.cpu_read(address + 1):02X},Y"
+                steps = 3
+            case "addressing_REL":
+                delta = self.cpu_read(address + 1)
+                arg = f"${(address + delta + 2 if delta < 127 else address + delta - 254):04X}"
+                steps = 2
+            case "addressing_IMM":
+                arg = f"#${self.cpu_read(address + 1):02X}"
+                steps = 2
+            case "addressing_ZP":
+                arg = f"${self.cpu_read(address + 1):02X}"
+                steps = 2
+            case "addressing_ZP_X":
+                arg = f"${self.cpu_read(address + 1):02X},X"
+                steps = 2
+            case "addressing_ZP_Y":
+                arg = f"${self.cpu_read(address + 1):02X},Y"
+                steps = 2
+            case "addressing_IND":
+                arg = f"(${self.cpu_read(address + 2):02X}{self.cpu_read(address + 1):02X})"
+                steps = 3
+            case "addressing_X_IND":
+                arg = f"(${self.cpu_read(address + 1):02X},X)"
+                steps = 2
+            case "addressing_IND_Y":
+                arg = f"(${self.cpu_read(address + 1):02X}),Y"
+                steps = 2
+            case _:
+                # Skip invalid addressing mode
+                arg = ""
+                steps = 1
         # Compose line
         output += (
-            f"{' '.join([f'{self[_]:02X}' for _ in range(address, address + step)])}"
-            f"{'   ' * (4 - step)}{instruction} {arg}"
+            f"{' '.join([f'{self.cpu_read(cell):02X}' for cell in range(address, address + steps)])}"
+            f"{'   ' * (4 - steps)}{instruction} {arg}"
         )
 
-        return output, step
+        return output, steps
