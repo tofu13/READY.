@@ -1,9 +1,9 @@
 import pytest
 
 import config
-from hardware.cpu import CPU
-from hardware.memory import Memory
-from hardware.roms import ROMS
+from libs.hardware.cpu import CPU
+from libs.hardware.memory import Memory
+from libs.hardware.roms import ROMS
 
 
 @pytest.fixture()

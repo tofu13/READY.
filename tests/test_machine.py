@@ -3,7 +3,7 @@ import pathlib
 import pytest
 
 import config
-import hardware
+from libs import hardware
 
 
 @pytest.fixture()

@@ -1,34 +1,16 @@
 import argparse
 
 import config
-import hardware
+from libs import hardware
+from libs.parser import create_parser
 
 
 def main():
-    parser = argparse.ArgumentParser(description="An educational C=64 emulator.")
-    parser.add_argument(
-        "-s",
-        "--screen",
-        action="store",
-        help=f"Screen driver (default: {config.SCREEN})",
-        default=config.SCREEN,
-        choices=["raster", "virtual", "fast"],
-    )
-    parser.add_argument(
-        "-d", "--disk", action="store", help="Disk (t64)", default="", type=str
-    )
-    parser.add_argument(
-        "-c",
-        "--console",
-        action="store_true",
-        help="Show screen in console (chars only)",
-        default=False,
-    )
-    parser.add_argument(
-        "-t", "--loadstate", action="store", help="Load state from file", default=False
-    )
-    parser.add_argument("-ar", "--autorun", action="store_true", help="Autorun *")
+    parser = create_parser()
     args = parser.parse_args()
+
+    autotype = 'load "*",8,1|run:|' if args.autorun else args.autotype or ""
+    autotype = autotype.replace("|", "\n")
 
     if args.loadstate:
         c64 = hardware.machine.Machine.from_file(args.loadstate)
@@ -59,7 +41,7 @@ def main():
             ciaA=cia_a,
             diskdrive=diskdrive,
             console=args.console,
-            autorun=args.autorun,
+            autotype=autotype,
         )
 
         if args.console:

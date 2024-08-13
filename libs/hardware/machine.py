@@ -5,8 +5,8 @@ from typing import Optional
 import pygame.event
 import pyperclip
 
-import hardware.memory
-from hardware.constants import (
+from libs import hardware
+from libs.hardware.constants import (
     CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER,
     CLOCKS_PER_CONSOLE_REFRESH,
     CLOCKS_PER_EVENT_SERVING,
@@ -122,7 +122,7 @@ class Machine(PatchMixin):
         ciaA,
         diskdrive=None,
         console=False,
-        autorun=False,
+        autotype="",
     ):
         self.memory = memory
         self.cpu = cpu
@@ -153,7 +153,7 @@ class Machine(PatchMixin):
         self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
 
-        self.paste_buffer = list('load "*",8,1\nrun:\n') if autorun else []
+        self.paste_buffer = list(autotype)
 
         # self.cpu.breakpoints.add(0xF4C4)
 
@@ -427,7 +427,6 @@ class Machine(PatchMixin):
 
 
 def DefaultMachine() -> Machine:
-    import hardware
     from config import ROMS_FOLDER
 
     roms = hardware.roms.ROMS(ROMS_FOLDER)
