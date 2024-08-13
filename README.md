@@ -39,18 +39,21 @@ python READY..py
 python READY..py --help
 ```
 ```
-usage: READY..py [-h] [-s {raster,virtual,fast}] [-d DISK] [-c] [-t LOADSTATE]
+usage: READY..py [-h] [-s {raster,virtual,fast}] [-d DISK] [-c] [-t LOADSTATE] [-ar] [-at AUTOTYPE]
 
 An educational C=64 emulator.
 
 options:
   -h, --help            show this help message and exit
   -s {raster,virtual,fast}, --screen {raster,virtual,fast}
-                        Screen driver
+                        Screen driver (default: raster)
   -d DISK, --disk DISK  Disk (t64)
   -c, --console         Show screen in console (chars only)
   -t LOADSTATE, --loadstate LOADSTATE
                         Load state from file
+  -ar, --autorun        Autorun * from disk
+  -at AUTOTYPE, --autotype AUTOTYPE
+                        Autotype command. Use | for return key
 ```
 
 ### Configuration
