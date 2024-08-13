@@ -124,14 +124,18 @@ class CPU:
             self._cycles_left -= 1
             return
 
-        opcode = self.fetch()
-        instruction, mode, self._cycles_left = OPCODES[opcode]
-        address = self.addressing_methods[mode]()
         try:
+            opcode = self.fetch()
+            instruction, mode, self._cycles_left = OPCODES[opcode]
+            address = self.addressing_methods[mode]()
             getattr(self, instruction)(address)
         except Exception as e:
-            print(f"ERROR at ${self.PC:04X}, {instruction} {mode} {address:04X}: {e}")
+            print(
+                f"ERROR at ${self.PC:04X}"
+            )  # , {instruction} {mode} {address:04X}: {e}")
             raise e
+        if False and 0x0800 <= self.PC <= 0xFFFF:
+            print(self)
 
     def irq(self):
         """

@@ -1,7 +1,7 @@
 import argparse
 
 import config
-import hardware
+from libs import hardware
 
 
 def create_parser():
@@ -27,8 +27,19 @@ def create_parser():
     parser.add_argument(
         "-t", "--loadstate", action="store", help="Load state from file", default=False
     )
-    parser.add_argument("-ar", "--autorun", action="store_true", help="Autorun * from disk", default=False)
-    parser.add_argument("-at", "--autotype", action="store", help="Autotype command. Use | for return key")
+    parser.add_argument(
+        "-ar",
+        "--autorun",
+        action="store_true",
+        help="Autorun * from disk",
+        default=False,
+    )
+    parser.add_argument(
+        "-at",
+        "--autotype",
+        action="store",
+        help="Autotype command. Use | for return key",
+    )
     return parser
 
 

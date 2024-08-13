@@ -1,6 +1,6 @@
 from typing import Optional
 
-from hardware.constants import OPCODES, SCREEN_CHARCODE
+from libs.hardware.constants import OPCODES, SCREEN_CHARCODE
 
 
 class Memory:

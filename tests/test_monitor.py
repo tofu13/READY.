@@ -1,7 +1,7 @@
 import pytest
 
-from hardware.constants import ASSEMBLER_REGEXES
-from hardware.monitor import convert, parse_assembly
+from libs.hardware.constants import ASSEMBLER_REGEXES
+from libs.hardware.monitor import convert, parse_assembly
 
 
 @pytest.mark.parametrize(("argument", "addressing", "value"), [

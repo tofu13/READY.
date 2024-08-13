@@ -5,8 +5,8 @@ from typing import Optional
 import pygame.event
 import pyperclip
 
-import hardware.memory
-from hardware.constants import (
+from libs import hardware
+from libs.hardware.constants import (
     CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER,
     CLOCKS_PER_CONSOLE_REFRESH,
     CLOCKS_PER_EVENT_SERVING,
@@ -122,7 +122,7 @@ class Machine(PatchMixin):
         ciaA,
         diskdrive=None,
         console=False,
-        autorun=False,
+        autorun="",
     ):
         self.memory = memory
         self.cpu = cpu

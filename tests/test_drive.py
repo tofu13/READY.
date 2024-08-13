@@ -1,6 +1,6 @@
 import pytest
 
-from hardware import disk_drive
+from libs.hardware import disk_drive
 
 TEST_DISK_IMAGE = "tests/test_image.d64"
 

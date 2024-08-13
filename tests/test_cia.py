@@ -1,8 +1,8 @@
 import pygame
 import pytest
 
-from hardware.cia import CIA, CIA_A
-from hardware.memory import Memory
+from libs.hardware.cia import CIA, CIA_A
+from libs.hardware.memory import Memory
 
 
 @pytest.fixture()
