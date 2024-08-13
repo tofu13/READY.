@@ -4,7 +4,7 @@ import config
 import hardware
 
 
-def main():
+def create_parser():
     parser = argparse.ArgumentParser(description="An educational C=64 emulator.")
     parser.add_argument(
         "-s",
@@ -27,7 +27,13 @@ def main():
     parser.add_argument(
         "-t", "--loadstate", action="store", help="Load state from file", default=False
     )
-    parser.add_argument("-ar", "--autorun", action="store_true", help="Autorun *")
+    parser.add_argument("-ar", "--autorun", action="store_true", help="Autorun * from disk", default=False)
+    parser.add_argument("-ac", "--autocmd", action="store", help="Autotype command. Use | for return key")
+    return parser
+
+
+def main():
+    parser = create_parser()
     args = parser.parse_args()
 
     if args.loadstate:
