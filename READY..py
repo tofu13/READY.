@@ -41,7 +41,7 @@ def main():
             ciaA=cia_a,
             diskdrive=diskdrive,
             console=args.console,
-            autorun=autotype,
+            autotype=autotype,
         )
 
         if args.console:
