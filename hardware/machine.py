@@ -153,7 +153,7 @@ class Machine(PatchMixin):
         self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
 
-        self.paste_buffer = list('load "*",8,1\nrun:\n') if autorun else []
+        self.paste_buffer = list(autorun)
 
         # self.cpu.breakpoints.add(0xF4C4)
 

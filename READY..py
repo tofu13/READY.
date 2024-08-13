@@ -28,13 +28,16 @@ def create_parser():
         "-t", "--loadstate", action="store", help="Load state from file", default=False
     )
     parser.add_argument("-ar", "--autorun", action="store_true", help="Autorun * from disk", default=False)
-    parser.add_argument("-ac", "--autocmd", action="store", help="Autotype command. Use | for return key")
+    parser.add_argument("-at", "--autotype", action="store", help="Autotype command. Use | for return key")
     return parser
 
 
 def main():
     parser = create_parser()
     args = parser.parse_args()
+
+    autotype = 'load "*",8,1|run:|' if args.autorun else args.autotype or ""
+    autotype = autotype.replace("|", "\n")
 
     if args.loadstate:
         c64 = hardware.machine.Machine.from_file(args.loadstate)
@@ -65,7 +68,7 @@ def main():
             ciaA=cia_a,
             diskdrive=diskdrive,
             console=args.console,
-            autorun=args.autorun,
+            autorun=autotype,
         )
 
         if args.console:
