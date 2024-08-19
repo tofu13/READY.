@@ -5,10 +5,10 @@ import numpy as np
 from .constants import (
     BITRANGE,
     CLOCKS_PER_FRAME,
-    #FIRST_COLUMN,
-    FIRST_LINE,
-    #LAST_COLUMN,
-    LAST_LINE,
+    # FIRST_COLUMN,
+    # FIRST_LINE,
+    # LAST_COLUMN,
+    # LAST_LINE,
     SCAN_AREA_H,
     SCAN_AREA_V,
     VIDEO_SIZE,
@@ -73,6 +73,7 @@ class VIC_II:
         "video_matrix_base_address",
         "character_generator_base_address",
         "border_color",
+        "border_color_pack",
         "background_color",
         "background_color_1",
         "background_color_2",
@@ -113,6 +114,7 @@ class VIC_II:
         self.video_matrix_base_address = 0x0400
         self.character_generator_base_address = 0xC000
         self.border_color = 0x0E
+        self.border_color_pack = [self.border_color] * 8
         self.background_color = 0x06
         self.background_color_1 = 0x03
         self.background_color_2 = 0x04
@@ -212,6 +214,8 @@ class VIC_II:
                     self.sprites[i].expand_x = bool(value & BITRANGE[i][1])
             case 0x20:
                 self.border_color = value & 0x0F
+                # Cache for border pixels
+                self.border_color_pack = [self.border_color] * 8
             case 0x21:
                 self.background_color = value & 0x0F
             case 0x22:
@@ -300,15 +304,13 @@ class RasterScreen(VIC_II):
 
         self._frame_on = self.DEN
 
-        self.frame = np.zeros(VIDEO_SIZE, dtype="uint8")
-        self.dataframe = np.empty(
-            shape=(VIDEO_SIZE_H // 8 + 1, VIDEO_SIZE_V, 3), dtype="uint8"
-        )  # +1 cause partial byte @ 403
+        self.frame = bytearray([0] * VIDEO_SIZE_H * VIDEO_SIZE_V)
 
     def clock(self, clock_counter: int):
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
-            raster_x__8 = self.raster_x // 8
+            pixel_pointer = self.raster_y * VIDEO_SIZE_H + self.raster_x
+            pixel_range = slice(pixel_pointer, pixel_pointer + 8)
             if 24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250:
                 if self._frame_on:
                     # Raster is in the display area
@@ -320,49 +322,48 @@ class RasterScreen(VIC_II):
                         )
                         color_pointer = 0xD800 + (self.raster_y - 51) // 8 * 40
 
-                        # TODO: optimize these reads
                         self.char_buffer = bytearray(
                             self.memory.vic_read(i)
                             for i in range(char_pointer, char_pointer + 40)
                         )
-                        self.color_buffer = bytearray(
-                            self.memory[i]  # Direct read from fixed color ram
-                            for i in range(color_pointer, color_pointer + 40)
-                        )
+                        self.color_buffer = self.memory[
+                            color_pointer : color_pointer + 40
+                        ]  # Direct read from fixed color ram
 
-                    char = self.char_buffer[(self.raster_x - 24) // 8]
-                    color = self.color_buffer[raster_x__8 - 24 // 8]
                     pixels = self.memory.vic_read(
                         self.character_generator_base_address
-                        + char * 8
-                        + (self.raster_y - 51) % 8
-                    )
+                        + self.char_buffer[(self.raster_x - 24) // 8] * 8
+                        + (self.raster_y - 51) % 8)
 
                     # TODO: XY SCROLL
-                    self.dataframe[raster_x__8, self.raster_y] = (
-                        pixels,
-                        self.background_color,
-                        color,
+                    self.frame[pixel_range] = (
+                        # If one its foreground color
+                        self.color_buffer[(self.raster_x // 8 - 24) // 8]
+                        # For each bit == pixel
+                        if px == "1"
+                        # If zero its background color
+                        else self.background_color
+                        for px in f"{pixels:08b}"
                     )
 
                     # Narrow border
+                    # TODO: draw partial horizontal border
                     # TODO: use flip-flop
-                    if (
-                        self.raster_y < FIRST_LINE[self.RSEL]
-                        or self.raster_y > LAST_LINE[self.RSEL]
-                    ):
-                        # TODO: draw partial horizontal border
-                        self.dataframe[raster_x__8, self.raster_y] = (
-                            0,
-                            self.border_color,
-                            0,
-                        )
+                    # if (
+                    #    self.raster_y < FIRST_LINE[self.RSEL]
+                    #    or self.raster_y > LAST_LINE[self.RSEL]
+                    # ):
+                    #    self.dataframe[raster_x__8, self.raster_y] = (
+                    #        0,
+                    #        self.border_color,
+                    #        0,
+                    #    )
                 else:
                     # Blank frame
-                    self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
+                    self.frame[pixel_range] = self.border_color_pack
             else:
                 # Border
-                self.dataframe[raster_x__8, self.raster_y] = 0, self.border_color, 0
+                self.frame[pixel_range] = self.border_color_pack
 
         self.raster_x += 8
         if self.raster_x > SCAN_AREA_H:
@@ -374,17 +375,12 @@ class RasterScreen(VIC_II):
                 self.raster_y = 0
                 self._frame_on = self.DEN
                 return (
-                    np.where(
-                        # For each bit == pixel
-                        np.unpackbits(self.dataframe[:, :, 0], axis=0) == 0,
-                        # If zero its background color
-                        np.repeat(self.dataframe[:, :, 1], 8, axis=0),
-                        # If one its foreground color
-                        np.repeat(self.dataframe[:, :, 2], 8, axis=0),
-                    ),
+                    np.array(self.frame, dtype=np.ubyte)
+                    .reshape((VIDEO_SIZE_V, VIDEO_SIZE_H))[:, :403]
+                    .T,
                     self.any_irq_enabled and self.irq_raster_occured,
                 )
-        return (None, self.any_irq_enabled and self.irq_raster_occured)
+        return None, self.any_irq_enabled and self.irq_raster_occured
 
 
 class VirtualScreen(VIC_II):
