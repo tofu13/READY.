@@ -17,6 +17,15 @@ from .constants import (
 )
 
 
+def base4(n: int):
+    return (
+        n >> 6 & 3,
+        n >> 4 & 3,
+        n >> 2 & 3,
+        n & 3,
+    )
+
+
 @dataclasses.dataclass(slots=True)
 class Sprite:
     x: int = 0
@@ -82,6 +91,7 @@ class VIC_II:
         "sprite_multicolor_2",
         "sprites",
         "_register_cache",
+        "_cached_multicolor_pack",
     ]
 
     def __init__(self, memory):
@@ -150,6 +160,14 @@ class VIC_II:
     def clock(self, clock_counter: int):
         pass
 
+    def cache_multicolor_pack(self):
+        self._cached_multicolor_pack = [
+            self.background_color,
+            self.background_color_1,
+            self.background_color_2,
+            None,
+        ]
+
     def write_registers(self, address: int, value: int):
         # The VIC registers are repeated each 64 bytes in the area $d000-$d3ff
         address &= 0x3F
@@ -215,13 +233,16 @@ class VIC_II:
             case 0x20:
                 self.border_color = value & 0x0F
                 # Cache for border pixels
-                self.border_color_pack = [self.border_color] * 8
+                self.border_color_pack = (self.border_color,) * 8
             case 0x21:
                 self.background_color = value & 0x0F
+                self.cache_multicolor_pack()
             case 0x22:
                 self.background_color_1 = value & 0x0F
+                self.cache_multicolor_pack()
             case 0x23:
                 self.background_color_2 = value & 0x0F
+                self.cache_multicolor_pack()
             case 0x24:
                 self.background_color_3 = value & 0x0F
             case 0x25:
@@ -333,18 +354,39 @@ class RasterScreen(VIC_II):
                     pixels = self.memory.vic_read(
                         self.character_generator_base_address
                         + self.char_buffer[(self.raster_x - 24) // 8] * 8
-                        + (self.raster_y - 51) % 8)
-
-                    # TODO: XY SCROLL
-                    self.frame[pixel_range] = (
-                        # If one its foreground color
-                        self.color_buffer[(self.raster_x // 8 - 24) // 8]
-                        # For each bit == pixel
-                        if px == "1"
-                        # If zero its background color
-                        else self.background_color
-                        for px in f"{pixels:08b}"
+                        + (self.raster_y - 51) % 8
                     )
+
+                    char_color = self.color_buffer[(self.raster_x // 8 - 24) // 8]
+                    # TODO: XY SCROLL
+                    if self.multicolor_mode and char_color & 0x08:
+                        # TIL multicolor char mode can mix
+                        # hires chars based in their color MSB
+                        # (which limits their color space)
+                        p0, p1, p2, p3 = base4(pixels)
+                        self._cached_multicolor_pack[3] = char_color & 0x07
+                        self.frame[pixel_range] = (
+                            # Pick 1 color, fill 2 pixels
+                            # (not nice code but pretty fast)
+                            self._cached_multicolor_pack[p0],
+                            self._cached_multicolor_pack[p0],
+                            self._cached_multicolor_pack[p1],
+                            self._cached_multicolor_pack[p1],
+                            self._cached_multicolor_pack[p2],
+                            self._cached_multicolor_pack[p2],
+                            self._cached_multicolor_pack[p3],
+                            self._cached_multicolor_pack[p3],
+                        )
+                    else:
+                        self.frame[pixel_range] = (
+                            # If one its foreground color
+                            char_color
+                            # For each bit == pixel
+                            if px == "1"
+                            # If zero its background color
+                            else self.background_color
+                            for px in f"{pixels:08b}"
+                        )
 
                     # Narrow border
                     # TODO: draw partial horizontal border
