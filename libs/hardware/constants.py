@@ -74,6 +74,7 @@ PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 BITVALUES = [2**k for k in range(8)]
 BITRANGE = [(7 - k, 2**k) for k in range(8)]
 BYTEBOOLEANS = [[bool(int(j)) for j in f"{i:08b}"] for i in range(256)]
+BYTEPAIRS = [[i >> 6 & 3, i >> 4 & 3, i >> 2 & 3, i & 3] for i in range(256)]
 
 OPCODE_MAP = {
     0x00: ("BRK", "addressing_IMP", 7),

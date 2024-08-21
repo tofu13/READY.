@@ -5,6 +5,7 @@ import numpy as np
 from .constants import (
     BITRANGE,
     BYTEBOOLEANS,
+    BYTEPAIRS,
     CLOCKS_PER_FRAME,
     # FIRST_COLUMN,
     # FIRST_LINE,
@@ -16,15 +17,6 @@ from .constants import (
     VIDEO_SIZE_H,
     VIDEO_SIZE_V,
 )
-
-
-def base4(n: int):
-    return (
-        n >> 6 & 3,
-        n >> 4 & 3,
-        n >> 2 & 3,
-        n & 3,
-    )
 
 
 @dataclasses.dataclass(slots=True)
@@ -364,7 +356,7 @@ class RasterScreen(VIC_II):
                         # TIL multicolor char mode can mix
                         # hires chars based in their color MSB
                         # (which limits their color space)
-                        p0, p1, p2, p3 = base4(pixels)
+                        p0, p1, p2, p3 = BYTEPAIRS[pixels]
                         self._cached_multicolor_pack[3] = char_color & 0x07
                         self.frame[pixel_range] = (
                             # Pick 1 color, fill 2 pixels
