@@ -4,6 +4,7 @@ import numpy as np
 
 from .constants import (
     BITRANGE,
+    BYTEBOOLEANS,
     CLOCKS_PER_FRAME,
     # FIRST_COLUMN,
     # FIRST_LINE,
@@ -382,10 +383,10 @@ class RasterScreen(VIC_II):
                             # If one its foreground color
                             char_color
                             # For each bit == pixel
-                            if px == "1"
+                            if px
                             # If zero its background color
                             else self.background_color
-                            for px in f"{pixels:08b}"
+                            for px in BYTEBOOLEANS[pixels]
                         )
 
                     # Narrow border
