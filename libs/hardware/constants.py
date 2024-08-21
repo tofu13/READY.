@@ -38,9 +38,11 @@ SCAN_AREA = [504, 312]
 SCAN_AREA_H = SCAN_AREA[0]
 SCAN_AREA_V = SCAN_AREA[1]
 
-VIDEO_SIZE = (403, 284)
+VIDEO_SIZE = (408, 284)  # Faked for performance, see REAL_VIDEO_SIZE
 VIDEO_SIZE_H = VIDEO_SIZE[0]
 VIDEO_SIZE_V = VIDEO_SIZE[1]
+REAL_VIDEO_SIZE = (403, 284)
+
 
 FIRST_COLUMN = [31, 24]
 LAST_COLUMN = [334, 343]
@@ -71,6 +73,8 @@ PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 
 BITVALUES = [2**k for k in range(8)]
 BITRANGE = [(7 - k, 2**k) for k in range(8)]
+BYTEBOOLEANS = [[bool(int(j)) for j in f"{i:08b}"] for i in range(256)]
+BYTEPAIRS = [[i >> 6 & 3, i >> 4 & 3, i >> 2 & 3, i & 3] for i in range(256)]
 
 OPCODE_MAP = {
     0x00: ("BRK", "addressing_IMP", 7),

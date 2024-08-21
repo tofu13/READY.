@@ -13,9 +13,9 @@ from libs.hardware.constants import (
     CLOCKS_PER_PERFORMANCE_REFRESH,
     PALETTE,
     PETSCII,
+    REAL_VIDEO_SIZE,
     SCREEN_CHARCODE,
     SIGNALS,
-    VIDEO_SIZE,
 )
 
 
@@ -184,7 +184,7 @@ class Machine(PatchMixin):
         """
         if not isinstance(self.screen, hardware.screen.VirtualScreen):
             self.display = pygame.display.set_mode(
-                VIDEO_SIZE, depth=8, flags=pygame.SCALED
+                REAL_VIDEO_SIZE, depth=8, flags=pygame.SCALED
             )
             pygame.event.set_blocked(None)
             pygame.event.set_allowed(
