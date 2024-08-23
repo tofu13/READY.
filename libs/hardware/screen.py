@@ -331,15 +331,13 @@ class RasterScreen(VIC_II):
             if 24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250:
                 if self._frame_on:
                     # Raster is in the display area
-                    # Bad lines
                     matrix_column = (self.raster_x - 24) // 8
                     matrix_row = (self.raster_y - 51) // 8
-                    if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):
-                        char_pointer = (
-                            self.video_matrix_base_address
-                            + (self.raster_y - 51) // 8 * 40
-                        )
-                        color_pointer = 0xD800 + (self.raster_y - 51) // 8 * 40
+                    matrix_row_offset = (self.raster_y - 51) % 8
+                    # Bad lines
+                    if self.raster_x == 24 and matrix_row_offset == 0:
+                        char_pointer = self.video_matrix_base_address + matrix_row * 40
+                        color_pointer = 0xD800 + matrix_row * 40
 
                         self.char_buffer = bytearray(
                             self.memory.vic_read(i)
@@ -354,15 +352,13 @@ class RasterScreen(VIC_II):
                             self.bitmap_base_address
                             + (self.raster_x - 24)
                             + matrix_row * 320
-                            + (self.raster_y - 51) % 8
+                            + matrix_row_offset
                         )
                         # Fixme: misleading variable name
                         colors = self.char_buffer[matrix_column]
                         if self.multicolor_mode:
                             # pixels = self.memory.vic_read(pixel_address)
-                            char_color = self.color_buffer[
-                                (self.raster_x // 8 - 24) // 8
-                            ]
+                            char_color = self.color_buffer[matrix_column]
                             color_pack = (
                                 self.background_color,
                                 colors >> 4,
@@ -393,11 +389,11 @@ class RasterScreen(VIC_II):
                             )
 
                     else:
-                        char_color = self.color_buffer[(self.raster_x // 8 - 24) // 8]
+                        char_color = self.color_buffer[matrix_column]
                         pixels = self.memory.vic_read(
                             self.character_generator_base_address
-                            + self.char_buffer[(self.raster_x - 24) // 8] * 8
-                            + (self.raster_y - 51) % 8
+                            + self.char_buffer[matrix_column] * 8
+                            + matrix_row_offset
                         )
 
                         # TODO: XY SCROLL
