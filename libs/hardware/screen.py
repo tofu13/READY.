@@ -74,6 +74,7 @@ class VIC_II:
         "X_SCROLL",
         "video_matrix_base_address",
         "character_generator_base_address",
+        "bitmap_base_address",
         "border_color",
         "border_color_pack",
         "background_color",
@@ -116,6 +117,7 @@ class VIC_II:
         self.X_SCROLL = 0
         self.video_matrix_base_address = 0x0400
         self.character_generator_base_address = 0xC000
+        self.bitmap_base_address = 0x0000
         self.border_color = 0x0E
         self.border_color_pack = [self.border_color] * 8
         self.background_color = 0x06
@@ -197,6 +199,7 @@ class VIC_II:
             case 0x18:
                 self.video_matrix_base_address = (value & 0b11110000) << 6
                 self.character_generator_base_address = (value & 0b00001110) << 10
+                self.bitmap_base_address = self.character_generator_base_address & 2**13
             case 0x19:
                 # Ack irqs
                 if value & 0b0001:
@@ -328,13 +331,13 @@ class RasterScreen(VIC_II):
             if 24 <= self.raster_x <= 343 and 51 <= self.raster_y <= 250:
                 if self._frame_on:
                     # Raster is in the display area
+                    matrix_column = (self.raster_x - 24) // 8
+                    matrix_row = (self.raster_y - 51) // 8
+                    matrix_row_offset = (self.raster_y - 51) % 8
                     # Bad lines
-                    if self.raster_x == 24 and ((self.raster_y - 51) % 8 == 0):
-                        char_pointer = (
-                            self.video_matrix_base_address
-                            + (self.raster_y - 51) // 8 * 40
-                        )
-                        color_pointer = 0xD800 + (self.raster_y - 51) // 8 * 40
+                    if self.raster_x == 24 and matrix_row_offset == 0:
+                        char_pointer = self.video_matrix_base_address + matrix_row * 40
+                        color_pointer = 0xD800 + matrix_row * 40
 
                         self.char_buffer = bytearray(
                             self.memory.vic_read(i)
@@ -344,55 +347,97 @@ class RasterScreen(VIC_II):
                             color_pointer : color_pointer + 40
                         ]  # Direct read from fixed color ram
 
-                    pixels = self.memory.vic_read(
-                        self.character_generator_base_address
-                        + self.char_buffer[(self.raster_x - 24) // 8] * 8
-                        + (self.raster_y - 51) % 8
-                    )
-
-                    char_color = self.color_buffer[(self.raster_x // 8 - 24) // 8]
-                    # TODO: XY SCROLL
-                    if self.multicolor_mode and char_color & 0x08:
-                        # TIL multicolor char mode can mix
-                        # hires chars based in their color MSB
-                        # (which limits their color space)
-                        p0, p1, p2, p3 = BYTEPAIRS[pixels]
-                        self._cached_multicolor_pack[3] = char_color & 0x07
-                        self.frame[pixel_range] = (
+                    if self.bitmap_mode:
+                        pixels = self.memory.vic_read(
+                            self.bitmap_base_address
+                            + (self.raster_x - 24)
+                            + matrix_row * 320
+                            + matrix_row_offset
+                        )
+                        # Fixme: misleading variable name
+                        colors = self.char_buffer[matrix_column]
+                        if self.multicolor_mode:
+                            # pixels = self.memory.vic_read(pixel_address)
+                            char_color = self.color_buffer[matrix_column]
+                            color_pack = (
+                                self.background_color,
+                                colors >> 4,
+                                colors & 0x0F,
+                                char_color,
+                            )
+                            p0, p1, p2, p3 = BYTEPAIRS[pixels]
                             # Pick 1 color, fill 2 pixels
-                            # (not nice code but pretty fast)
-                            self._cached_multicolor_pack[p0],
-                            self._cached_multicolor_pack[p0],
-                            self._cached_multicolor_pack[p1],
-                            self._cached_multicolor_pack[p1],
-                            self._cached_multicolor_pack[p2],
-                            self._cached_multicolor_pack[p2],
-                            self._cached_multicolor_pack[p3],
-                            self._cached_multicolor_pack[p3],
-                        )
+                            self.frame[pixel_range] = (
+                                color_pack[p0],
+                                color_pack[p0],
+                                color_pack[p1],
+                                color_pack[p1],
+                                color_pack[p2],
+                                color_pack[p2],
+                                color_pack[p3],
+                                color_pack[p3],
+                            )
+                        else:
+                            self.frame[pixel_range] = (
+                                # If one the upper half of charcode (used as color)
+                                colors >> 4
+                                # For each bit == pixel
+                                if px
+                                # If zero the lower half
+                                else colors & 0x0F
+                                for px in BYTEBOOLEANS[pixels]
+                            )
+
                     else:
-                        self.frame[pixel_range] = (
-                            # If one its foreground color
-                            char_color
-                            # For each bit == pixel
-                            if px
-                            # If zero its background color
-                            else self.background_color
-                            for px in BYTEBOOLEANS[pixels]
+                        char_color = self.color_buffer[matrix_column]
+                        pixels = self.memory.vic_read(
+                            self.character_generator_base_address
+                            + self.char_buffer[matrix_column] * 8
+                            + matrix_row_offset
                         )
 
-                    # Narrow border
-                    # TODO: draw partial horizontal border
-                    # TODO: use flip-flop
-                    # if (
-                    #    self.raster_y < FIRST_LINE[self.RSEL]
-                    #    or self.raster_y > LAST_LINE[self.RSEL]
-                    # ):
-                    #    self.dataframe[raster_x__8, self.raster_y] = (
-                    #        0,
-                    #        self.border_color,
-                    #        0,
-                    #    )
+                        # TODO: XY SCROLL
+                        if self.multicolor_mode and char_color & 0x08:
+                            # TIL multicolor char mode can mix
+                            # hires chars based in their color MSB
+                            # (which limits their color space)
+                            p0, p1, p2, p3 = BYTEPAIRS[pixels]
+                            self._cached_multicolor_pack[3] = char_color & 0x07
+                            self.frame[pixel_range] = (
+                                # Pick 1 color, fill 2 pixels
+                                # (not nice code but pretty fast)
+                                self._cached_multicolor_pack[p0],
+                                self._cached_multicolor_pack[p0],
+                                self._cached_multicolor_pack[p1],
+                                self._cached_multicolor_pack[p1],
+                                self._cached_multicolor_pack[p2],
+                                self._cached_multicolor_pack[p2],
+                                self._cached_multicolor_pack[p3],
+                                self._cached_multicolor_pack[p3],
+                            )
+                        else:
+                            self.frame[pixel_range] = (
+                                # If one its foreground color
+                                char_color
+                                # For each bit == pixel
+                                if px
+                                # If zero its background color
+                                else self.background_color
+                                for px in BYTEBOOLEANS[pixels]
+                            )
+
+                        # Narrow border
+                        # TODO: draw partial horizontal border
+                        # TODO: use flip-flop
+                        # if (
+                        #    self.raster_y < FIRST_LINE[self.RSEL]
+                        #    or self.raster_y > LAST_LINE[self.RSEL]
+                        # ):
+                        #    self.dataframe[raster_x__8, self.raster_y] = (
+                        #        0,
+                        #        self.border_color,
+                        #        0,
+                        #    )
                 else:
                     # Blank frame
                     self.frame[pixel_range] = self.border_color_pack
