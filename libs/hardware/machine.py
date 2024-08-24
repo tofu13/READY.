@@ -23,12 +23,11 @@ class PatchMixin:
     __slots__ = ["filename", "filesize", "byteprovider"]
 
     def patch_IECIN(self):
-        print("Serial patch IECIN")
-        print(self.cpu.A)  # self.cpu.A = 0x42
+        pass
         # self.cpu.PC = 0xEE84
 
     def patch_LSTNSA(self):
-        print(f"KERNAL patch LSTNSA: A={self.cpu.A}")
+        pass
 
     def patch_OPEN(self):
         def provider(self):
@@ -45,23 +44,19 @@ class PatchMixin:
                 pos += 1
                 yield byte, pos == size
 
-        print(f"Serial patch openfile: A={self.cpu.A}, Y={self.cpu.Y}")
         self.byteprovider = provider(self)
 
     def patch_LISTEN(self):
-        print(f"KERNAL patch LISTEN: A={self.cpu.A}")
         self.serial_device_number = self.cpu.A
 
     def patch_CLKDATA(self):  # Fix name
-        # print(f"KERNAL patch Read CLOCK IN and DATA IN.: A={self.cpu.A}")
         self.cpu.PC = 0xEEB2  # Skip to RTS
 
     def patch_SNDBYT(self):  # fix name
         data = self.memory[0x95]
-        # print(f"Write byte to serial bus: data={bytes([data])} {chr(data)}")
         self.outfile.write(bytes([data]))
         self.cpu.PC = 0xEDAC  # Jump to RTS
-        # SAQ: ok salva. Ora distingui l'apertura del file dai dati
+        # TODO: ok salva. Ora distingui l'apertura del file dai dati
 
     def patch_RDBYTE(self):  # fix name
         self.cpu.A, eof = next(self.byteprovider)
@@ -76,7 +71,6 @@ class PatchMixin:
         address = self.cpu.make_address(self.cpu.X, self.cpu.Y)
         length = self.cpu.A
         self.filename = self.memory[address : address + length]
-        print(f"set filename to: {self.filename}")
 
     def patch_SETLFS(self):
         self.logical_file_number = self.cpu.A
@@ -90,6 +84,7 @@ class Machine(PatchMixin):
         "cpu",
         "screen",
         "ciaA",
+        "ciaB",
         "diskdrive",
         "console",
         "monitor_active",
@@ -120,6 +115,7 @@ class Machine(PatchMixin):
         cpu: hardware.cpu.CPU,
         screen: hardware.screen.VIC_II,
         ciaA,
+        ciaB,
         diskdrive=None,
         console=False,
         autotype="",
@@ -128,6 +124,7 @@ class Machine(PatchMixin):
         self.cpu = cpu
         self.screen = screen
         self.ciaA = ciaA
+        self.ciaB = ciaB
         self.diskdrive = diskdrive
         self.console = console
 
@@ -266,6 +263,7 @@ class Machine(PatchMixin):
 
         # Run CIA A
         irq |= self.ciaA.clock(self.keys_pressed)
+        irq |= self.ciaB.clock()
 
         # Handle irq if any
         if irq:
@@ -401,7 +399,6 @@ class Machine(PatchMixin):
             data = f.read()
         for i, byte in enumerate(data):
             self.memory[base + i] = byte
-        print(f"Loaded {len(data)} bytes starting at ${base:04X}")
         return base
 
     def set_datassette_button_status(self, status: bool):

@@ -105,16 +105,6 @@ class CPU:
         self.SP = (self.SP + 1) & 0xFF
         return self.memory.cpu_read(0x100 | self.SP)
 
-    def fetch(self):
-        """
-        Fetch next istruction (memory read at PC, advance PC)
-        :return: None
-        """
-        opcode = self.memory.cpu_read(self.PC)
-        # print(f"Fetched at {self.PC:04X}: {self.opcodes[opcode]}")
-        self.PC += 1
-        return opcode
-
     def clock(self) -> None:
         """
         Execute next instruction
@@ -125,7 +115,9 @@ class CPU:
             return
 
         try:
-            opcode = self.fetch()
+            # Fetch next istruction (memory read at PC, advance PC)
+            opcode = self.memory.cpu_read(self.PC)
+            self.PC += 1
             instruction, mode, self._cycles_left = OPCODES[opcode]
             address = self.addressing_methods[mode]()
             getattr(self, instruction)(address)

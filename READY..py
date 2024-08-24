@@ -29,6 +29,7 @@ def main():
             raise argparse.ArgumentError(None, f"Invalid screen driver {args.screen}")
 
         cia_a = hardware.cia.CIA_A(memory)
+        cia_b = hardware.cia.CIA_B(memory)
 
         diskdrive = hardware.disk_drive.Drive()
         if disk := args.disk:
@@ -39,6 +40,7 @@ def main():
             cpu=cpu,
             screen=screen,
             ciaA=cia_a,
+            ciaB=cia_b,
             diskdrive=diskdrive,
             console=args.console,
             autotype=autotype,
