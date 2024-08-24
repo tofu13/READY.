@@ -224,7 +224,6 @@ class CIA_A(CIA):
 
                 self.timer_A_start = bool(value & 0x01)
                 self.timer_A_restart_after_underflow = not bool(value & 0b1000)
-                print(f"A {'start' if self.timer_A_start else 'stop'}")
                 if value & 0b00010000:
                     self.timer_A_load()
 
@@ -250,6 +249,4 @@ class CIA_B(CIA):
                 # Here, at CIA_B's
                 # We'll set a MEMORY internal
                 # Used by the VIC
-                print(value)
                 self.memory.vic_memory_bank = (3 - (value & 0b11)) << 14
-                print(self.memory.vic_memory_bank)
