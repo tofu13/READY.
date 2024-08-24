@@ -12,6 +12,7 @@ class Memory:
         "io_port",
         "loram_port",
         "hiram_port",
+        "vic_memory_bank",
     ]
 
     def __init__(self, ram=None, roms=None):
@@ -27,6 +28,7 @@ class Memory:
 
         # Internals
         self.io_port, self.loram_port, self.hiram_port = True, True, True
+        self.vic_memory_bank: int = 0x0000
 
     def __getitem__(self, item):
         return self.ram[item]
@@ -72,13 +74,13 @@ class Memory:
 
     def vic_read(self, address: int) -> int:
         """Returns memory content as seen by VIC-II"""
-        memory_bank = 3 - (self[0xDD00] & 0b11) << 14
+        #memory_bank = 3 - (self[0xDD00] & 0b11) << 14
 
         # CHARGEN ROM is visible in banks 0 and 2 at $1000-1FFF
-        if memory_bank in {0x0000, 0x8000} and 0x1000 <= address < 0x2000:
+        if self.vic_memory_bank in {0x0000, 0x8000} and 0x1000 <= address < 0x2000:
             return self.roms["chargen"][address - 0x1000]
 
-        return self[memory_bank + address]
+        return self[self.vic_memory_bank + address]
 
     def read_address(self, address: int) -> int:
         """
