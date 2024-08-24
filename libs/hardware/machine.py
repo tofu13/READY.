@@ -90,6 +90,7 @@ class Machine(PatchMixin):
         "cpu",
         "screen",
         "ciaA",
+        "ciaB",
         "diskdrive",
         "console",
         "monitor_active",
@@ -120,6 +121,7 @@ class Machine(PatchMixin):
         cpu: hardware.cpu.CPU,
         screen: hardware.screen.VIC_II,
         ciaA,
+        ciaB,
         diskdrive=None,
         console=False,
         autotype="",
@@ -128,6 +130,7 @@ class Machine(PatchMixin):
         self.cpu = cpu
         self.screen = screen
         self.ciaA = ciaA
+        self.ciaB = ciaB
         self.diskdrive = diskdrive
         self.console = console
 
@@ -266,6 +269,7 @@ class Machine(PatchMixin):
 
         # Run CIA A
         irq |= self.ciaA.clock(self.keys_pressed)
+        irq |= self.ciaB.clock()
 
         # Handle irq if any
         if irq:

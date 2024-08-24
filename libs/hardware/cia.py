@@ -231,17 +231,25 @@ class CIA_A(CIA):
 
 class CIA_B(CIA):
     __slots__ = []
-    memory = None
 
-    def init(self):
-        self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
+    def __init__(self, memory):
+        super().__init__(memory)
+        # self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
         self.memory.write_watchers.append((0xDD00, 0xDDFF, self.set_registers))
 
     def clock(self):
-        pass
+        return False
 
     def get_registers(self, address, value):
         pass
 
     def set_registers(self, address, value):
-        pass
+        match address & 0x0F:
+            case 0x00:
+                # Note:
+                # Here, at CIA_B's
+                # We'll set a MEMORY internal
+                # Used by the VIC
+                print(value)
+                self.memory.vic_memory_bank = (3 - (value & 0b11)) << 14
+                print(self.memory.vic_memory_bank)
