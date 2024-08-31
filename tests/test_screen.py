@@ -185,7 +185,7 @@ def test_VIC_II_raster_irq_occurs(memory, vic_ii_raster):
     assert vic_ii_raster.any_irq_occured
 
     # Ack irq
-    memory.cpu_write(0xd019, 0b0001)
+    memory.cpu_write(0xD019, 0b0001)
     assert vic_ii_raster.irq_raster_occured is False
     assert vic_ii_raster.any_irq_occured is False
 
