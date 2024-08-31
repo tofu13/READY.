@@ -7,10 +7,10 @@ from .constants import (
     BYTEBOOLEANS,
     BYTEPAIRS,
     CLOCKS_PER_FRAME,
-    # FIRST_COLUMN,
-    # FIRST_LINE,
-    # LAST_COLUMN,
-    # LAST_LINE,
+    FIRST_COLUMN,
+    FIRST_LINE,
+    LAST_COLUMN,
+    LAST_LINE,
     SCAN_AREA_H,
     SCAN_AREA_V,
     VIDEO_SIZE,
@@ -87,6 +87,10 @@ class VIC_II:
         "sprites",
         "_register_cache",
         "_cached_multicolor_pack",
+        "_cached_first_line",
+        "_cached_last_line",
+        "_cached_first_column",
+        "_cached_last_column",
     ]
 
     def __init__(self, memory):
@@ -130,6 +134,11 @@ class VIC_II:
         self.sprite_multicolor_2 = 0x05
 
         self.sprites = [Sprite() for _ in range(8)]
+
+        self._cached_first_line = FIRST_LINE[self.RSEL]
+        self._cached_last_line = LAST_LINE[self.RSEL]
+        self._cached_first_column = FIRST_COLUMN[self.CSEL]
+        self._cached_last_column = LAST_COLUMN[self.CSEL]
 
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.write_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.read_registers))
@@ -186,6 +195,8 @@ class VIC_II:
                 self.DEN = bool(value & 0b00010000)
                 self.RSEL = bool(value & 0b00001000)
                 self.Y_SCROLL = value & 0b00000111
+                self._cached_first_line = FIRST_LINE[self.RSEL]
+                self._cached_last_line = LAST_LINE[self.RSEL]
             case 0x12:
                 self.irq_raster_line_lsb = value
             case 0x15:
@@ -195,6 +206,9 @@ class VIC_II:
                 self.multicolor_mode = bool(value & 0b10000)
                 self.CSEL = bool(value & 0b1000)
                 self.X_SCROLL = value & 0b111
+                self._cached_first_column = FIRST_COLUMN[self.CSEL]
+                self._cached_last_column = LAST_COLUMN[self.CSEL]
+
             case 0x17:
                 for i in range(8):
                     self.sprites[i].expand_y = bool(value & BITRANGE[i][1])
@@ -470,10 +484,11 @@ class RasterScreen(VIC_II):
             # Border
             if any(
                 (
-                    self.raster_y < 51,
-                    self.raster_y > 250,
-                    self.raster_x < 24,
-                    self.raster_x > 343,
+                    self.raster_y < self._cached_first_line,
+                    self.raster_y > self._cached_last_line,
+                    self.raster_x < self._cached_first_column,
+                    self.raster_x > self._cached_last_column,
+                    not self.DEN,
                 )
             ):
                 self.frame[pixel_pointer : pixel_pointer + 8] = self.border_color_pack
