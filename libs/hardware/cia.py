@@ -123,7 +123,7 @@ class CIA_A(CIA):
 
         return self.irq_occured
 
-    def get_registers(self, address, value):
+    def get_registers(self, address):
         # Registers repeated every 0x10
         match address & 0x0F:
             case 0x01:
@@ -196,7 +196,7 @@ class CIA_A(CIA):
                 self.timer_A_underflow = False
                 self.timer_B_underflow = False
                 return result
-        return value
+        return 0
 
     def set_registers(self, address, value):
         match address & 0x0F:
@@ -239,8 +239,8 @@ class CIA_B(CIA):
     def clock(self):
         return False
 
-    def get_registers(self, address, value):
-        pass
+    def get_registers(self, address):
+        return 0
 
     def set_registers(self, address, value):
         match address & 0x0F:

@@ -92,7 +92,7 @@ def test_memory_as_seen_by_cpu(memory_with_roms):
 
 
 def test_read_watcher(memory_with_roms):
-    def read_watcher(address, value):
+    def read_watcher(address):
         return 42
 
     memory_with_roms.read_watchers.append((0xD000, 0xDFFF, read_watcher))

@@ -48,7 +48,7 @@ class Memory:
             else:
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
-                        return callback(address, self.ram[address])
+                        return callback(address)
         return self.ram[address]
 
     def cpu_write(self, address: int, value: int):
