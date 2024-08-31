@@ -15,6 +15,7 @@ def c64():
         cpu=hardware.cpu.CPU(memory),
         screen=hardware.screen.VirtualScreen(memory),
         ciaA=hardware.cia.CIA_A(memory),
+        ciaB=hardware.cia.CIA_B(memory),
         diskdrive=hardware.disk_drive.Drive(),
     )
 

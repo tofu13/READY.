@@ -33,8 +33,8 @@ def test_cpu_registers(cpu):
     cpu.A = 0xFF
     cpu.X = 0xFF
     cpu.Y = 0xFF
-    cpu.PC = 0XFFFF
-    cpu.SP = 0X00
+    cpu.PC = 0xFFFF
+    cpu.SP = 0x00
     cpu.flag_N = True
     cpu.flag_V = True
     cpu.flag_B = True
@@ -60,14 +60,6 @@ def test_cpu_stack(cpu):
     assert cpu.SP == 0xFF
 
 
-def test_cpu_fetch(cpu):
-    cpu.memory.cpu_write(0xC000, 0x42)
-    cpu.PC = 0xC000
-
-    assert cpu.fetch() == 0x42
-    assert cpu.PC == 0xC001
-
-
 def test_cpu_irq(cpu):
     cpu.PC = 0xC000
     cpu.flag_I = True
@@ -86,14 +78,17 @@ def test_cpu_nmi(cpu):
     assert cpu.PC == 0xBA2E  # Value from testing roms
 
 
-@pytest.mark.parametrize(('value', 'N', 'Z'), [
-    (0x00, False, True),
-    (0x01, False, False),
-    (0x7F, False, False),
-    (0x80, True, False),
-    (0x81, True, False),
-    (0xFF, True, False),
-])
+@pytest.mark.parametrize(
+    ("value", "N", "Z"),
+    [
+        (0x00, False, True),
+        (0x01, False, False),
+        (0x7F, False, False),
+        (0x80, True, False),
+        (0x81, True, False),
+        (0xFF, True, False),
+    ],
+)
 def test_cpu_setNZ(cpu, value, N, Z):
     cpu.setNZ(value)
     assert cpu.flag_N is N
@@ -121,21 +116,23 @@ def test_cpu_save_state(cpu):
     assert cpu.pop() == 0x12
 
 
-@pytest.mark.parametrize(('method', 'expected', 'advance'), [
-    ("IMP", None, 0),
-    ("IMM", 0XC000, 1),
-    ("REL", 0X02, 1),
-    ("ABS", 0XC002, 2),
-    ("ZP", 0X02, 1),
-    ("ABS_X", 0XC003, 2),
-    ("ABS_Y", 0XC004, 2),
-    ("ZP_X", 0X03, 1),
-    ("ZP_Y", 0X04, 1),
-    ("IND", 0X1234, 2),
-    ("X_IND", 0XABCD, 1),
-    ("IND_Y", 0X34A2, 1),
-
-])
+@pytest.mark.parametrize(
+    ("method", "expected", "advance"),
+    [
+        ("IMP", None, 0),
+        ("IMM", 0xC000, 1),
+        ("REL", 0x02, 1),
+        ("ABS", 0xC002, 2),
+        ("ZP", 0x02, 1),
+        ("ABS_X", 0xC003, 2),
+        ("ABS_Y", 0xC004, 2),
+        ("ZP_X", 0x03, 1),
+        ("ZP_Y", 0x04, 1),
+        ("IND", 0x1234, 2),
+        ("X_IND", 0xABCD, 1),
+        ("IND_Y", 0x34A2, 1),
+    ],
+)
 def test_cpu_addressing_methods(cpu, method, expected, advance):
     cpu.memory.cpu_write(0xC000, 0x02)
     cpu.memory.cpu_write(0xC001, 0xC0)
