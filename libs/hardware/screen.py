@@ -76,17 +76,17 @@ class VIC_II:
         "character_generator_base_address",
         "bitmap_base_address",
         "border_color",
-        "border_color_pack",
         "background_color",
-        "background_color_pack",
         "background_color_1",
         "background_color_2",
         "background_color_3",
         "sprite_multicolor_1",
         "sprite_multicolor_2",
         "sprites",
-        "_register_cache",
+        "_cached_registers",
+        "_cached_border_color_pack",
         "_cached_multicolor_pack",
+        "_cached_background_color_pack",
         "_cached_first_line",
         "_cached_last_line",
         "_cached_first_column",
@@ -124,9 +124,7 @@ class VIC_II:
         self.character_generator_base_address = 0xC000
         self.bitmap_base_address = 0x0000
         self.border_color = 0x0E
-        self.border_color_pack = [self.border_color] * 8
         self.background_color = 0x06
-        self.background_color_pack = [self.background_color] * 8
         self.background_color_1 = 0x03
         self.background_color_2 = 0x04
         self.background_color_3 = 0x05
@@ -135,6 +133,9 @@ class VIC_II:
 
         self.sprites = [Sprite() for _ in range(8)]
 
+        self._cached_border_color_pack = [self.border_color] * 8
+        self._cached_background_color_pack = [self.background_color] * 8
+        self._cached_registers = bytearray(0x40)
         self._cached_first_line = FIRST_LINE[self.RSEL]
         self._cached_last_line = LAST_LINE[self.RSEL]
         self._cached_first_column = FIRST_COLUMN[self.CSEL]
@@ -142,11 +143,6 @@ class VIC_II:
 
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.write_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.read_registers))
-
-        self._register_cache = bytearray(0x40)
-
-        # self.memory[0x0400:0x0800] = [1] * 1024
-        # self.memory[0xD800:0xDC00] = [0xE] * 1024
 
     @property
     def irq_raster_line(self):
@@ -178,7 +174,7 @@ class VIC_II:
         # The VIC registers are repeated each 64 bytes in the area $d000-$d3ff
         address &= 0x3F
         # Store value for quick retrival
-        self._register_cache[address] = value
+        self._cached_registers[address] = value
 
         match address:
             case sprite if sprite in {0, 2, 4, 6, 8, 10, 12, 14}:
@@ -245,10 +241,10 @@ class VIC_II:
             case 0x20:
                 self.border_color = value & 0x0F
                 # Cache for border pixels
-                self.border_color_pack = (self.border_color,) * 8
+                self._cached_border_color_pack = (self.border_color,) * 8
             case 0x21:
                 self.background_color = value & 0x0F
-                self.background_color_pack = (self.background_color,) * 8
+                self._cached_background_color_pack = (self.background_color,) * 8
                 self.cache_multicolor_pack()
             case 0x22:
                 self.background_color_1 = value & 0x0F
@@ -273,7 +269,7 @@ class VIC_II:
                 # Dynamically set bit #7 = bit raster_y bit #8
                 # Other bits are cached
                 return ((self.raster_y & 0x0100) >> 1) | (
-                    self._register_cache[0x11] & 0x7F
+                    self._cached_registers[0x11] & 0x7F
                 )
             case 0x12:
                 return self.raster_y & 0xFF
@@ -307,15 +303,15 @@ class VIC_II:
                 return 0
             # Static register (disconnected bits are 1 on read)
             case 0x16:
-                return self._register_cache[0x16] | 0b11000000
+                return self._cached_registers[0x16] | 0b11000000
             case 0x18:
-                return self._register_cache[0x18] | 0b00000001
+                return self._cached_registers[0x18] | 0b00000001
             case 0x1A:
-                return self._register_cache[0x1A] | 0b11110000
+                return self._cached_registers[0x1A] | 0b11110000
             case color if 0x20 <= color <= 0x2E:
-                return self._register_cache[color] | 0b11110000
+                return self._cached_registers[color] | 0b11110000
             case other:
-                return self._register_cache[other]
+                return self._cached_registers[other]
 
 
 class RasterScreen(VIC_II):
@@ -352,10 +348,7 @@ class RasterScreen(VIC_II):
                 # Raster is in the display area
                 pixel_range = slice(
                     pixel_pointer + self.X_SCROLL + VIDEO_SIZE_H * self.Y_SCROLL,
-                    pixel_pointer
-                    + self.X_SCROLL
-                    + VIDEO_SIZE_H * self.Y_SCROLL
-                    + 8,
+                    pixel_pointer + self.X_SCROLL + VIDEO_SIZE_H * self.Y_SCROLL + 8,
                 )
                 matrix_column = (self.raster_x - 24) // 8
                 matrix_row = (self.raster_y - 48) // 8
@@ -451,22 +444,9 @@ class RasterScreen(VIC_II):
                             else self.background_color
                             for px in BYTEBOOLEANS[pixels]
                         )
-
-                    # Narrow border
-                    # TODO: draw partial horizontal border
-                    # TODO: use flip-flop
-                    # if (
-                    #    self.raster_y < FIRST_LINE[self.RSEL]
-                    #    or self.raster_y > LAST_LINE[self.RSEL]
-                    # ):
-                    #    self.dataframe[raster_x__8, self.raster_y] = (
-                    #        0,
-                    #        self.border_color,
-                    #        0,
-                    #    )
-
-                # TODO: Empty pixels shall be fetched as zeros when ot of range, not set
                 # Empty pixels at left when X_SCROLL
+                # TODO: Empty pixels shall be fetched as zeros when scrolled,
+                # not set explicitily
                 if self.X_SCROLL and self.raster_x == 24:
                     self.frame[pixel_pointer : pixel_pointer + self.X_SCROLL] = (
                         self.background_color,
@@ -474,14 +454,15 @@ class RasterScreen(VIC_II):
                 # Empty pixels at top
                 elif 51 <= self.raster_y < 48 + self.Y_SCROLL:
                     self.frame[pixel_pointer : pixel_pointer + 8] = (
-                        self.background_color_pack
+                        self._cached_background_color_pack
                     )
                 # Empty pixels at bottom
                 elif self.raster_y > 247 + self.Y_SCROLL:
                     self.frame[pixel_pointer : pixel_pointer + 8] = (
-                        self.background_color_pack
+                        self._cached_background_color_pack
                     )
             # Border
+            # TODO: use border flip-flop
             if any(
                 (
                     self.raster_y < self._cached_first_line,
@@ -491,7 +472,9 @@ class RasterScreen(VIC_II):
                     not self.DEN,
                 )
             ):
-                self.frame[pixel_pointer : pixel_pointer + 8] = self.border_color_pack
+                self.frame[pixel_pointer : pixel_pointer + 8] = (
+                    self._cached_border_color_pack
+                )
 
         self.raster_x += 8
         if self.raster_x > SCAN_AREA_H:
