@@ -248,7 +248,7 @@ class VIC_II:
             case sprite if 0x27 <= sprite <= 0x2E:
                 self.sprites[sprite - 0x27].color = value & 0x0F
 
-    def read_registers(self, address: int, _: int) -> int:
+    def read_registers(self, address: int) -> int:
         address &= 0x3F
         match address:
             # Dynamic registers
