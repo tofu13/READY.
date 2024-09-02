@@ -146,6 +146,18 @@ class VIC_II:
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.write_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.read_registers))
 
+    def __str__(self):
+        return (
+            f"VIC-II {self.__class__} - DEN:{self.DEN}\n"
+            f"RSEL:{self.RSEL} CSEL:{self.CSEL} "
+            f"X_SCROLL:{self.X_SCROLL} Y_SCROLL:{self.Y_SCROLL}\n"
+            f"CHAR ADDRESS:{hex(self.video_matrix_base_address)} "
+            f"CHARGEN ADDRESS:{hex(self.character_generator_base_address)} "
+            f"BITMAP ADDRESS:{hex(self.character_generator_base_address)} "
+            f"RASTER: {self.raster_x, self.raster_y}\n"
+            + "\n".join(str(sprite) for sprite in self.sprites)
+        )
+
     @property
     def irq_raster_line(self):
         return self.irq_raster_line_lsb + (0x100 if self.irq_raster_line_msb else 0)
