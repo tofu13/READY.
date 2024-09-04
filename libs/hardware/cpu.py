@@ -17,6 +17,7 @@ class CPU:
         "flag_Z",
         "flag_C",
         "memory",
+        "bus",
         "indent",
         "_debug",
         "_cycles_left",
@@ -26,6 +27,7 @@ class CPU:
     def __init__(
         self,
         memory,
+        bus,
         A: int = 0,
         X: int = 0,
         Y: int = 0,
@@ -34,6 +36,7 @@ class CPU:
         SR: int = 0b00100100,
     ):
         self.memory = memory
+        self.bus = bus
 
         self.A = A
         self.X = X
@@ -128,6 +131,13 @@ class CPU:
             raise e
         if False and 0x0800 <= self.PC <= 0xFFFF:
             print(self)
+
+        # Handle nmi if any occured
+        if self.bus.nmi:
+            self.nmi()
+        # Handle irq if any occured
+        elif self.bus.irq:
+            self.irq()
 
     def irq(self):
         """

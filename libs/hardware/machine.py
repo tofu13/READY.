@@ -81,6 +81,7 @@ class PatchMixin:
 class Machine(PatchMixin):
     __slots__ = [
         "memory",
+        "bus",
         "cpu",
         "screen",
         "ciaA",
@@ -112,6 +113,7 @@ class Machine(PatchMixin):
     def __init__(
         self,
         memory: hardware.memory.Memory,
+        bus: hardware.bus.Bus,
         cpu: hardware.cpu.CPU,
         screen: hardware.screen.VIC_II,
         ciaA,
@@ -121,6 +123,7 @@ class Machine(PatchMixin):
         autotype="",
     ):
         self.memory = memory
+        self.bus = bus
         self.cpu = cpu
         self.screen = screen
         self.ciaA = ciaA
@@ -262,16 +265,12 @@ class Machine(PatchMixin):
         self.cpu.clock()
 
         # Run CIA A
-        irq |= self.ciaA.clock(self.keys_pressed)
-        irq |= self.ciaB.clock()
-
-        # Handle irq if any
-        if irq:
-            self.cpu.irq()
+        self.ciaA.clock(self.keys_pressed)
+        self.ciaB.clock()
 
         self._clock_counter += 1
         if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
-            self.signal, self.nmi = self.manage_events()
+            self.signal = self.manage_events()
             if self.signal is SIGNALS.RESET:
                 self.cpu.PC = 0xFCE2
                 self.signal = SIGNALS.NONE
@@ -283,10 +282,6 @@ class Machine(PatchMixin):
             # Send screen to console
             print("\033[H\033[1J", end="")  # Clear screen
             print(self.screendump())
-
-        if self.nmi:
-            self.cpu.nmi()
-            self.nmi = False
 
         if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
             _perf_timer = time.perf_counter()
@@ -322,12 +317,11 @@ class Machine(PatchMixin):
                 self.memory[0xC6] += 1
 
         signal = SIGNALS.NONE
-        nmi = False
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 # Scan RESTORE key
                 if event.key == pygame.K_PAGEDOWN:
-                    nmi = True
+                    self.bus.nmi_set("restore_key")
 
                 # Also scan special keys
                 elif event.key == pygame.K_F12:
@@ -362,12 +356,15 @@ class Machine(PatchMixin):
                     self.keys_pressed.add(pygame.K_LSHIFT)
 
             elif event.type == pygame.KEYUP:
-                self.keys_pressed.discard(event.key)
+                if event.key == pygame.K_PAGEDOWN:
+                    self.bus.nmi_clear("restore_key")
+                else:
+                    self.keys_pressed.discard(event.key)
 
             elif event.type == pygame.WINDOWCLOSE:
                 pygame.quit()
 
-        return signal, nmi
+        return signal
 
     @classmethod
     def from_file(cls, filename):
