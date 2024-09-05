@@ -18,7 +18,8 @@ def main():
     else:
         roms = hardware.roms.ROMS(config.ROMS_FOLDER)
         memory = hardware.memory.Memory(roms=roms)
-        cpu = hardware.cpu.CPU(memory)
+        bus = hardware.bus.Bus()
+        cpu = hardware.cpu.CPU(memory, bus)
         if args.screen == "raster":
             screen = hardware.screen.RasterScreen(memory)
         elif args.screen == "virtual":
@@ -28,8 +29,8 @@ def main():
         else:
             raise argparse.ArgumentError(None, f"Invalid screen driver {args.screen}")
 
-        cia_a = hardware.cia.CIA_A(memory)
-        cia_b = hardware.cia.CIA_B(memory)
+        cia_a = hardware.cia.CIA_A(memory, bus)
+        cia_b = hardware.cia.CIA_B(memory, bus)
 
         diskdrive = hardware.disk_drive.Drive()
         if disk := args.disk:
@@ -37,6 +38,7 @@ def main():
 
         c64 = hardware.machine.Machine(
             memory=memory,
+            bus=bus,
             cpu=cpu,
             screen=screen,
             ciaA=cia_a,

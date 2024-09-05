@@ -6,6 +6,7 @@ from .constants import BITVALUES, KEYBOARD
 class CIA:
     __slots__ = [
         "memory",
+        "bus",
         "timer_A",
         "timer_B",
         "timer_A_latch",
@@ -19,8 +20,9 @@ class CIA:
         "tod_zero",
     ]
 
-    def __init__(self, memory):
+    def __init__(self, memory, bus):
         self.memory = memory
+        self.bus = bus
         self.timer_A = 0x0000
         self.timer_B = 0x0000
 
@@ -92,8 +94,8 @@ class CIA:
 class CIA_A(CIA):
     __slots__ = ["pipe", "keys_pressed"]
 
-    def __init__(self, memory):
-        super().__init__(memory)
+    def __init__(self, memory, bus):
+        super().__init__(memory, bus)
 
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
@@ -121,7 +123,8 @@ class CIA_A(CIA):
                     self.timer_A = 0  # Unsure which value to set
                     self.timer_A_start = False
 
-        return self.irq_occured
+        if self.irq_occured:
+            self.bus.irq_set("timer_A")
 
     def get_registers(self, address):
         # Registers repeated every 0x10
@@ -195,6 +198,8 @@ class CIA_A(CIA):
                 # Flags will be cleared after reading the register!
                 self.timer_A_underflow = False
                 self.timer_B_underflow = False
+                self.bus.irq_clear("timer_A")
+
                 return result
         return 0
 
@@ -231,8 +236,8 @@ class CIA_A(CIA):
 class CIA_B(CIA):
     __slots__ = []
 
-    def __init__(self, memory):
-        super().__init__(memory)
+    def __init__(self, memory, bus):
+        super().__init__(memory, bus)
         # self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
         self.memory.write_watchers.append((0xDD00, 0xDDFF, self.set_registers))
 

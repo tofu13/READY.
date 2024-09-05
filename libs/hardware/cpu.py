@@ -17,6 +17,7 @@ class CPU:
         "flag_Z",
         "flag_C",
         "memory",
+        "bus",
         "indent",
         "_debug",
         "_cycles_left",
@@ -26,6 +27,7 @@ class CPU:
     def __init__(
         self,
         memory,
+        bus,
         A: int = 0,
         X: int = 0,
         Y: int = 0,
@@ -34,6 +36,7 @@ class CPU:
         SR: int = 0b00100100,
     ):
         self.memory = memory
+        self.bus = bus
 
         self.A = A
         self.X = X
@@ -129,14 +132,22 @@ class CPU:
         if False and 0x0800 <= self.PC <= 0xFFFF:
             print(self)
 
+        # Handle nmi if any occured
+        if self.bus.nmi:
+            print("nmi")
+            self.nmi()
+        # Handle irq if any occured
+        elif self.bus.irq and not self.flag_I:
+            self.irq()
+
     def irq(self):
         """
         Handle IRQ
         """
-        if not self.flag_I:
-            self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
-            self.save_state()
-            self.PC = self.memory.read_address(0xFFFE)
+        self.save_state()
+        self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
+        self.PC = self.memory.read_address(0xFFFE)
+        self._cycles_left += 7
 
     def nmi(self):
         """
@@ -144,6 +155,7 @@ class CPU:
         """
         self.save_state()
         self.PC = self.memory.read_address(0xFFFA)
+        self._cycles_left += 7
 
     # Utils
     def setNZ(self, value):
@@ -513,7 +525,6 @@ class CPU:
     def RTI(self, Address):
         self.unpack_status_register(self.pop())
         self.PC = self.make_address(self.pop(), self.pop())
-        self.flag_I = False  # Re-enable interrupts after serving
 
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)

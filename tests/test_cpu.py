@@ -1,6 +1,7 @@
 import pytest
 
 import config
+from libs.hardware.bus import Bus
 from libs.hardware.cpu import CPU
 from libs.hardware.memory import Memory
 from libs.hardware.roms import ROMS
@@ -8,7 +9,7 @@ from libs.hardware.roms import ROMS
 
 @pytest.fixture()
 def cpu() -> CPU:
-    return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)))
+    return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)), Bus())
 
 
 def test_cpu_defaults(cpu):

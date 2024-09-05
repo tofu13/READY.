@@ -10,12 +10,14 @@ from libs import hardware
 def c64():
     roms = hardware.roms.ROMS(config.TESTING_ROMS_FOLDER)
     memory = hardware.memory.Memory(roms=roms)
+    bus = hardware.bus.Bus()
     return hardware.machine.Machine(
         memory=memory,
-        cpu=hardware.cpu.CPU(memory),
+        bus=bus,
+        cpu=hardware.cpu.CPU(memory, bus),
         screen=hardware.screen.VirtualScreen(memory),
-        ciaA=hardware.cia.CIA_A(memory),
-        ciaB=hardware.cia.CIA_B(memory),
+        ciaA=hardware.cia.CIA_A(memory, bus),
+        ciaB=hardware.cia.CIA_B(memory, bus),
         diskdrive=hardware.disk_drive.Drive(),
     )
 

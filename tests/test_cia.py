@@ -1,6 +1,7 @@
 import pygame
 import pytest
 
+from libs.hardware.bus import Bus
 from libs.hardware.cia import CIA, CIA_A
 from libs.hardware.memory import Memory
 
@@ -17,13 +18,18 @@ def memory():
 
 
 @pytest.fixture()
-def cia(memory) -> CIA:
-    return CIA(memory)
+def bus():
+    return Bus()
 
 
 @pytest.fixture()
-def cia_a(memory):
-    return CIA_A(memory)
+def cia(memory, bus) -> CIA:
+    return CIA(memory, bus)
+
+
+@pytest.fixture()
+def cia_a(memory, bus):
+    return CIA_A(memory, bus)
 
 
 def test_CIA_timer_A(cia):
