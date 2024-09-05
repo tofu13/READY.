@@ -144,8 +144,8 @@ class CPU:
         Handle IRQ
         """
         if not self.flag_I:
-            self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self.save_state()
+            self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
             self.PC = self.memory.read_address(0xFFFE)
 
     def nmi(self):
@@ -523,7 +523,6 @@ class CPU:
     def RTI(self, Address):
         self.unpack_status_register(self.pop())
         self.PC = self.make_address(self.pop(), self.pop())
-        self.flag_I = False  # Re-enable interrupts after serving
 
     def RTS(self, address):
         value = self.pop() + (self.pop() << 8)
