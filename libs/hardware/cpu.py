@@ -134,19 +134,20 @@ class CPU:
 
         # Handle nmi if any occured
         if self.bus.nmi:
+            print("nmi")
             self.nmi()
         # Handle irq if any occured
-        elif self.bus.irq:
+        elif self.bus.irq and not self.flag_I:
             self.irq()
 
     def irq(self):
         """
         Handle IRQ
         """
-        if not self.flag_I:
-            self.save_state()
-            self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
-            self.PC = self.memory.read_address(0xFFFE)
+        self.save_state()
+        self.flag_I = True  # Do ignore other IRQ while serving. Re-enable after RTI
+        self.PC = self.memory.read_address(0xFFFE)
+        self._cycles_left += 7
 
     def nmi(self):
         """
@@ -154,6 +155,7 @@ class CPU:
         """
         self.save_state()
         self.PC = self.memory.read_address(0xFFFA)
+        self._cycles_left += 7
 
     # Utils
     def setNZ(self, value):
