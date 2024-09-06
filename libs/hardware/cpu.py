@@ -129,13 +129,11 @@ class CPU:
                 f"ERROR at ${self.PC:04X}"
             )  # , {instruction} {mode} {address:04X}: {e}")
             raise e
-        if False and 0x0800 <= self.PC <= 0xFFFF:
-            print(self)
 
         # Handle nmi if any occured
         if self.bus.nmi:
-            print("nmi")
             self.nmi()
+
         # Handle irq if any occured
         elif self.bus.irq and not self.flag_I:
             self.irq()
