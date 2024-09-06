@@ -123,12 +123,17 @@ class CPU:
             return
 
         if self._fetching:
-            # Fetch next istruction (memory read at PC, advance PC)
             opcode = self.memory.cpu_read(self.PC)
+            # Fetch next istruction (memory read at PC, advance PC)
+            self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
+            if self._instruction:
+                self._fetching = False
+                if not is_legal:
+                    print(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
+            else:
+                print(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
             self.PC += 1
-            self._instruction, self._mode, self._cycles_left = OPCODES[opcode]
-            self._cycles_left -= 1
-            self._fetching = False
+            self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
             return
 
         else:

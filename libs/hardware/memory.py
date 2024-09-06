@@ -137,7 +137,7 @@ class Memory:
         :return:
         """
         output = ""
-        instruction, mode, _ = OPCODES[self.cpu_read(address)]
+        instruction, mode, cycles, is_legal = OPCODES[self.cpu_read(address)]
 
         # Skip data bytes (or invalid opcodes)
         instruction = instruction or "???"
