@@ -18,10 +18,13 @@ class CPU:
         "flag_C",
         "memory",
         "bus",
+        "addressing_methods",
         "indent",
         "_debug",
         "_cycles_left",
-        "addressing_methods",
+        "_fetching",
+        "_instruction",
+        "_mode",
     ]
 
     def __init__(
@@ -63,7 +66,9 @@ class CPU:
             "addressing_IND_Y": self.addressing_IND_Y,
         }
 
+        self._fetching = True
         self._cycles_left = 0
+        self._instruction = ""
 
     def __str__(self):
         st = "".join(
@@ -117,18 +122,19 @@ class CPU:
             self._cycles_left -= 1
             return
 
-        try:
+        if self._fetching:
             # Fetch next istruction (memory read at PC, advance PC)
             opcode = self.memory.cpu_read(self.PC)
             self.PC += 1
-            instruction, mode, self._cycles_left = OPCODES[opcode]
-            address = self.addressing_methods[mode]()
-            getattr(self, instruction)(address)
-        except Exception as e:
-            print(
-                f"ERROR at ${self.PC:04X}"
-            )  # , {instruction} {mode} {address:04X}: {e}")
-            raise e
+            self._instruction, self._mode, self._cycles_left = OPCODES[opcode]
+            self._cycles_left -= 1
+            self._fetching = False
+            return
+
+        else:
+            address = self.addressing_methods[self._mode]()
+            getattr(self, self._instruction)(address)
+            self._fetching = True
 
         # Handle nmi if any occured
         if self.bus.nmi:
