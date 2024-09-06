@@ -96,7 +96,7 @@ class CPU:
         :return: None
         """
         # Stack memory is at page 1 (0x100)
-        self.memory.cpu_write(0x100 | self.SP, value)
+        self.memory[0x100 | self.SP] = value
         self.SP = (self.SP - 1) & 0xFF
 
     def pop(self):
@@ -106,7 +106,7 @@ class CPU:
         """
         # Stack memory is at page 1 (0x100)
         self.SP = (self.SP + 1) & 0xFF
-        return self.memory.cpu_read(0x100 | self.SP)
+        return self.memory[0x100 | self.SP]
 
     def clock(self) -> None:
         """
