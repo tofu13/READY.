@@ -80,7 +80,7 @@ OPCODE_MAP = {
     # {mnemonic, addressing, cycles, is_legal)
     0x00: ("BRK", "addressing_IMP", 7, True),
     0x01: ("ORA", "addressing_X_IND", 6, True),
-    0x02: (None, "", 0, False),
+    0x02: ("JAM", "addressing_IMP", 2, False),
     0x03: (None, "", 0, False),
     0x04: (None, "", 0, False),
     0x05: ("ORA", "addressing_ZP", 3, True),
@@ -97,7 +97,7 @@ OPCODE_MAP = {
     #
     0x10: ("BPL", "addressing_REL", 2, True),
     0x11: ("ORA", "addressing_IND_Y", 5, True),
-    0x12: (None, "", 0, False),
+    0x12: ("JAM", "addressing_IMP", 2, False),
     0x13: (None, "", 0, False),
     0x14: (None, "", 0, False),
     0x15: ("ORA", "addressing_ZP_X", 4, True),
@@ -114,7 +114,7 @@ OPCODE_MAP = {
     #
     0x20: ("JSR", "addressing_ABS", 6, True),
     0x21: ("AND", "addressing_X_IND", 6, True),
-    0x22: (None, "", 0, False),
+    0x22: ("JAM", "addressing_IMP", 2, False),
     0x23: (None, "", 0, False),
     0x24: ("BIT", "addressing_ZP", 3, True),
     0x25: ("AND", "addressing_ZP", 3, True),
@@ -131,7 +131,7 @@ OPCODE_MAP = {
     #
     0x30: ("BMI", "addressing_REL", 2, True),
     0x31: ("AND", "addressing_IND_Y", 5, True),
-    0x32: (None, "", 0, False),
+    0x32: ("JAM", "addressing_IMP", 2, False),
     0x33: (None, "", 0, False),
     0x34: (None, "", 0, False),
     0x35: ("AND", "addressing_ZP_X", 4, True),
@@ -148,12 +148,12 @@ OPCODE_MAP = {
     #
     0x40: ("RTI", "addressing_IMP", 6, True),
     0x41: ("EOR", "addressing_X_IND", 6, True),
-    0x42: (None, "", 0, False),
+    0x42: ("JAM", "addressing_IMP", 2, False),
     0x43: (None, "", 0, False),
     0x44: (None, "", 0, False),
     0x45: ("EOR", "addressing_ZP", 3, True),
     0x46: ("LSR", "addressing_ZP", 5, True),
-    0x47: (None, "", 0, False),
+    0x47: (None, "", 2, False),
     0x48: ("PHA", "addressing_IMP", 3, True),
     0x49: ("EOR", "addressing_IMM", 2, True),
     0x4A: ("LSR", "addressing_IMP", 2, True),
@@ -165,7 +165,7 @@ OPCODE_MAP = {
     #
     0x50: ("BVC", "addressing_REL", 2, True),
     0x51: ("EOR", "addressing_IND_Y", 5, True),
-    0x52: (None, "", 0, False),
+    0x52: ("JAM", "addressing_IMP", 2, False),
     0x53: (None, "", 0, False),
     0x54: (None, "", 0, False),
     0x55: ("EOR", "addressing_ZP_X", 4, True),
@@ -182,7 +182,7 @@ OPCODE_MAP = {
     #
     0x60: ("RTS", "addressing_IMP", 6, True),
     0x61: ("ADC", "addressing_X_IND", 6, True),
-    0x62: (None, "", 0, False),
+    0x62: ("JAM", "addressing_IMP", 2, False),
     0x63: (None, "", 0, False),
     0x64: (None, "", 0, False),
     0x65: ("ADC", "addressing_ZP", 3, True),
@@ -199,7 +199,7 @@ OPCODE_MAP = {
     #
     0x70: ("BVS", "addressing_REL", 2, True),
     0x71: ("ADC", "addressing_IND_Y", 5, True),
-    0x72: (None, "", 0, False),
+    0x72: ("JAM", "addressing_IMP", 2, False),
     0x73: (None, "", 0, False),
     0x74: (None, "", 0, False),
     0x75: ("ADC", "addressing_ZP_X", 4, True),
@@ -233,7 +233,7 @@ OPCODE_MAP = {
     #
     0x90: ("BCC", "addressing_REL", 2, True),
     0x91: ("STA", "addressing_IND_Y", 6, True),
-    0x92: (None, "", 0, False),
+    0x92: ("JAM", "addressing_IMP", 2, False),
     0x93: (None, "", 0, False),
     0x94: ("STY", "addressing_ZP_X", 4, True),
     0x95: ("STA", "addressing_ZP_X", 4, True),
@@ -267,7 +267,7 @@ OPCODE_MAP = {
     #
     0xB0: ("BCS", "addressing_REL", 2, True),
     0xB1: ("LDA", "addressing_IND_Y", 5, True),
-    0xB2: (None, "", 0, False),
+    0xB2: ("JAM", "addressing_IMP", 2, False),
     0xB3: (None, "", 0, False),
     0xB4: ("LDY", "addressing_ZP_X", 4, True),
     0xB5: ("LDA", "addressing_ZP_X", 4, True),
@@ -301,7 +301,7 @@ OPCODE_MAP = {
     #
     0xD0: ("BNE", "addressing_REL", 2, True),
     0xD1: ("CMP", "addressing_IND_Y", 5, True),
-    0xD2: (None, "", 0, False),
+    0xD2: ("JAM", "addressing_IMP", 2, False),
     0xD3: (None, "", 0, False),
     0xD4: (None, "", 0, False),
     0xD5: ("CMP", "addressing_ZP_X", 4, True),
@@ -335,7 +335,7 @@ OPCODE_MAP = {
     #
     0xF0: ("BEQ", "addressing_REL", 2, True),
     0xF1: ("SBC", "addressing_IND_Y", 5, True),
-    0xF2: (None, "", 0, False),
+    0xF2: ("JAM", "addressing_IMP", 2, False),
     0xF3: (None, "", 0, False),
     0xF4: (None, "", 0, False),
     0xF5: ("SBC", "addressing_ZP_X", 4, True),

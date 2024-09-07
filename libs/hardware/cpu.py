@@ -127,13 +127,13 @@ class CPU:
             # Fetch next istruction (memory read at PC, advance PC)
             self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
             if self._instruction:
+                self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
                 self._fetching = False
                 if not is_legal:
                     print(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
             else:
                 print(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
             self.PC += 1
-            self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
             return
 
         else:
@@ -317,7 +317,7 @@ class CPU:
 
     # endregion
 
-    # region Instructions
+    # region Legal Instructions
     def ADC(self, address):
         result = self.A + self.memory.cpu_read(address) + self.flag_C
         self.setNZ(result & 0xFF)
@@ -590,5 +590,12 @@ class CPU:
     def TYA(self, address):
         self.A = self.Y
         self.setNZ(self.Y)
+
+    # endregion
+
+    # region Illegal Instructions
+
+    def JAM(self, address):
+        print(f"Got JAM @ ${self.PC:04X}")
 
     # endregion
