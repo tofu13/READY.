@@ -12,6 +12,27 @@ def cpu() -> CPU:
     return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)), Bus())
 
 
+bcd_testcases = (
+    ["binary", "decimal"],
+    [
+        (0x00, 0),
+        (0x11, 11),
+        (0x42, 42),
+        (0x99, 99),
+    ],
+)
+
+
+@pytest.mark.parametrize(*bcd_testcases)
+def test_binary_to_decimal(binary, decimal):
+    assert CPU.binary_to_decimal(binary) == decimal
+
+
+@pytest.mark.parametrize(*bcd_testcases)
+def test_decimal_to_binary(binary, decimal):
+    assert CPU.decimal_to_binary(decimal) == binary
+
+
 def test_cpu_defaults(cpu):
     assert cpu.A == 0
     assert cpu.X == 0

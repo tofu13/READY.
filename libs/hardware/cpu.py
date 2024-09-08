@@ -113,6 +113,16 @@ class CPU:
         self.SP = (self.SP + 1) & 0xFF
         return self.memory[0x100 | self.SP]
 
+    @staticmethod
+    def binary_to_decimal(value):
+        hi, lo = value >> 4, value & 0x0F
+        return hi * 10 + lo
+
+    @staticmethod
+    def decimal_to_binary(value):
+        hi, lo = value // 10, value % 10
+        return hi * 16 + lo
+
     def clock(self) -> None:
         """
         Execute next instruction
