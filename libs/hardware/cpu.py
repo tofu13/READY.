@@ -329,13 +329,25 @@ class CPU:
 
     # region Legal Instructions
     def ADC(self, address):
-        result = self.A + self.memory.cpu_read(address) + self.flag_C
-        self.setNZ(result & 0xFF)
-        self.flag_C = result > 0xFF
-        # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.flag_V = bool(
-            (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-        )
+        value = self.memory.cpu_read(address)
+        if self.flag_D:
+            A = self.binary_to_decimal(self.A)
+            value = self.binary_to_decimal(value)
+            result = A + value + self.flag_C
+            self.setNZ(result & 0xFF)  # ?
+            self.flag_C = result > 99
+            self.flag_V = bool(
+                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
+            )  # ???
+            result = self.decimal_to_binary(result % 100)
+        else:
+            result = self.A + value + self.flag_C
+            self.setNZ(result & 0xFF)
+            self.flag_C = result > 0xFF
+            # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flag_V = bool(
+                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
+            )
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -551,19 +563,37 @@ class CPU:
         self.indent -= 1
 
     def SBC(self, address):
-        result = self.A - self.memory.cpu_read(address) - (1 - self.flag_C)
-        self.setNZ(result & 0xFF)
-        self.flag_C = result >= 0x00
-        # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.flag_V = bool(
-            (self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80
-        )
+        value = self.memory.cpu_read(address)
+        if self.flag_D:
+            A = self.binary_to_decimal(self.A)
+            value = self.binary_to_decimal(value)
+            result = A - value - (1 - self.flag_C)
+            self.setNZ(result & 0xFF)
+            self.flag_C = result > 0x00
+            # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flag_V = bool(
+                (self.A ^ result)
+                & ((0xFF - self.memory.cpu_read(address)) ^ result)
+                & 0x80
+            )
+            result = self.decimal_to_binary(result % 100)
+        else:
+            result = self.A - value - (1 - self.flag_C)
+            self.setNZ(result & 0xFF)
+            self.flag_C = result >= 0x00
+            # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flag_V = bool(
+                (self.A ^ result)
+                & ((0xFF - self.memory.cpu_read(address)) ^ result)
+                & 0x80
+            )
         self.A = result & 0xFF
 
     def SEC(self, address):
         self.flag_C = True
 
     def SED(self, address):
+        print("Decimal  mode on")
         self.flag_D = True
 
     def SEI(self, address):
