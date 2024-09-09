@@ -18,10 +18,13 @@ class CPU:
         "flag_C",
         "memory",
         "bus",
+        "addressing_methods",
         "indent",
         "_debug",
         "_cycles_left",
-        "addressing_methods",
+        "_fetching",
+        "_instruction",
+        "_mode",
     ]
 
     def __init__(
@@ -63,7 +66,9 @@ class CPU:
             "addressing_IND_Y": self.addressing_IND_Y,
         }
 
+        self._fetching = True
         self._cycles_left = 0
+        self._instruction = ""
 
     def __str__(self):
         st = "".join(
@@ -96,7 +101,7 @@ class CPU:
         :return: None
         """
         # Stack memory is at page 1 (0x100)
-        self.memory.cpu_write(0x100 | self.SP, value)
+        self.memory[0x100 | self.SP] = value
         self.SP = (self.SP - 1) & 0xFF
 
     def pop(self):
@@ -106,7 +111,17 @@ class CPU:
         """
         # Stack memory is at page 1 (0x100)
         self.SP = (self.SP + 1) & 0xFF
-        return self.memory.cpu_read(0x100 | self.SP)
+        return self.memory[0x100 | self.SP]
+
+    @staticmethod
+    def binary_to_decimal(value):
+        hi, lo = value >> 4, value & 0x0F
+        return hi * 10 + lo
+
+    @staticmethod
+    def decimal_to_binary(value):
+        hi, lo = value // 10, value % 10
+        return hi * 16 + lo
 
     def clock(self) -> None:
         """
@@ -117,25 +132,29 @@ class CPU:
             self._cycles_left -= 1
             return
 
-        try:
-            # Fetch next istruction (memory read at PC, advance PC)
+        if self._fetching:
             opcode = self.memory.cpu_read(self.PC)
+            # Fetch next istruction (memory read at PC, advance PC)
+            self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
+            if self._instruction:
+                self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
+                self._fetching = False
+                if not is_legal:
+                    print(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
+            else:
+                print(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
             self.PC += 1
-            instruction, mode, self._cycles_left = OPCODES[opcode]
-            address = self.addressing_methods[mode]()
-            getattr(self, instruction)(address)
-        except Exception as e:
-            print(
-                f"ERROR at ${self.PC:04X}"
-            )  # , {instruction} {mode} {address:04X}: {e}")
-            raise e
-        if False and 0x0800 <= self.PC <= 0xFFFF:
-            print(self)
+            return
+
+        else:
+            address = self.addressing_methods[self._mode]()
+            getattr(self, self._instruction)(address)
+            self._fetching = True
 
         # Handle nmi if any occured
         if self.bus.nmi:
-            print("nmi")
             self.nmi()
+
         # Handle irq if any occured
         elif self.bus.irq and not self.flag_I:
             self.irq()
@@ -308,15 +327,27 @@ class CPU:
 
     # endregion
 
-    # region Instructions
+    # region Legal Instructions
     def ADC(self, address):
-        result = self.A + self.memory.cpu_read(address) + self.flag_C
-        self.setNZ(result & 0xFF)
-        self.flag_C = result > 0xFF
-        # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.flag_V = bool(
-            (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-        )
+        value = self.memory.cpu_read(address)
+        if self.flag_D:
+            A = self.binary_to_decimal(self.A)
+            value = self.binary_to_decimal(value)
+            result = A + value + self.flag_C
+            self.setNZ(result & 0xFF)  # ?
+            self.flag_C = result > 99
+            self.flag_V = bool(
+                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
+            )  # ???
+            result = self.decimal_to_binary(result % 100)
+        else:
+            result = self.A + value + self.flag_C
+            self.setNZ(result & 0xFF)
+            self.flag_C = result > 0xFF
+            # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flag_V = bool(
+                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
+            )
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -532,19 +563,37 @@ class CPU:
         self.indent -= 1
 
     def SBC(self, address):
-        result = self.A - self.memory.cpu_read(address) - (1 - self.flag_C)
-        self.setNZ(result & 0xFF)
-        self.flag_C = result >= 0x00
-        # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.flag_V = bool(
-            (self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80
-        )
+        value = self.memory.cpu_read(address)
+        if self.flag_D:
+            A = self.binary_to_decimal(self.A)
+            value = self.binary_to_decimal(value)
+            result = A - value - (1 - self.flag_C)
+            self.setNZ(result & 0xFF)
+            self.flag_C = result > 0x00
+            # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flag_V = bool(
+                (self.A ^ result)
+                & ((0xFF - self.memory.cpu_read(address)) ^ result)
+                & 0x80
+            )
+            result = self.decimal_to_binary(result % 100)
+        else:
+            result = self.A - value - (1 - self.flag_C)
+            self.setNZ(result & 0xFF)
+            self.flag_C = result >= 0x00
+            # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+            self.flag_V = bool(
+                (self.A ^ result)
+                & ((0xFF - self.memory.cpu_read(address)) ^ result)
+                & 0x80
+            )
         self.A = result & 0xFF
 
     def SEC(self, address):
         self.flag_C = True
 
     def SED(self, address):
+        print("Decimal  mode on")
         self.flag_D = True
 
     def SEI(self, address):
@@ -581,5 +630,12 @@ class CPU:
     def TYA(self, address):
         self.A = self.Y
         self.setNZ(self.Y)
+
+    # endregion
+
+    # region Illegal Instructions
+
+    def JAM(self, address):
+        print(f"Got JAM @ ${self.PC:04X}")
 
     # endregion

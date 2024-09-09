@@ -141,7 +141,7 @@ def test_dump(memory_with_roms):
 @pytest.mark.parametrize(
     ("mem", "disassembled"),
     [
-        ([0x52], ("52         ??? ", 1)),
+        ([0x52], ("52         JAM ", 1)),
         ([0x18], ("18         CLC ", 1)),
         ([0xA9, 0x42], ("A9 42      LDA #$42", 2)),
         ([0xD0, 0xFB], ("D0 FB      BNE $BFFD", 2)),

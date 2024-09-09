@@ -12,6 +12,27 @@ def cpu() -> CPU:
     return CPU(Memory(roms=ROMS(config.TESTING_ROMS_FOLDER)), Bus())
 
 
+bcd_testcases = (
+    ["binary", "decimal"],
+    [
+        (0x00, 0),
+        (0x11, 11),
+        (0x42, 42),
+        (0x99, 99),
+    ],
+)
+
+
+@pytest.mark.parametrize(*bcd_testcases)
+def test_binary_to_decimal(binary, decimal):
+    assert CPU.binary_to_decimal(binary) == decimal
+
+
+@pytest.mark.parametrize(*bcd_testcases)
+def test_decimal_to_binary(binary, decimal):
+    assert CPU.decimal_to_binary(decimal) == binary
+
+
 def test_cpu_defaults(cpu):
     assert cpu.A == 0
     assert cpu.X == 0
@@ -151,3 +172,47 @@ def test_cpu_addressing_methods(cpu, method, expected, advance):
 
     assert getattr(cpu, f"addressing_{method}")() == expected
     assert cpu.PC == 0xC000 + advance
+
+
+@pytest.mark.parametrize(
+    ["carry_in", "accumulator", "operand", "result", "C", "Z"],
+    [
+        (False, 0x00, 0x00, 0x00, False, True),
+        (True, 0x00, 0x00, 0x01, False, False),
+        (False, 0x48, 0x13, 0x61, False, False),
+        (True, 0x58, 0x46, 0x5, True, False),
+        (False, 0x81, 0x92, 0x73, True, False),
+    ],
+)
+def test_decimal_ADC(cpu, carry_in, accumulator, operand, result, C, Z):
+    cpu.flag_D = True
+    cpu.flag_C = carry_in
+    cpu.A = accumulator
+    cpu.memory[0x02] = operand
+    cpu.ADC(0x02)
+
+    assert cpu.A == result
+    assert cpu.flag_C is C
+    assert cpu.flag_Z is Z
+
+
+@pytest.mark.parametrize(
+    ["carry_in", "accumulator", "operand", "result", "C", "Z"],
+    [
+        (True, 0x00, 0x00, 0x00, False, True),
+        (True, 0x46, 0x12, 0x34, True, False),
+        (True, 0x40, 0x13, 0x27, True, False),
+        (False, 0x32, 0x2, 0x29, True, False),
+        (True, 0x12, 0x21, 0x91, False, False),
+    ],
+)
+def test_decimal_SBC(cpu, carry_in, accumulator, operand, result, C, Z):
+    cpu.flag_D = True
+    cpu.flag_C = carry_in
+    cpu.A = accumulator
+    cpu.memory[0x02] = operand
+    cpu.SBC(0x02)
+
+    assert cpu.A == result
+    assert cpu.flag_C is C
+    assert cpu.flag_Z is Z
