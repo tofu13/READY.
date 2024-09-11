@@ -39,7 +39,7 @@ python READY..py
 python READY..py --help
 ```
 ```
-usage: READY..py [-h] [-s {raster,virtual,fast}] [-d DISK] [-c] [-t LOADSTATE] [-ar] [-at AUTOTYPE]
+usage: READY..py [-h] [-s {raster,virtual,fast}] [-d DISK] [-c] [-t LOADSTATE] [-ar] [-at AUTOTYPE] [-ds DISPLAY_SCALE]
 
 An educational C=64 emulator.
 
@@ -47,13 +47,15 @@ options:
   -h, --help            show this help message and exit
   -s {raster,virtual,fast}, --screen {raster,virtual,fast}
                         Screen driver (default: raster)
-  -d DISK, --disk DISK  Disk (t64)
-  -c, --console         Show screen in console (chars only)
+  -d DISK, --disk DISK  Disk (t64) (default: None)
+  -c, --console         Show screen in console (chars only) (default: False)
   -t LOADSTATE, --loadstate LOADSTATE
-                        Load state from file
-  -ar, --autorun        Autorun * from disk
+                        Load state from file (default: False)
+  -ar, --autorun        Autorun * from disk (default: False)
   -at AUTOTYPE, --autotype AUTOTYPE
-                        Autotype command. Use | for return key
+                        Autotype command. Use | for return key (default: None)
+  -ds DISPLAY_SCALE, --display-scale DISPLAY_SCALE
+                        Display scale factor (default: 2.0)
 ```
 
 ### Configuration

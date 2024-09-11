@@ -4,18 +4,19 @@ import config
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description="An educational C=64 emulator.")
+    parser = argparse.ArgumentParser(
+        description="An educational C=64 emulator.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument(
         "-s",
         "--screen",
         action="store",
-        help=f"Screen driver (default: {config.SCREEN})",
+        help="Screen driver",
         default=config.SCREEN,
         choices=["raster", "virtual", "fast"],
     )
-    parser.add_argument(
-        "-d", "--disk", action="store", help="Disk (t64)", default="", type=str
-    )
+    parser.add_argument("-d", "--disk", action="store", help="Disk (t64)", type=str)
     parser.add_argument(
         "-c",
         "--console",
@@ -38,5 +39,13 @@ def create_parser():
         "--autotype",
         action="store",
         help="Autotype command. Use | for return key",
+    )
+    parser.add_argument(
+        "-ds",
+        "--display-scale",
+        type=float,
+        action="store",
+        default=2.0,
+        help="Display scale factor",
     )
     return parser

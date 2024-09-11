@@ -7,6 +7,7 @@ import pyperclip
 
 from libs import hardware
 from libs.hardware.constants import (
+    ASPECT_RATIO,
     CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER,
     CLOCKS_PER_CONSOLE_REFRESH,
     CLOCKS_PER_EVENT_SERVING,
@@ -92,7 +93,7 @@ class Machine(PatchMixin):
         "signal",
         "nmi",
         "input_buffer",
-        "CAPTION",
+        "caption",
         "paste_buffer",
         "patches",
         "serial_device_number",
@@ -108,6 +109,7 @@ class Machine(PatchMixin):
         "display",
         "pygame_clock",
         "outfile",
+        "display_size",
     ]
 
     def __init__(
@@ -121,6 +123,7 @@ class Machine(PatchMixin):
         diskdrive=None,
         console=False,
         autotype="",
+        display_scale=2.0,
     ):
         self.memory = memory
         self.bus = bus
@@ -146,9 +149,11 @@ class Machine(PatchMixin):
         self.input_buffer = ""
         self._clock_counter = 0
 
-        self.CAPTION = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
-
-        # pygame.display.set_caption(self.CAPTION)
+        self.caption = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
+        self.display_size = (
+            REAL_VIDEO_SIZE[0] * display_scale,
+            REAL_VIDEO_SIZE[1] * display_scale,
+        )
 
         self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
@@ -184,7 +189,7 @@ class Machine(PatchMixin):
         """
         if not isinstance(self.screen, hardware.screen.VirtualScreen):
             self.display = pygame.display.set_mode(
-                REAL_VIDEO_SIZE, depth=8, flags=pygame.SCALED
+                self.display_size, depth=8, flags=pygame.RESIZABLE
             )
             pygame.event.set_blocked(None)
             pygame.event.set_allowed(
@@ -193,6 +198,7 @@ class Machine(PatchMixin):
                     pygame.WINDOWCLOSE,
                     pygame.KEYDOWN,
                     pygame.KEYUP,
+                    pygame.VIDEORESIZE,
                 ]
             )
             self.pygame_clock = pygame.time.Clock()
@@ -255,6 +261,7 @@ class Machine(PatchMixin):
         # Display complete frame
         if frame is not None:
             frame = pygame.surfarray.make_surface(frame)
+            frame = pygame.transform.scale(frame, self.display_size)
             frame.set_palette(PALETTE)
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
@@ -287,7 +294,7 @@ class Machine(PatchMixin):
             _perf_timer = time.perf_counter()
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
-                self.CAPTION.format(
+                self.caption.format(
                     self.pygame_clock.get_fps(),
                     CLOCKS_PER_PERFORMANCE_REFRESH
                     / 10000
@@ -360,6 +367,13 @@ class Machine(PatchMixin):
                     self.bus.nmi_clear("restore_key")
                 else:
                     self.keys_pressed.discard(event.key)
+
+            elif event.type == pygame.VIDEORESIZE:
+                h, w = event.size
+                self.display_size = (
+                    min(h, w * ASPECT_RATIO),
+                    min(w, h / ASPECT_RATIO),
+                )
 
             elif event.type == pygame.WINDOWCLOSE:
                 pygame.quit()
