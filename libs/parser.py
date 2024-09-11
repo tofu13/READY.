@@ -39,4 +39,12 @@ def create_parser():
         action="store",
         help="Autotype command. Use | for return key",
     )
+    parser.add_argument(
+        "-ds",
+        "--display-scale",
+        type=float,
+        action="store",
+        default=2.0,
+        help="Display scale factor, default 2.0",
+    )
     return parser

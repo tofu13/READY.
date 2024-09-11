@@ -46,6 +46,7 @@ def main():
             diskdrive=diskdrive,
             console=args.console,
             autotype=autotype,
+            display_scale=args.display_scale,
         )
 
         if args.console:
