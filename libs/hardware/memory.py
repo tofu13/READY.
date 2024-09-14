@@ -146,7 +146,7 @@ class Memory:
 
         match mode:
             case "addressing_IMP":
-                arg = ""
+                arg = "A" if instruction in ("ROL", "ROR") else ""
                 steps = 1
             case "addressing_ABS":
                 arg = (
