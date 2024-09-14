@@ -116,8 +116,9 @@ class Memory:
         step = 0x28 if as_chars else 0x10
 
         out = ""
+        pointer = start
         for row in range(start, end, step):
-            data = [self.cpu_read(i) for i in range(start, end)]
+            data = [self.cpu_read(i) for i in range(pointer, pointer + step)]
             data_hex = [
                 f"{'' if i % 4 else ' '}{byte:02X} " for i, byte in enumerate(data)
             ]
@@ -128,6 +129,7 @@ class Memory:
                 out += f"{''.join(data_char)}\n"
             else:
                 out += f"{''.join(data_hex)}  {''.join(data_char)}\n"
+            pointer += step
         return out
 
     def disassemble(self, address) -> tuple[str, int]:
