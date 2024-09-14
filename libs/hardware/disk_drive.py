@@ -1,5 +1,7 @@
 import d64
 
+from libs.hardware.constants import PETSCII
+
 
 class Drive:
     image_file: str
@@ -21,8 +23,8 @@ class Drive:
                 buffer.append(0x00)  # 0 fixed
                 buffer.append(0x12)  # Reverse
                 buffer.append(0x22)  # "
-                buffer.extend([0x20] * (16 - len(image.name)))  # Pad
                 buffer.extend(image.name)  # Disk name
+                buffer.extend([0x20] * (16 - len(image.name)))  # Pad
                 buffer.append(0x22)  # "
                 buffer.append(0x20)
                 buffer.extend(image.id)
@@ -31,17 +33,25 @@ class Drive:
                 buffer.append(image.dos_type)
                 buffer.append(0x00)
 
-                for entry in image.glob(b"*"):
+                for dos_path in image.glob(b"*"):
                     pointer += 28
                     buffer.append(pointer % 256)
                     buffer.append(pointer // 256)
-                    buffer.append(entry.size_blocks % 256)
-                    buffer.append(entry.size_blocks // 256)
-                    buffer.extend([0x20] * 3)
+                    buffer.append(dos_path.size_blocks % 256)
+                    buffer.append(dos_path.size_blocks // 256)
+                    buffer.extend([0x20] * (4 - len(str(dos_path.size_blocks))))
                     buffer.append(0x22)  # "
-                    buffer.extend(entry.name)
+                    buffer.extend(dos_path.name)
                     buffer.append(0x22)  # "
-                    buffer.extend([0x20] * (18 - len(entry.name)))  # Pad
+                    buffer.extend([0x20] * (16 - len(dos_path.name)))  # Pad
+                    buffer.append(0x20 if dos_path.entry.closed else 0x2A)
+                    buffer.extend(
+                        bytes(
+                            PETSCII[char.lower()] for char in dos_path.entry.file_type
+                        )
+                    )
+                    if dos_path.entry.protected:
+                        buffer.append(0x3C)  # <
                     buffer.append(0x00)  # End of line
 
                 pointer += 0x1E
