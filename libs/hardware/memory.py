@@ -6,7 +6,9 @@ from libs.hardware.constants import OPCODES, SCREEN_CHARCODE
 class Memory:
     __slots__ = [
         "ram",
-        "roms",
+        "rom_basic",
+        "rom_kernal",
+        "rom_chargen",
         "read_watchers",
         "write_watchers",
         "io_port",
@@ -21,7 +23,14 @@ class Memory:
         to/from RAM, ROMS, I/O.
         """
         self.ram = ram if ram is not None else bytearray(65536)
-        self.roms = roms.contents if roms is not None else {}
+        if roms is None:
+            self.rom_basic = None
+            self.rom_kernal = None
+            self.rom_chargen = None
+        else:
+            self.rom_basic = roms.contents["basic"]
+            self.rom_kernal = roms.contents["kernal"]
+            self.rom_chargen = roms.contents["chargen"]
 
         self.read_watchers = []
         self.write_watchers = []
@@ -39,12 +48,12 @@ class Memory:
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
         if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
-            return self.roms["basic"][address - 0xA000]
+            return self.rom_basic[address - 0xA000]
         elif 0xE000 <= address <= 0xFFFF and self.hiram_port:
-            return self.roms["kernal"][address - 0xE000]
+            return self.rom_kernal[address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
             if not self.io_port and (self.hiram_port or self.loram_port):
-                return self.roms["chargen"][address - 0xD000]
+                return self.rom_chargen[address - 0xD000]
             else:
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
@@ -78,7 +87,7 @@ class Memory:
 
         # CHARGEN ROM is visible in banks 0 and 2 at $1000-1FFF
         if self.vic_memory_bank in {0x0000, 0x8000} and 0x1000 <= address < 0x2000:
-            return self.roms["chargen"][address - 0x1000]
+            return self.rom_chargen[address - 0x1000]
 
         return self[self.vic_memory_bank + address]
 
@@ -88,9 +97,9 @@ class Memory:
         Return big endian word (16-bit address)
         """
         if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
-            lo, hi = self.roms["basic"][address - 0xA000 : address - 0xA000 + 2]
+            lo, hi = self.rom_basic[address - 0xA000 : address - 0xA000 + 2]
         elif 0xE000 <= address <= 0xFFFF and self.hiram_port:
-            lo, hi = self.roms["kernal"][address - 0xE000 : address - 0xE000 + 2]
+            lo, hi = self.rom_kernal[address - 0xE000 : address - 0xE000 + 2]
         else:
             lo, hi = self.ram[address : address + 2]
         return hi * 256 + lo
