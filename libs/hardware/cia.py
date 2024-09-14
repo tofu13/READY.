@@ -18,6 +18,7 @@ class CIA:
         "timer_B_underflow",
         "timer_B_restart_after_underflow",
         "tod_zero",
+        "interrupt_occured",
     ]
 
     def __init__(self, memory, bus):
@@ -39,6 +40,7 @@ class CIA:
         self.timer_B_restart_after_underflow: bool = False
 
         self.tod_zero = perf_counter()
+        self.interrupt_occured = False
 
     def clock(self):
         # see note on derived classes
@@ -46,6 +48,7 @@ class CIA:
             self.timer_A -= 1
             if self.timer_A < 0:
                 self.timer_A_underflow = True
+                self.interrupt_occured = True
                 if self.timer_A_restart_after_underflow:
                     self.timer_A_load()
                 else:
@@ -70,10 +73,6 @@ class CIA:
     @property
     def timer_B_hi(self):
         return self.timer_B // 256
-
-    @property
-    def irq_occured(self) -> bool:
-        return self.timer_A_underflow or self.timer_B_underflow  # TODO
 
     @property
     def tod(self) -> tuple:
@@ -114,7 +113,7 @@ class CIA_A(CIA):
         # Note: should use super(), but it's quite slow
         CIA.clock(self)
 
-        if self.irq_occured:
+        if self.interrupt_occured:
             self.bus.irq_set("timer_A")
 
     def get_registers(self, address):
@@ -181,7 +180,7 @@ class CIA_A(CIA):
                             0,  # TODO
                             0,
                             0,
-                            self.irq_occured,
+                            self.interrupt_occured,
                         ),
                         BITVALUES,
                     )
@@ -189,6 +188,7 @@ class CIA_A(CIA):
                 # Flags will be cleared after reading the register!
                 self.timer_A_underflow = False
                 self.timer_B_underflow = False
+                self.interrupt_occured = False
                 self.bus.irq_clear("timer_A")
 
                 return result
