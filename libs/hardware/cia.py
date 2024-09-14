@@ -92,7 +92,9 @@ class CIA:
 
 
 class CIA_A(CIA):
-    __slots__ = ["pipe", "keys_pressed"]
+    __slots__ = [
+        "keys_pressed",
+    ]
 
     def __init__(self, memory, bus):
         super().__init__(memory, bus)
@@ -105,23 +107,12 @@ class CIA_A(CIA):
     def clock(self, keys_pressed: set):
         """
         Execute CIA stuff
-        :return: signals [irq, nmi, reset, quit]
         """
         # Save keys pressed
         self.keys_pressed = keys_pressed
 
-        # super() is very slow :(
-        # CIA.clock(self) is slow
-        # Since practicality beats purity, code duplication here
-        if self.timer_A_start:
-            self.timer_A -= 1
-            if self.timer_A < 0:
-                self.timer_A_underflow = True
-                if self.timer_A_restart_after_underflow:
-                    self.timer_A_load()
-                else:
-                    self.timer_A = 0  # Unsure which value to set
-                    self.timer_A_start = False
+        # Note: should use super(), but it's quite slow
+        CIA.clock(self)
 
         if self.irq_occured:
             self.bus.irq_set("timer_A")
