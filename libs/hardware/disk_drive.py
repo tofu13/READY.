@@ -7,9 +7,6 @@ class Drive:
     def set_imagefile(self, image_file: str):
         self.image_file = image_file
 
-    def set_filename(self, filename: str):
-        self.filename = filename
-
     def read(self, filename: bytes):
         if filename == b"$":
             buffer = bytearray(0)
@@ -17,7 +14,6 @@ class Drive:
             buffer.append(0)  # hi address - ignored
             pointer = 0x0801
             with d64.DiskImage(self.image_file) as image:
-                print(image.name)
                 pointer += 0x1F
                 buffer.append(pointer % 256)
                 buffer.append(pointer // 256)
