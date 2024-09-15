@@ -381,6 +381,8 @@ class RasterScreen(VIC_II):
                     self.color_buffer = self.memory[
                         color_pointer : color_pointer + 40
                     ]  # Direct read from fixed color ram
+                    # Steal cycles from CPU
+                    self.bus.require_memory_bus(cycles=40)
 
                 # Hires
                 if self.bitmap_mode:

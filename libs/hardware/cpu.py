@@ -127,6 +127,9 @@ class CPU:
         """
         Execute next instruction
         """
+        if self.bus.memory_bus_required():
+            return
+
         if self._cycles_left > 0:
             # Still working on last instruction
             self._cycles_left -= 1

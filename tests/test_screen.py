@@ -265,3 +265,30 @@ def test_VIC_II_raster_text_mode(vic_ii_raster):
     while frame is None:
         frame, irq = vic_ii_raster.clock(0)
     assert frame.shape == VIDEO_SIZE
+
+
+def test_VIC_II_raster_bad_lines_occur(vic_ii_raster):
+    # Assert buffers unthouched
+    assert vic_ii_raster.char_buffer == bytearray([0x01] * 40)
+    assert vic_ii_raster.color_buffer == bytearray([0x00] * 40)
+
+    vic_ii_raster.raster_x = 24
+    vic_ii_raster.raster_y = 48
+    vic_ii_raster._frame_on = True
+
+    vic_ii_raster.clock(0)
+
+    assert vic_ii_raster.char_buffer == bytearray([0x00] * 40)
+    assert vic_ii_raster.color_buffer == bytearray([0x00] * 40)
+
+
+def test_VIC_II_raster_bad_lines_lock_CPU(vic_ii_raster):
+    vic_ii_raster.raster_x = 24
+    vic_ii_raster.raster_y = 48
+    vic_ii_raster._frame_on = True
+
+    with mock.patch("libs.hardware.bus.Bus") as irq_mock:
+        vic_ii_raster.bus = irq_mock
+        irq_mock.require_memory_bus.assert_not_called()
+        vic_ii_raster.clock(0)
+        irq_mock.require_memory_bus.assert_called_with(cycles=40)
