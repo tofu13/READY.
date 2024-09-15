@@ -51,6 +51,7 @@ class VIC_II:
 
     __slots__ = [
         "memory",
+        "bus",
         "irq_raster_line_lsb",
         "irq_raster_line_msb",
         "irq_raster_enabled",
@@ -93,8 +94,9 @@ class VIC_II:
         "_cached_last_column",
     ]
 
-    def __init__(self, memory):
+    def __init__(self, memory, bus):
         self.memory = memory
+        self.bus = bus
 
         # Registers
         self.irq_raster_line_lsb = 0
@@ -222,6 +224,8 @@ class VIC_II:
                     self.irq_sprite_sprite_collision_occured = False
                 if value & 0b1000:
                     self.irq_lightpen_occured = False
+                if value & 0b1111:
+                    self.bus.irq_clear("VIC-II")
             case 0x1A:
                 self.irq_raster_enabled = bool(value & 0b0001)
                 self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
@@ -324,8 +328,8 @@ class RasterScreen(VIC_II):
         "_frame_on",
     ]
 
-    def __init__(self, memory):
-        super().__init__(memory)
+    def __init__(self, memory, bus):
+        super().__init__(memory, bus)
 
         self.raster_y = 0
         self.raster_x: int = 0
@@ -481,7 +485,8 @@ class RasterScreen(VIC_II):
             self.raster_x = 0
             self.raster_y += 1
             # FIXME; very rough raster irq
-            self.irq_raster_occured = self.irq_raster_line == self.raster_y
+            if self.irq_raster_enabled and self.irq_raster_line == self.raster_y:
+                self.bus.irq_set("VIC-II")
             if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
                 self._frame_on = self.DEN

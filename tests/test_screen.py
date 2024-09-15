@@ -1,7 +1,9 @@
 import pytest
+from mock import mock
 
 import config
 from libs.hardware import roms
+from libs.hardware.bus import Bus
 from libs.hardware.constants import VIDEO_SIZE
 from libs.hardware.memory import Memory
 from libs.hardware.screen import VIC_II, RasterScreen
@@ -16,13 +18,18 @@ def memory():
 
 
 @pytest.fixture()
-def vic_ii(memory):
-    return VIC_II(memory)
+def bus():
+    return Bus()
 
 
 @pytest.fixture()
-def vic_ii_raster(memory):
-    return RasterScreen(memory)
+def vic_ii(memory, bus):
+    return VIC_II(memory, bus)
+
+
+@pytest.fixture()
+def vic_ii_raster(memory, bus):
+    return RasterScreen(memory, bus)
 
 
 def test_vic_ii(vic_ii):
@@ -200,40 +207,32 @@ def test_VIC_II_irq(memory, vic_ii):
 
 def test_VIC_II_raster_irq_occurs(vic_ii_raster):
     # Set raster line
-    vic_ii_raster.write_registers(0xD012, 0x10)
-    assert vic_ii_raster.irq_raster_line == 0x010
+    vic_ii_raster.write_registers(0xD012, 0x002)
+    assert vic_ii_raster.irq_raster_line == 0x002
 
     vic_ii_raster.write_registers(0xD011, 0x80)
-    assert vic_ii_raster.irq_raster_line == 0x110
+    assert vic_ii_raster.irq_raster_line == 0x102
 
     vic_ii_raster.write_registers(0xD011, 0x00)
-    assert vic_ii_raster.irq_raster_line == 0x010
+    assert vic_ii_raster.irq_raster_line == 0x002
 
-    assert vic_ii_raster.irq_raster_occured is False
-    while not vic_ii_raster.irq_raster_occured:
-        _, irq_line = vic_ii_raster.clock(0)
+    # Enable raster interrupts
+    vic_ii_raster.write_registers(0xD01A, 0b1111)
 
-    # Irq disabled -> irq signal is false
-    assert irq_line is False
-    assert vic_ii_raster.read_registers(0xD019) & 0b0001
-    assert vic_ii_raster.any_irq_occured
+    with mock.patch("libs.hardware.bus.Bus") as irq_mock:
+        vic_ii_raster.bus = irq_mock
+        irq_mock.irq_set.assert_not_called()
 
-    # Ack irq
-    vic_ii_raster.write_registers(0xD019, 0b0001)
-    assert vic_ii_raster.irq_raster_occured is False
-    assert vic_ii_raster.any_irq_occured is False
+        for i in range(63 * 2 - 1):  # 1 clock before IRQ
+            vic_ii_raster.clock(0)
+        irq_mock.irq_set.assert_not_called()
+        vic_ii_raster.clock(0)  # IRQ here
+        irq_mock.irq_set.assert_called()
 
-
-def test_VIC_II_raster_irq_line(vic_ii_raster):
-    vic_ii_raster.write_registers(0xD012, 0x10)
-    assert vic_ii_raster.irq_raster_line == 0x010
-
-    # Enable raster irq
-    vic_ii_raster.write_registers(0xD01A, 0x01)
-    while not vic_ii_raster.irq_raster_occured:
-        _, irq_line = vic_ii_raster.clock(0)
-    # irq has been signalled
-    assert irq_line is True
+        # Ack irq
+        irq_mock.irq_clear.assert_not_called()
+        vic_ii_raster.write_registers(0xD019, 0b0001)
+        irq_mock.irq_clear.assert_called()
 
 
 def test_VIC_II_raster_clock(vic_ii_raster):

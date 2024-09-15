@@ -21,11 +21,11 @@ def main():
         bus = hardware.bus.Bus()
         cpu = hardware.cpu.CPU(memory, bus)
         if args.screen == "raster":
-            screen = hardware.screen.RasterScreen(memory)
+            screen = hardware.screen.RasterScreen(memory, bus)
         elif args.screen == "virtual":
-            screen = hardware.screen.VirtualScreen(memory)
+            screen = hardware.screen.VirtualScreen(memory, bus)
         elif args.screen == "fast":
-            screen = hardware.screen.FastScreen(memory)
+            screen = hardware.screen.FastScreen(memory, bus)
         else:
             raise argparse.ArgumentError(None, f"Invalid screen driver {args.screen}")
 
