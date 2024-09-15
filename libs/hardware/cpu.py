@@ -151,6 +151,8 @@ class CPU:
             getattr(self, self._instruction)(address)
             self._fetching = True
 
+        # if 0x000 <= self.PC <= 0x800:
+        #    logging.info(".C:%s", self)
         # Handle nmi if any occured
         if self.bus.nmi:
             self.nmi()

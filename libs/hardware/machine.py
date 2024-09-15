@@ -1,3 +1,4 @@
+import logging
 import pickle
 import time
 from typing import Optional
@@ -180,6 +181,15 @@ class Machine(PatchMixin):
 
         self.breakpoints = set()
         self.tracepoints = set()
+
+        logging.basicConfig(
+            filename="READY..log",
+            encoding="utf-8",
+            filemode="w",
+            level=logging.INFO,
+            format="%(message)s",
+            style="%",
+        )
 
         self.post_init()
 

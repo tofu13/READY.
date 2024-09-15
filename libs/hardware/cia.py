@@ -18,6 +18,7 @@ class CIA:
         "timer_B_underflow",
         "timer_B_restart_after_underflow",
         "tod_zero",
+        "interrupt_occured",
     ]
 
     def __init__(self, memory, bus):
@@ -39,6 +40,7 @@ class CIA:
         self.timer_B_restart_after_underflow: bool = False
 
         self.tod_zero = perf_counter()
+        self.interrupt_occured = False
 
     def clock(self):
         # see note on derived classes
@@ -46,6 +48,7 @@ class CIA:
             self.timer_A -= 1
             if self.timer_A < 0:
                 self.timer_A_underflow = True
+                self.interrupt_occured = True
                 if self.timer_A_restart_after_underflow:
                     self.timer_A_load()
                 else:
@@ -72,10 +75,6 @@ class CIA:
         return self.timer_B // 256
 
     @property
-    def irq_occured(self) -> bool:
-        return self.timer_A_underflow or self.timer_B_underflow  # TODO
-
-    @property
     def tod(self) -> tuple:
         """
         TOD value
@@ -92,7 +91,9 @@ class CIA:
 
 
 class CIA_A(CIA):
-    __slots__ = ["pipe", "keys_pressed"]
+    __slots__ = [
+        "keys_pressed",
+    ]
 
     def __init__(self, memory, bus):
         super().__init__(memory, bus)
@@ -105,25 +106,14 @@ class CIA_A(CIA):
     def clock(self, keys_pressed: set):
         """
         Execute CIA stuff
-        :return: signals [irq, nmi, reset, quit]
         """
         # Save keys pressed
         self.keys_pressed = keys_pressed
 
-        # super() is very slow :(
-        # CIA.clock(self) is slow
-        # Since practicality beats purity, code duplication here
-        if self.timer_A_start:
-            self.timer_A -= 1
-            if self.timer_A < 0:
-                self.timer_A_underflow = True
-                if self.timer_A_restart_after_underflow:
-                    self.timer_A_load()
-                else:
-                    self.timer_A = 0  # Unsure which value to set
-                    self.timer_A_start = False
+        # Note: should use super(), but it's quite slow
+        CIA.clock(self)
 
-        if self.irq_occured:
+        if self.interrupt_occured:
             self.bus.irq_set("timer_A")
 
     def get_registers(self, address):
@@ -190,7 +180,7 @@ class CIA_A(CIA):
                             0,  # TODO
                             0,
                             0,
-                            self.irq_occured,
+                            self.interrupt_occured,
                         ),
                         BITVALUES,
                     )
@@ -198,6 +188,7 @@ class CIA_A(CIA):
                 # Flags will be cleared after reading the register!
                 self.timer_A_underflow = False
                 self.timer_B_underflow = False
+                self.interrupt_occured = False
                 self.bus.irq_clear("timer_A")
 
                 return result

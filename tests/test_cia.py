@@ -48,11 +48,11 @@ def test_CIA_timer_A(cia):
     assert cia.timer_A_hi == 0x00
 
     cia.clock()
-    assert cia.irq_occured is False
+    assert cia.interrupt_occured is False
 
     cia.timer_A_restart_after_underflow = True
     cia.clock()
-    assert cia.irq_occured is True
+    assert cia.interrupt_occured is True
     assert cia.timer_A == 0x0002
 
     cia.timer_A_restart_after_underflow = False

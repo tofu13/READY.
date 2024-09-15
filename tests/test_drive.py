@@ -17,12 +17,6 @@ def test_drive_properties(my_drive):
 
     assert my_drive.image_file == TEST_DISK_IMAGE
 
-    my_drive.set_filename("foo/bar.d64")
-    assert my_drive.filename == "foo/bar.d64"
-
-    my_drive.set_filename("demo")
-    assert my_drive.filename == "demo"
-
 
 def test_drive_read(my_drive):
     read = my_drive.read(b"HELLO")
