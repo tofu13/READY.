@@ -243,14 +243,14 @@ def test_VIC_II_raster_clock(vic_ii_raster):
     assert vic_ii_raster.raster_y == 0
 
     # To the next line
-    for _ in range(63):
+    for _ in range(62):
         vic_ii_raster.clock(0)
 
     assert vic_ii_raster.raster_x == 0
     assert vic_ii_raster.raster_y == 1
 
     # To the end of frame (311 lines missing, 1 clock remaining)
-    for _ in range(64 * 311 - 1):
+    for _ in range(63 * 311 - 1):
         vic_ii_raster.clock(0)
     # End of frame now
     frame, irq = vic_ii_raster.clock(0)

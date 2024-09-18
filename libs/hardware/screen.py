@@ -477,7 +477,7 @@ class RasterScreen(VIC_II):
                 )
 
         self.raster_x += 8
-        if self.raster_x > SCAN_AREA_H:
+        if self.raster_x >= SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
             # FIXME; very rough raster irq
