@@ -352,6 +352,69 @@ class RasterScreen(VIC_II):
 
         self.frame = bytearray([0] * VIDEO_SIZE_H * VIDEO_SIZE_V)
 
+    def pixelate_text_monochrome(self, char_color: int, pixels: int):
+        bgcolor = self.background_color
+        return (
+            # If one its foreground color
+            char_color
+            # For each bit == pixel
+            if px
+            # If zero its background color
+            else bgcolor
+            for px in BYTEBOOLEANS[pixels]
+        )
+
+    def pixelate_text_multicolor(self, char_color: int, pixels: int) -> tuple:
+        # TIL multicolor char mode can mix
+        # hires chars based in their color MSB
+        # (which limits their color space)
+        p0, p1, p2, p3 = BYTEPAIRS[pixels]
+        self._cached_multicolor_pack[3] = char_color & 0x07
+        return (
+            # Pick 1 color, fill 2 pixels
+            self._cached_multicolor_pack[p0],
+            self._cached_multicolor_pack[p0],
+            self._cached_multicolor_pack[p1],
+            self._cached_multicolor_pack[p1],
+            self._cached_multicolor_pack[p2],
+            self._cached_multicolor_pack[p2],
+            self._cached_multicolor_pack[p3],
+            self._cached_multicolor_pack[p3],
+        )
+
+    def pixelate_bitmap_multicolor(self, char_color: int, colors, pixels):
+        color_pack = (
+            self.background_color,
+            colors >> 4,
+            colors & 0x0F,
+            char_color,
+        )
+        p0, p1, p2, p3 = BYTEPAIRS[pixels]
+        # Pick 1 color, fill 2 pixels
+        return (
+            color_pack[p0],
+            color_pack[p0],
+            color_pack[p1],
+            color_pack[p1],
+            color_pack[p2],
+            color_pack[p2],
+            color_pack[p3],
+            color_pack[p3],
+        )
+
+    def pixelate_bitmap_monochrome(self, colors: int, pixels: int):
+        hi_color = colors >> 4
+        lo_color = colors & 0x0F
+        return (
+            # If one the upper half of charcode (used as color)
+            hi_color
+            # For each bit == pixel
+            if px
+            # If zero the lower half
+            else lo_color
+            for px in BYTEBOOLEANS[pixels]
+        )
+
     def clock(self, clock_counter: int):
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
@@ -395,36 +458,13 @@ class RasterScreen(VIC_II):
                     # Fixme: misleading variable name
                     colors = self.char_buffer[matrix_column]
                     if self.multicolor_mode:
-                        char_color = self.color_buffer[matrix_column]
-                        color_pack = (
-                            self.background_color,
-                            colors >> 4,
-                            colors & 0x0F,
-                            char_color,
-                        )
-                        p0, p1, p2, p3 = BYTEPAIRS[pixels]
-                        # Pick 1 color, fill 2 pixels
-                        self.frame[pixel_range] = (
-                            color_pack[p0],
-                            color_pack[p0],
-                            color_pack[p1],
-                            color_pack[p1],
-                            color_pack[p2],
-                            color_pack[p2],
-                            color_pack[p3],
-                            color_pack[p3],
+                        self.frame[pixel_range] = self.pixelate_bitmap_multicolor(
+                            self.color_buffer[matrix_column], colors, pixels
                         )
                     else:
-                        self.frame[pixel_range] = (
-                            # If one the upper half of charcode (used as color)
-                            colors >> 4
-                            # For each bit == pixel
-                            if px
-                            # If zero the lower half
-                            else colors & 0x0F
-                            for px in BYTEBOOLEANS[pixels]
+                        self.frame[pixel_range] = self.pixelate_bitmap_monochrome(
+                            colors, pixels
                         )
-
                 # Text
                 else:
                     char_color = self.color_buffer[matrix_column]
@@ -435,33 +475,14 @@ class RasterScreen(VIC_II):
                     )
 
                     if self.multicolor_mode and char_color & 0x08:
-                        # TIL multicolor char mode can mix
-                        # hires chars based in their color MSB
-                        # (which limits their color space)
-                        p0, p1, p2, p3 = BYTEPAIRS[pixels]
-                        self._cached_multicolor_pack[3] = char_color & 0x07
-                        self.frame[pixel_range] = (
-                            # Pick 1 color, fill 2 pixels
-                            # (not nice code but pretty fast)
-                            self._cached_multicolor_pack[p0],
-                            self._cached_multicolor_pack[p0],
-                            self._cached_multicolor_pack[p1],
-                            self._cached_multicolor_pack[p1],
-                            self._cached_multicolor_pack[p2],
-                            self._cached_multicolor_pack[p2],
-                            self._cached_multicolor_pack[p3],
-                            self._cached_multicolor_pack[p3],
+                        self.frame[pixel_range] = self.pixelate_text_multicolor(
+                            char_color, pixels
                         )
                     else:
-                        self.frame[pixel_range] = (
-                            # If one its foreground color
-                            char_color
-                            # For each bit == pixel
-                            if px
-                            # If zero its background color
-                            else self.background_color
-                            for px in BYTEBOOLEANS[pixels]
+                        self.frame[pixel_range] = self.pixelate_text_monochrome(
+                            char_color, pixels
                         )
+
                 # Empty pixels at left when X_SCROLL
                 # TODO: Empty pixels shall be fetched as zeros when scrolled,
                 # not set explicitily

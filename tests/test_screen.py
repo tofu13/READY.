@@ -292,3 +292,77 @@ def test_VIC_II_raster_bad_lines_lock_CPU(vic_ii_raster):
         irq_mock.require_memory_bus.assert_not_called()
         vic_ii_raster.clock(0)
         irq_mock.require_memory_bus.assert_called_with(cycles=40)
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [0, 1, 0, 1, 0, 1, 0, 1]),
+        (0b10101010, [1, 0, 1, 0, 1, 0, 1, 0]),
+        (0b11111111, [1, 1, 1, 1, 1, 1, 1, 1]),
+    ],
+)
+def test_VIC_II_raster_pixelate_text_monochrome(vic_ii_raster, pixels, expected):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+    assert (
+        list(vic_ii_raster.pixelate_text_monochrome(char_color=1, pixels=pixels))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b10101010, [2, 2, 2, 2, 2, 2, 2, 2]),
+        (0b11111111, [3, 3, 3, 3, 3, 3, 3, 3]),
+    ],
+)
+def test_VIC_II_raster_pixelate_text_multicolor(vic_ii_raster, pixels, expected):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+    vic_ii_raster.write_registers(0xD022, 1)  # Set background colour # 1
+    vic_ii_raster.write_registers(0xD023, 2)  # Set background colour # 2
+    assert (
+        list(vic_ii_raster.pixelate_text_multicolor(char_color=3, pixels=pixels))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [0, 1, 0, 1, 0, 1, 0, 1]),
+        (0b10101010, [1, 0, 1, 0, 1, 0, 1, 0]),
+        (0b11111111, [1, 1, 1, 1, 1, 1, 1, 1]),
+    ],
+)
+def test_VIC_II_raster_pixelate_bitmap_monochrome(vic_ii_raster, pixels, expected):
+    assert (
+        list(vic_ii_raster.pixelate_bitmap_monochrome(colors=0x10, pixels=pixels))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b10101010, [2, 2, 2, 2, 2, 2, 2, 2]),
+        (0b11111111, [3, 3, 3, 3, 3, 3, 3, 3]),
+    ],
+)
+def test_VIC_II_raster_pixelate_bitmap_multicolor(vic_ii_raster, pixels, expected):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+
+    assert (
+        list(
+            vic_ii_raster.pixelate_bitmap_multicolor(
+                char_color=0x03, colors=0x12, pixels=pixels
+            )
+        )
+        == expected
+    )
