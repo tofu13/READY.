@@ -229,6 +229,9 @@ class Monitor(cmd.Cmd):
                     print("? extra arguments")
                     continue
 
+    def do_vic(self, line):
+        print(self.machine.screen)
+
 
 def convert(value: str) -> Optional[int]:
     """Return base-10 int from binary %, octal &, decimal +, hex ($) values"""

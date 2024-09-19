@@ -1,7 +1,9 @@
 import pytest
+from mock import mock
 
 import config
 from libs.hardware import roms
+from libs.hardware.bus import Bus
 from libs.hardware.constants import VIDEO_SIZE
 from libs.hardware.memory import Memory
 from libs.hardware.screen import VIC_II, RasterScreen
@@ -16,13 +18,18 @@ def memory():
 
 
 @pytest.fixture()
-def vic_ii(memory):
-    return VIC_II(memory)
+def bus():
+    return Bus()
 
 
 @pytest.fixture()
-def vic_ii_raster(memory):
-    return RasterScreen(memory)
+def vic_ii(memory, bus):
+    return VIC_II(memory, bus)
+
+
+@pytest.fixture()
+def vic_ii_raster(memory, bus):
+    return RasterScreen(memory, bus)
 
 
 def test_vic_ii(vic_ii):
@@ -200,60 +207,52 @@ def test_VIC_II_irq(memory, vic_ii):
 
 def test_VIC_II_raster_irq_occurs(vic_ii_raster):
     # Set raster line
-    vic_ii_raster.write_registers(0xD012, 0x10)
-    assert vic_ii_raster.irq_raster_line == 0x010
+    vic_ii_raster.write_registers(0xD012, 0x002)
+    assert vic_ii_raster.irq_raster_line == 0x002
 
     vic_ii_raster.write_registers(0xD011, 0x80)
-    assert vic_ii_raster.irq_raster_line == 0x110
+    assert vic_ii_raster.irq_raster_line == 0x102
 
     vic_ii_raster.write_registers(0xD011, 0x00)
-    assert vic_ii_raster.irq_raster_line == 0x010
+    assert vic_ii_raster.irq_raster_line == 0x002
 
-    assert vic_ii_raster.irq_raster_occured is False
-    while not vic_ii_raster.irq_raster_occured:
-        _, irq_line = vic_ii_raster.clock(0)
+    # Enable raster interrupts
+    vic_ii_raster.write_registers(0xD01A, 0b1111)
 
-    # Irq disabled -> irq signal is false
-    assert irq_line is False
-    assert vic_ii_raster.read_registers(0xD019) & 0b0001
-    assert vic_ii_raster.any_irq_occured
+    with mock.patch("libs.hardware.bus.Bus") as irq_mock:
+        vic_ii_raster.bus = irq_mock
+        irq_mock.irq_set.assert_not_called()
 
-    # Ack irq
-    vic_ii_raster.write_registers(0xD019, 0b0001)
-    assert vic_ii_raster.irq_raster_occured is False
-    assert vic_ii_raster.any_irq_occured is False
+        for i in range(63 * 2 - 1):  # 1 clock before IRQ
+            vic_ii_raster.clock(0)
+        irq_mock.irq_set.assert_not_called()
+        vic_ii_raster.clock(0)  # IRQ here
+        irq_mock.irq_set.assert_called()
 
-
-def test_VIC_II_raster_irq_line(vic_ii_raster):
-    vic_ii_raster.write_registers(0xD012, 0x10)
-    assert vic_ii_raster.irq_raster_line == 0x010
-
-    # Enable raster irq
-    vic_ii_raster.write_registers(0xD01A, 0x01)
-    while not vic_ii_raster.irq_raster_occured:
-        _, irq_line = vic_ii_raster.clock(0)
-    # irq has been signalled
-    assert irq_line is True
+        # Ack irq
+        irq_mock.irq_clear.assert_not_called()
+        vic_ii_raster.write_registers(0xD019, 0b0001)
+        irq_mock.irq_clear.assert_called()
 
 
 def test_VIC_II_raster_clock(vic_ii_raster):
-    frame, irq = vic_ii_raster.clock(0)
+    frame = vic_ii_raster.clock(0)
     assert frame is None
     assert vic_ii_raster.raster_x == 8
     assert vic_ii_raster.raster_y == 0
 
     # To the next line
-    for _ in range(63):
+    for _ in range(62):
         vic_ii_raster.clock(0)
 
     assert vic_ii_raster.raster_x == 0
     assert vic_ii_raster.raster_y == 1
 
     # To the end of frame (311 lines missing, 1 clock remaining)
-    for _ in range(64 * 311 - 1):
+    for _ in range(63 * 311 - 1):
         vic_ii_raster.clock(0)
     # End of frame now
-    frame, irq = vic_ii_raster.clock(0)
+    frame = vic_ii_raster.clock(0)
 
     assert vic_ii_raster.raster_x == 0
     assert vic_ii_raster.raster_y == 0
@@ -264,5 +263,106 @@ def test_VIC_II_raster_text_mode(vic_ii_raster):
     vic_ii_raster._frame_on = True
     frame = None
     while frame is None:
-        frame, irq = vic_ii_raster.clock(0)
+        frame = vic_ii_raster.clock(0)
     assert frame.shape == VIDEO_SIZE
+
+
+def test_VIC_II_raster_bad_lines_occur(vic_ii_raster):
+    # Assert buffers unthouched
+    assert vic_ii_raster.char_buffer == bytearray([0x01] * 40)
+    assert vic_ii_raster.color_buffer == bytearray([0x00] * 40)
+
+    vic_ii_raster.raster_x = 24
+    vic_ii_raster.raster_y = 48
+    vic_ii_raster._frame_on = True
+
+    vic_ii_raster.clock(0)
+
+    assert vic_ii_raster.char_buffer == bytearray([0x00] * 40)
+    assert vic_ii_raster.color_buffer == bytearray([0x00] * 40)
+
+
+def test_VIC_II_raster_bad_lines_lock_CPU(vic_ii_raster):
+    vic_ii_raster.raster_x = 24
+    vic_ii_raster.raster_y = 48
+    vic_ii_raster._frame_on = True
+
+    with mock.patch("libs.hardware.bus.Bus") as irq_mock:
+        vic_ii_raster.bus = irq_mock
+        irq_mock.require_memory_bus.assert_not_called()
+        vic_ii_raster.clock(0)
+        irq_mock.require_memory_bus.assert_called_with(cycles=40)
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [0, 1, 0, 1, 0, 1, 0, 1]),
+        (0b10101010, [1, 0, 1, 0, 1, 0, 1, 0]),
+        (0b11111111, [1, 1, 1, 1, 1, 1, 1, 1]),
+    ],
+)
+def test_VIC_II_raster_pixelate_text_monochrome(vic_ii_raster, pixels, expected):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+    assert (
+        list(vic_ii_raster.pixelate_text_monochrome(char_color=1, pixels=pixels))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b10101010, [2, 2, 2, 2, 2, 2, 2, 2]),
+        (0b11111111, [3, 3, 3, 3, 3, 3, 3, 3]),
+    ],
+)
+def test_VIC_II_raster_pixelate_text_multicolor(vic_ii_raster, pixels, expected):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+    vic_ii_raster.write_registers(0xD022, 1)  # Set background colour # 1
+    vic_ii_raster.write_registers(0xD023, 2)  # Set background colour # 2
+    assert (
+        list(vic_ii_raster.pixelate_text_multicolor(char_color=3, pixels=pixels))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [0, 1, 0, 1, 0, 1, 0, 1]),
+        (0b10101010, [1, 0, 1, 0, 1, 0, 1, 0]),
+        (0b11111111, [1, 1, 1, 1, 1, 1, 1, 1]),
+    ],
+)
+def test_VIC_II_raster_pixelate_bitmap_monochrome(vic_ii_raster, pixels, expected):
+    assert (
+        list(vic_ii_raster.pixelate_bitmap_monochrome(colors=0x10, pixels=pixels))
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("pixels", "expected"),
+    [
+        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b01010101, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b10101010, [2, 2, 2, 2, 2, 2, 2, 2]),
+        (0b11111111, [3, 3, 3, 3, 3, 3, 3, 3]),
+    ],
+)
+def test_VIC_II_raster_pixelate_bitmap_multicolor(vic_ii_raster, pixels, expected):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+
+    assert (
+        list(
+            vic_ii_raster.pixelate_bitmap_multicolor(
+                char_color=0x03, colors=0x12, pixels=pixels
+            )
+        )
+        == expected
+    )

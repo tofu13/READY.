@@ -51,6 +51,7 @@ class VIC_II:
 
     __slots__ = [
         "memory",
+        "bus",
         "irq_raster_line_lsb",
         "irq_raster_line_msb",
         "irq_raster_enabled",
@@ -93,8 +94,9 @@ class VIC_II:
         "_cached_last_column",
     ]
 
-    def __init__(self, memory):
+    def __init__(self, memory, bus):
         self.memory = memory
+        self.bus = bus
 
         # Registers
         self.irq_raster_line_lsb = 0
@@ -143,6 +145,18 @@ class VIC_II:
 
         self.memory.write_watchers.append((0xD000, 0xD3FF, self.write_registers))
         self.memory.read_watchers.append((0xD000, 0xD3FF, self.read_registers))
+
+    def __str__(self):
+        return (
+            f"VIC-II {self.__class__} - DEN:{self.DEN}\n"
+            f"RSEL:{self.RSEL} CSEL:{self.CSEL} "
+            f"X_SCROLL:{self.X_SCROLL} Y_SCROLL:{self.Y_SCROLL}\n"
+            f"CHAR ADDRESS:{hex(self.video_matrix_base_address)} "
+            f"CHARGEN ADDRESS:{hex(self.character_generator_base_address)} "
+            f"BITMAP ADDRESS:{hex(self.character_generator_base_address)} "
+            f"RASTER: {self.raster_x, self.raster_y}\n"
+            + "\n".join(str(sprite) for sprite in self.sprites)
+        )
 
     @property
     def irq_raster_line(self):
@@ -222,6 +236,8 @@ class VIC_II:
                     self.irq_sprite_sprite_collision_occured = False
                 if value & 0b1000:
                     self.irq_lightpen_occured = False
+                if value & 0b1111:
+                    self.bus.irq_clear("VIC-II")
             case 0x1A:
                 self.irq_raster_enabled = bool(value & 0b0001)
                 self.irq_sprite_background_collision_enabled = bool(value & 0b0010)
@@ -324,8 +340,8 @@ class RasterScreen(VIC_II):
         "_frame_on",
     ]
 
-    def __init__(self, memory):
-        super().__init__(memory)
+    def __init__(self, memory, bus):
+        super().__init__(memory, bus)
 
         self.raster_y = 0
         self.raster_x: int = 0
@@ -335,6 +351,69 @@ class RasterScreen(VIC_II):
         self._frame_on = self.DEN
 
         self.frame = bytearray([0] * VIDEO_SIZE_H * VIDEO_SIZE_V)
+
+    def pixelate_text_monochrome(self, char_color: int, pixels: int):
+        bgcolor = self.background_color
+        return (
+            # If one its foreground color
+            char_color
+            # For each bit == pixel
+            if px
+            # If zero its background color
+            else bgcolor
+            for px in BYTEBOOLEANS[pixels]
+        )
+
+    def pixelate_text_multicolor(self, char_color: int, pixels: int) -> tuple:
+        # TIL multicolor char mode can mix
+        # hires chars based in their color MSB
+        # (which limits their color space)
+        p0, p1, p2, p3 = BYTEPAIRS[pixels]
+        self._cached_multicolor_pack[3] = char_color & 0x07
+        return (
+            # Pick 1 color, fill 2 pixels
+            self._cached_multicolor_pack[p0],
+            self._cached_multicolor_pack[p0],
+            self._cached_multicolor_pack[p1],
+            self._cached_multicolor_pack[p1],
+            self._cached_multicolor_pack[p2],
+            self._cached_multicolor_pack[p2],
+            self._cached_multicolor_pack[p3],
+            self._cached_multicolor_pack[p3],
+        )
+
+    def pixelate_bitmap_multicolor(self, char_color: int, colors, pixels):
+        color_pack = (
+            self.background_color,
+            colors >> 4,
+            colors & 0x0F,
+            char_color,
+        )
+        p0, p1, p2, p3 = BYTEPAIRS[pixels]
+        # Pick 1 color, fill 2 pixels
+        return (
+            color_pack[p0],
+            color_pack[p0],
+            color_pack[p1],
+            color_pack[p1],
+            color_pack[p2],
+            color_pack[p2],
+            color_pack[p3],
+            color_pack[p3],
+        )
+
+    def pixelate_bitmap_monochrome(self, colors: int, pixels: int):
+        hi_color = colors >> 4
+        lo_color = colors & 0x0F
+        return (
+            # If one the upper half of charcode (used as color)
+            hi_color
+            # For each bit == pixel
+            if px
+            # If zero the lower half
+            else lo_color
+            for px in BYTEBOOLEANS[pixels]
+        )
 
     def clock(self, clock_counter: int):
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
@@ -365,6 +444,8 @@ class RasterScreen(VIC_II):
                     self.color_buffer = self.memory[
                         color_pointer : color_pointer + 40
                     ]  # Direct read from fixed color ram
+                    # Steal cycles from CPU
+                    self.bus.require_memory_bus(cycles=40)
 
                 # Hires
                 if self.bitmap_mode:
@@ -377,36 +458,13 @@ class RasterScreen(VIC_II):
                     # Fixme: misleading variable name
                     colors = self.char_buffer[matrix_column]
                     if self.multicolor_mode:
-                        char_color = self.color_buffer[matrix_column]
-                        color_pack = (
-                            self.background_color,
-                            colors >> 4,
-                            colors & 0x0F,
-                            char_color,
-                        )
-                        p0, p1, p2, p3 = BYTEPAIRS[pixels]
-                        # Pick 1 color, fill 2 pixels
-                        self.frame[pixel_range] = (
-                            color_pack[p0],
-                            color_pack[p0],
-                            color_pack[p1],
-                            color_pack[p1],
-                            color_pack[p2],
-                            color_pack[p2],
-                            color_pack[p3],
-                            color_pack[p3],
+                        self.frame[pixel_range] = self.pixelate_bitmap_multicolor(
+                            self.color_buffer[matrix_column], colors, pixels
                         )
                     else:
-                        self.frame[pixel_range] = (
-                            # If one the upper half of charcode (used as color)
-                            colors >> 4
-                            # For each bit == pixel
-                            if px
-                            # If zero the lower half
-                            else colors & 0x0F
-                            for px in BYTEBOOLEANS[pixels]
+                        self.frame[pixel_range] = self.pixelate_bitmap_monochrome(
+                            colors, pixels
                         )
-
                 # Text
                 else:
                     char_color = self.color_buffer[matrix_column]
@@ -417,33 +475,14 @@ class RasterScreen(VIC_II):
                     )
 
                     if self.multicolor_mode and char_color & 0x08:
-                        # TIL multicolor char mode can mix
-                        # hires chars based in their color MSB
-                        # (which limits their color space)
-                        p0, p1, p2, p3 = BYTEPAIRS[pixels]
-                        self._cached_multicolor_pack[3] = char_color & 0x07
-                        self.frame[pixel_range] = (
-                            # Pick 1 color, fill 2 pixels
-                            # (not nice code but pretty fast)
-                            self._cached_multicolor_pack[p0],
-                            self._cached_multicolor_pack[p0],
-                            self._cached_multicolor_pack[p1],
-                            self._cached_multicolor_pack[p1],
-                            self._cached_multicolor_pack[p2],
-                            self._cached_multicolor_pack[p2],
-                            self._cached_multicolor_pack[p3],
-                            self._cached_multicolor_pack[p3],
+                        self.frame[pixel_range] = self.pixelate_text_multicolor(
+                            char_color, pixels
                         )
                     else:
-                        self.frame[pixel_range] = (
-                            # If one its foreground color
-                            char_color
-                            # For each bit == pixel
-                            if px
-                            # If zero its background color
-                            else self.background_color
-                            for px in BYTEBOOLEANS[pixels]
+                        self.frame[pixel_range] = self.pixelate_text_monochrome(
+                            char_color, pixels
                         )
+
                 # Empty pixels at left when X_SCROLL
                 # TODO: Empty pixels shall be fetched as zeros when scrolled,
                 # not set explicitily
@@ -477,11 +516,12 @@ class RasterScreen(VIC_II):
                 )
 
         self.raster_x += 8
-        if self.raster_x > SCAN_AREA_H:
+        if self.raster_x >= SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
             # FIXME; very rough raster irq
-            self.irq_raster_occured = self.irq_raster_line == self.raster_y
+            if self.irq_raster_enabled and self.irq_raster_line == self.raster_y:
+                self.bus.irq_set("VIC-II")
             if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
                 self._frame_on = self.DEN
@@ -489,10 +529,8 @@ class RasterScreen(VIC_II):
                     # Cut frame size to ignore out-of-frame pixels
                     np.array(self.frame, dtype=np.ubyte)
                     .reshape((VIDEO_SIZE_V, VIDEO_SIZE_H))
-                    .T,
-                    self.any_irq_enabled and self.irq_raster_occured,
+                    .T
                 )
-        return None, self.any_irq_enabled and self.irq_raster_occured
 
 
 class VirtualScreen(VIC_II):
@@ -560,5 +598,4 @@ class FastScreen(VIC_II):
                 chars = np.where(chars == 0, self.background_color, chars)
                 frame[24:344, 51:251] = chars
             self.memory[0xD012] = 0  # This lets the system boot (see $FF5E)
-            return frame, False
-        return None, False
+            return frame

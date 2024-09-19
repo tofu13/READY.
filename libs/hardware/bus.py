@@ -6,6 +6,7 @@ class Bus:
     nmi_producers: set = field(default_factory=set)
     nmi_raised: bool = False  # Flag for ramp up to be read by consumers (CPU)
     irq_producers: set = field(default_factory=set)
+    _cycles_left: int = 0
 
     def nmi_set(self, source):
         self.nmi_raised |= not bool(self.nmi_producers)
@@ -33,3 +34,21 @@ class Bus:
     def irq(self) -> bool:
         """True if any producer is set"""
         return bool(self.irq_producers)
+
+    def require_memory_bus(self, cycles: int = 40):
+        """
+        Set clock cycles to keep memory bus locked by VIC-II
+        """
+        self._cycles_left = cycles
+
+    def memory_bus_required(self) -> bool:
+        """
+        Return memory bus status
+        True: memory bus is locked by VIC-II until it finishes
+        False: memory bus is free for CPU
+        """
+        if self._cycles_left:
+            self._cycles_left -= 1
+            return True
+        else:
+            return False

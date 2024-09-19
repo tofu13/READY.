@@ -62,3 +62,14 @@ def test_bus_detect_irq_many_sources(mybus):
     # Clear a source
     mybus.irq_clear("test_irq_2")
     assert mybus.irq is False
+
+
+def test_memory_sub(mybus):
+    assert mybus.memory_bus_required() is False
+
+    mybus.require_memory_bus(2)
+
+    assert mybus.memory_bus_required() is True
+    assert mybus.memory_bus_required() is True
+    assert mybus.memory_bus_required() is False
+    assert mybus.memory_bus_required() is False

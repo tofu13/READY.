@@ -266,7 +266,7 @@ class Machine(PatchMixin):
             patch()
 
         # Run VIC-II
-        frame, irq = self.screen.clock(self._clock_counter)
+        frame = self.screen.clock(self._clock_counter)
 
         # Display complete frame
         if frame is not None:
