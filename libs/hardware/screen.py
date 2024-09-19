@@ -508,10 +508,8 @@ class RasterScreen(VIC_II):
                     # Cut frame size to ignore out-of-frame pixels
                     np.array(self.frame, dtype=np.ubyte)
                     .reshape((VIDEO_SIZE_V, VIDEO_SIZE_H))
-                    .T,
-                    self.any_irq_enabled and self.irq_raster_occured,
+                    .T
                 )
-        return None, self.any_irq_enabled and self.irq_raster_occured
 
 
 class VirtualScreen(VIC_II):
@@ -579,5 +577,4 @@ class FastScreen(VIC_II):
                 chars = np.where(chars == 0, self.background_color, chars)
                 frame[24:344, 51:251] = chars
             self.memory[0xD012] = 0  # This lets the system boot (see $FF5E)
-            return frame, False
-        return None, False
+            return frame

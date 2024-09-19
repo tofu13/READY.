@@ -236,7 +236,7 @@ def test_VIC_II_raster_irq_occurs(vic_ii_raster):
 
 
 def test_VIC_II_raster_clock(vic_ii_raster):
-    frame, irq = vic_ii_raster.clock(0)
+    frame = vic_ii_raster.clock(0)
     assert frame is None
     assert vic_ii_raster.raster_x == 8
     assert vic_ii_raster.raster_y == 0
@@ -252,7 +252,7 @@ def test_VIC_II_raster_clock(vic_ii_raster):
     for _ in range(63 * 311 - 1):
         vic_ii_raster.clock(0)
     # End of frame now
-    frame, irq = vic_ii_raster.clock(0)
+    frame = vic_ii_raster.clock(0)
 
     assert vic_ii_raster.raster_x == 0
     assert vic_ii_raster.raster_y == 0
@@ -263,7 +263,7 @@ def test_VIC_II_raster_text_mode(vic_ii_raster):
     vic_ii_raster._frame_on = True
     frame = None
     while frame is None:
-        frame, irq = vic_ii_raster.clock(0)
+        frame = vic_ii_raster.clock(0)
     assert frame.shape == VIDEO_SIZE
 
 
