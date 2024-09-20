@@ -261,7 +261,7 @@ class VIC_II:
             case 0x21:
                 self.background_color = value & 0x0F
                 self._cached_background_color_pack = (self.background_color,) * 8
-                self.cache_multicolor_pack()
+                self.cache_multicolor_pack()  # TODO only change this color
             case 0x22:
                 self.background_color_1 = value & 0x0F
                 self.cache_multicolor_pack()
@@ -364,6 +364,25 @@ class RasterScreen(VIC_II):
             for px in BYTEBOOLEANS[pixels]
         )
 
+    def pixelate_text_extended_color(
+        self, background_index: int, char_color: int, pixels: int
+    ):
+        bgcolor = (
+            self.background_color,
+            self.background_color_1,
+            self.background_color_2,
+            self.background_color_3,
+        )[background_index]
+        return (
+            # If one its foreground color
+            char_color
+            # For each bit == pixel
+            if px
+            # If zero its background color
+            else bgcolor
+            for px in BYTEBOOLEANS[pixels]
+        )
+
     def pixelate_text_multicolor(self, char_color: int, pixels: int) -> tuple:
         # TIL multicolor char mode can mix
         # hires chars based in their color MSB
@@ -447,7 +466,7 @@ class RasterScreen(VIC_II):
                     # Steal cycles from CPU
                     self.bus.require_memory_bus(cycles=40)
 
-                # Hires
+                # Bitmap
                 if self.bitmap_mode:
                     pixels = self.memory.vic_read(
                         self.bitmap_base_address
@@ -468,20 +487,31 @@ class RasterScreen(VIC_II):
                 # Text
                 else:
                     char_color = self.color_buffer[matrix_column]
-                    pixels = self.memory.vic_read(
-                        self.character_generator_base_address
-                        + self.char_buffer[matrix_column] * 8
-                        + matrix_row_offset
-                    )
+                    if self.extended_background:
+                        pixels = self.memory.vic_read(
+                            self.character_generator_base_address
+                            + (self.char_buffer[matrix_column] & 0x3F) * 8
+                            + matrix_row_offset
+                        )
 
-                    if self.multicolor_mode and char_color & 0x08:
-                        self.frame[pixel_range] = self.pixelate_text_multicolor(
-                            char_color, pixels
+                        self.frame[pixel_range] = self.pixelate_text_extended_color(
+                            self.char_buffer[matrix_column] >> 6, char_color, pixels
                         )
                     else:
-                        self.frame[pixel_range] = self.pixelate_text_monochrome(
-                            char_color, pixels
+                        pixels = self.memory.vic_read(
+                            self.character_generator_base_address
+                            + self.char_buffer[matrix_column] * 8
+                            + matrix_row_offset
                         )
+
+                        if self.multicolor_mode and char_color & 0x08:
+                            self.frame[pixel_range] = self.pixelate_text_multicolor(
+                                char_color, pixels
+                            )
+                        else:
+                            self.frame[pixel_range] = self.pixelate_text_monochrome(
+                                char_color, pixels
+                            )
 
                 # Empty pixels at left when X_SCROLL
                 # TODO: Empty pixels shall be fetched as zeros when scrolled,

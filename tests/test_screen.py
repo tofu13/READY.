@@ -331,6 +331,44 @@ def test_VIC_II_raster_pixelate_text_multicolor(vic_ii_raster, pixels, expected)
 
 
 @pytest.mark.parametrize(
+    ("bg_index", "pixels", "expected"),
+    [
+        (0b00, 0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b00, 0b01010101, [0, 4, 0, 4, 0, 4, 0, 4]),
+        (0b00, 0b10101010, [4, 0, 4, 0, 4, 0, 4, 0]),
+        (0b00, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+        (0b01, 0b00000000, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b01, 0b01010101, [1, 4, 1, 4, 1, 4, 1, 4]),
+        (0b01, 0b10101010, [4, 1, 4, 1, 4, 1, 4, 1]),
+        (0b01, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+        (0b10, 0b00000000, [2, 2, 2, 2, 2, 2, 2, 2]),
+        (0b10, 0b01010101, [2, 4, 2, 4, 2, 4, 2, 4]),
+        (0b10, 0b10101010, [4, 2, 4, 2, 4, 2, 4, 2]),
+        (0b10, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+        (0b11, 0b00000000, [3, 3, 3, 3, 3, 3, 3, 3]),
+        (0b11, 0b01010101, [3, 4, 3, 4, 3, 4, 3, 4]),
+        (0b11, 0b10101010, [4, 3, 4, 3, 4, 3, 4, 3]),
+        (0b11, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+    ],
+)
+def test_VIC_II_raster_pixelate_text_extended_color(
+    vic_ii_raster, bg_index, pixels, expected
+):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+    vic_ii_raster.write_registers(0xD022, 1)  # Set background colour # 1
+    vic_ii_raster.write_registers(0xD023, 2)  # Set background colour # 2
+    vic_ii_raster.write_registers(0xD024, 3)  # Set background colour # 3
+    assert (
+        list(
+            vic_ii_raster.pixelate_text_extended_color(
+                background_index=bg_index, char_color=4, pixels=pixels
+            )
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
     ("pixels", "expected"),
     [
         (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
