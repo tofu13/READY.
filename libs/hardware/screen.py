@@ -136,8 +136,12 @@ class VIC_II:
 
         self.sprites = [Sprite() for _ in range(8)]
 
-        self._cached_border_color_pack = [self.border_color] * 8
-        self._cached_background_color_pack = [self.background_color] * 8
+        self._cached_border_color_pack = bytearray((self.border_color,) * 8)
+        self._cached_background_color_pack = bytearray((self.background_color,) * 8)
+        self._cached_multicolor_pack = bytearray(
+            (self.background_color, self.background_color_1, self.background_color_2, 0)
+        )
+
         self._cached_registers = bytearray(0x40)
         self._cached_first_line = FIRST_LINE[self.RSEL]
         self._cached_last_line = LAST_LINE[self.RSEL]
@@ -176,14 +180,6 @@ class VIC_II:
 
     def clock(self, clock_counter: int):
         pass
-
-    def cache_multicolor_pack(self):
-        self._cached_multicolor_pack = [
-            self.background_color,
-            self.background_color_1,
-            self.background_color_2,
-            None,
-        ]
 
     def write_registers(self, address: int, value: int):
         # The VIC registers are repeated each 64 bytes in the area $d000-$d3ff
@@ -258,17 +254,19 @@ class VIC_II:
             case 0x20:
                 self.border_color = value & 0x0F
                 # Cache for border pixels
-                self._cached_border_color_pack = (self.border_color,) * 8
+                self._cached_border_color_pack = bytearray((self.border_color,) * 8)
             case 0x21:
                 self.background_color = value & 0x0F
-                self._cached_background_color_pack = (self.background_color,) * 8
-                self.cache_multicolor_pack()  # TODO only change this color
+                self._cached_multicolor_pack[0] = self.background_color
+                self._cached_background_color_pack = bytearray(
+                    (self.background_color,) * 8
+                )
             case 0x22:
                 self.background_color_1 = value & 0x0F
-                self.cache_multicolor_pack()
+                self._cached_multicolor_pack[1] = self.background_color_1
             case 0x23:
                 self.background_color_2 = value & 0x0F
-                self.cache_multicolor_pack()
+                self._cached_multicolor_pack[2] = self.background_color_2
             case 0x24:
                 self.background_color_3 = value & 0x0F
             case 0x25:
