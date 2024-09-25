@@ -4,7 +4,7 @@ from mock import mock
 import config
 from libs.hardware import roms
 from libs.hardware.bus import Bus
-from libs.hardware.constants import VIDEO_SIZE
+from libs.hardware.constants import PIXELATOR_BITMAP, VIDEO_SIZE
 from libs.hardware.memory import Memory
 from libs.hardware.screen import VIC_II, RasterScreen
 
@@ -303,12 +303,8 @@ def test_VIC_II_raster_bad_lines_lock_CPU(vic_ii_raster):
         (0b11111111, [1, 1, 1, 1, 1, 1, 1, 1]),
     ],
 )
-def test_VIC_II_raster_pixelate_text_monochrome(vic_ii_raster, pixels, expected):
-    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
-    assert (
-        list(vic_ii_raster.pixelate_text_monochrome(char_color=1, pixels=pixels))
-        == expected
-    )
+def test_VIC_II_raster_pixelate_bitmap(vic_ii_raster, pixels, expected):
+    assert PIXELATOR_BITMAP[pixels][1][0] == bytearray(expected)
 
 
 @pytest.mark.parametrize(
@@ -331,17 +327,39 @@ def test_VIC_II_raster_pixelate_text_multicolor(vic_ii_raster, pixels, expected)
 
 
 @pytest.mark.parametrize(
-    ("pixels", "expected"),
+    ("bg_index", "pixels", "expected"),
     [
-        (0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
-        (0b01010101, [0, 1, 0, 1, 0, 1, 0, 1]),
-        (0b10101010, [1, 0, 1, 0, 1, 0, 1, 0]),
-        (0b11111111, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b00, 0b00000000, [0, 0, 0, 0, 0, 0, 0, 0]),
+        (0b00, 0b01010101, [0, 4, 0, 4, 0, 4, 0, 4]),
+        (0b00, 0b10101010, [4, 0, 4, 0, 4, 0, 4, 0]),
+        (0b00, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+        (0b01, 0b00000000, [1, 1, 1, 1, 1, 1, 1, 1]),
+        (0b01, 0b01010101, [1, 4, 1, 4, 1, 4, 1, 4]),
+        (0b01, 0b10101010, [4, 1, 4, 1, 4, 1, 4, 1]),
+        (0b01, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+        (0b10, 0b00000000, [2, 2, 2, 2, 2, 2, 2, 2]),
+        (0b10, 0b01010101, [2, 4, 2, 4, 2, 4, 2, 4]),
+        (0b10, 0b10101010, [4, 2, 4, 2, 4, 2, 4, 2]),
+        (0b10, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
+        (0b11, 0b00000000, [3, 3, 3, 3, 3, 3, 3, 3]),
+        (0b11, 0b01010101, [3, 4, 3, 4, 3, 4, 3, 4]),
+        (0b11, 0b10101010, [4, 3, 4, 3, 4, 3, 4, 3]),
+        (0b11, 0b11111111, [4, 4, 4, 4, 4, 4, 4, 4]),
     ],
 )
-def test_VIC_II_raster_pixelate_bitmap_monochrome(vic_ii_raster, pixels, expected):
+def test_VIC_II_raster_pixelate_text_extended_color(
+    vic_ii_raster, bg_index, pixels, expected
+):
+    vic_ii_raster.write_registers(0xD021, 0)  # Set background colour
+    vic_ii_raster.write_registers(0xD022, 1)  # Set background colour # 1
+    vic_ii_raster.write_registers(0xD023, 2)  # Set background colour # 2
+    vic_ii_raster.write_registers(0xD024, 3)  # Set background colour # 3
     assert (
-        list(vic_ii_raster.pixelate_bitmap_monochrome(colors=0x10, pixels=pixels))
+        list(
+            vic_ii_raster.pixelate_text_extended_color(
+                background_index=bg_index, char_color=4, pixels=pixels
+            )
+        )
         == expected
     )
 

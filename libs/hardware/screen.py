@@ -11,6 +11,7 @@ from .constants import (
     FIRST_LINE,
     LAST_COLUMN,
     LAST_LINE,
+    PIXELATOR_BITMAP,
     SCAN_AREA_H,
     SCAN_AREA_V,
     VIDEO_SIZE,
@@ -135,8 +136,12 @@ class VIC_II:
 
         self.sprites = [Sprite() for _ in range(8)]
 
-        self._cached_border_color_pack = [self.border_color] * 8
-        self._cached_background_color_pack = [self.background_color] * 8
+        self._cached_border_color_pack = bytearray((self.border_color,) * 8)
+        self._cached_background_color_pack = bytearray((self.background_color,) * 8)
+        self._cached_multicolor_pack = bytearray(
+            (self.background_color, self.background_color_1, self.background_color_2, 0)
+        )
+
         self._cached_registers = bytearray(0x40)
         self._cached_first_line = FIRST_LINE[self.RSEL]
         self._cached_last_line = LAST_LINE[self.RSEL]
@@ -175,14 +180,6 @@ class VIC_II:
 
     def clock(self, clock_counter: int):
         pass
-
-    def cache_multicolor_pack(self):
-        self._cached_multicolor_pack = [
-            self.background_color,
-            self.background_color_1,
-            self.background_color_2,
-            None,
-        ]
 
     def write_registers(self, address: int, value: int):
         # The VIC registers are repeated each 64 bytes in the area $d000-$d3ff
@@ -257,17 +254,19 @@ class VIC_II:
             case 0x20:
                 self.border_color = value & 0x0F
                 # Cache for border pixels
-                self._cached_border_color_pack = (self.border_color,) * 8
+                self._cached_border_color_pack = bytearray((self.border_color,) * 8)
             case 0x21:
                 self.background_color = value & 0x0F
-                self._cached_background_color_pack = (self.background_color,) * 8
-                self.cache_multicolor_pack()
+                self._cached_multicolor_pack[0] = self.background_color
+                self._cached_background_color_pack = bytearray(
+                    (self.background_color,) * 8
+                )
             case 0x22:
                 self.background_color_1 = value & 0x0F
-                self.cache_multicolor_pack()
+                self._cached_multicolor_pack[1] = self.background_color_1
             case 0x23:
                 self.background_color_2 = value & 0x0F
-                self.cache_multicolor_pack()
+                self._cached_multicolor_pack[2] = self.background_color_2
             case 0x24:
                 self.background_color_3 = value & 0x0F
             case 0x25:
@@ -352,8 +351,15 @@ class RasterScreen(VIC_II):
 
         self.frame = bytearray([0] * VIDEO_SIZE_H * VIDEO_SIZE_V)
 
-    def pixelate_text_monochrome(self, char_color: int, pixels: int):
-        bgcolor = self.background_color
+    def pixelate_text_extended_color(
+        self, background_index: int, char_color: int, pixels: int
+    ):
+        bgcolor = (
+            self.background_color,
+            self.background_color_1,
+            self.background_color_2,
+            self.background_color_3,
+        )[background_index]
         return (
             # If one its foreground color
             char_color
@@ -402,19 +408,6 @@ class RasterScreen(VIC_II):
             color_pack[p3],
         )
 
-    def pixelate_bitmap_monochrome(self, colors: int, pixels: int):
-        hi_color = colors >> 4
-        lo_color = colors & 0x0F
-        return (
-            # If one the upper half of charcode (used as color)
-            hi_color
-            # For each bit == pixel
-            if px
-            # If zero the lower half
-            else lo_color
-            for px in BYTEBOOLEANS[pixels]
-        )
-
     def clock(self, clock_counter: int):
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
@@ -447,7 +440,7 @@ class RasterScreen(VIC_II):
                     # Steal cycles from CPU
                     self.bus.require_memory_bus(cycles=40)
 
-                # Hires
+                # Bitmap
                 if self.bitmap_mode:
                     pixels = self.memory.vic_read(
                         self.bitmap_base_address
@@ -462,12 +455,12 @@ class RasterScreen(VIC_II):
                             self.color_buffer[matrix_column], colors, pixels
                         )
                     else:
-                        self.frame[pixel_range] = self.pixelate_bitmap_monochrome(
-                            colors, pixels
-                        )
+                        self.frame[pixel_range] = PIXELATOR_BITMAP[pixels][colors >> 4][
+                            colors & 0x0F
+                        ]
                 # Text
                 else:
-                    char_color = self.color_buffer[matrix_column]
+                    char_color = self.color_buffer[matrix_column] & 0x0F
                     pixels = self.memory.vic_read(
                         self.character_generator_base_address
                         + self.char_buffer[matrix_column] * 8
@@ -479,9 +472,9 @@ class RasterScreen(VIC_II):
                             char_color, pixels
                         )
                     else:
-                        self.frame[pixel_range] = self.pixelate_text_monochrome(
-                            char_color, pixels
-                        )
+                        self.frame[pixel_range] = PIXELATOR_BITMAP[pixels][char_color][
+                            self.background_color
+                        ]
 
                 # Empty pixels at left when X_SCROLL
                 # TODO: Empty pixels shall be fetched as zeros when scrolled,
