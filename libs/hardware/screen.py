@@ -11,6 +11,7 @@ from .constants import (
     FIRST_LINE,
     LAST_COLUMN,
     LAST_LINE,
+    PIXELATOR_BITMAP,
     SCAN_AREA_H,
     SCAN_AREA_V,
     VIDEO_SIZE,
@@ -352,18 +353,6 @@ class RasterScreen(VIC_II):
 
         self.frame = bytearray([0] * VIDEO_SIZE_H * VIDEO_SIZE_V)
 
-    def pixelate_text_monochrome(self, char_color: int, pixels: int):
-        bgcolor = self.background_color
-        return (
-            # If one its foreground color
-            char_color
-            # For each bit == pixel
-            if px
-            # If zero its background color
-            else bgcolor
-            for px in BYTEBOOLEANS[pixels]
-        )
-
     def pixelate_text_extended_color(
         self, background_index: int, char_color: int, pixels: int
     ):
@@ -421,19 +410,6 @@ class RasterScreen(VIC_II):
             color_pack[p3],
         )
 
-    def pixelate_bitmap_monochrome(self, colors: int, pixels: int):
-        hi_color = colors >> 4
-        lo_color = colors & 0x0F
-        return (
-            # If one the upper half of charcode (used as color)
-            hi_color
-            # For each bit == pixel
-            if px
-            # If zero the lower half
-            else lo_color
-            for px in BYTEBOOLEANS[pixels]
-        )
-
     def clock(self, clock_counter: int):
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
@@ -481,37 +457,26 @@ class RasterScreen(VIC_II):
                             self.color_buffer[matrix_column], colors, pixels
                         )
                     else:
-                        self.frame[pixel_range] = self.pixelate_bitmap_monochrome(
-                            colors, pixels
-                        )
+                        self.frame[pixel_range] = PIXELATOR_BITMAP[pixels][colors >> 4][
+                            colors & 0x0F
+                        ]
                 # Text
                 else:
-                    char_color = self.color_buffer[matrix_column]
-                    if self.extended_background:
-                        pixels = self.memory.vic_read(
-                            self.character_generator_base_address
-                            + (self.char_buffer[matrix_column] & 0x3F) * 8
-                            + matrix_row_offset
-                        )
+                    char_color = self.color_buffer[matrix_column] & 0x0F
+                    pixels = self.memory.vic_read(
+                        self.character_generator_base_address
+                        + self.char_buffer[matrix_column] * 8
+                        + matrix_row_offset
+                    )
 
-                        self.frame[pixel_range] = self.pixelate_text_extended_color(
-                            self.char_buffer[matrix_column] >> 6, char_color, pixels
+                    if self.multicolor_mode and char_color & 0x08:
+                        self.frame[pixel_range] = self.pixelate_text_multicolor(
+                            char_color, pixels
                         )
                     else:
-                        pixels = self.memory.vic_read(
-                            self.character_generator_base_address
-                            + self.char_buffer[matrix_column] * 8
-                            + matrix_row_offset
-                        )
-
-                        if self.multicolor_mode and char_color & 0x08:
-                            self.frame[pixel_range] = self.pixelate_text_multicolor(
-                                char_color, pixels
-                            )
-                        else:
-                            self.frame[pixel_range] = self.pixelate_text_monochrome(
-                                char_color, pixels
-                            )
+                        self.frame[pixel_range] = PIXELATOR_BITMAP[pixels][char_color][
+                            self.background_color
+                        ]
 
                 # Empty pixels at left when X_SCROLL
                 # TODO: Empty pixels shall be fetched as zeros when scrolled,
