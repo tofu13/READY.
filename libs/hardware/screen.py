@@ -325,6 +325,8 @@ class VIC_II:
                 return self._cached_registers[0x1A] | 0b11110000
             case color if 0x20 <= color <= 0x2E:
                 return self._cached_registers[color] | 0b11110000
+            case disconnected if 0x30 <= disconnected <= 0x3F:
+                return 0xFF
             case other:
                 return self._cached_registers[other]
 

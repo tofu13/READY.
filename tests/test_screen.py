@@ -65,6 +65,11 @@ def test_VIC_II_registers(vic_ii):
     assert vic_ii.X_SCROLL == 7
 
 
+def test_VIC_II_registers_disconnected(vic_ii):
+    for i in range(0xD030, 0xD040):
+        assert vic_ii.read_registers(i) == 0xFF
+
+
 def test_VIC_II_light_pen(vic_ii):
     assert vic_ii.read_registers(0xD013) == 0
     assert vic_ii.read_registers(0xD014) == 0
