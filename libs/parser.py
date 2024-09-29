@@ -18,6 +18,13 @@ def create_parser():
     )
     parser.add_argument("-d", "--disk", action="store", help="Disk (t64)", type=str)
     parser.add_argument(
+        "-p",
+        "--program",
+        action="store",
+        help="(PRG) file to store on a temporary disk image. Useful with --autorun",
+        type=str,
+    )
+    parser.add_argument(
         "-c",
         "--console",
         action="store_true",

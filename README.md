@@ -48,6 +48,8 @@ options:
   -s {raster,virtual,fast}, --screen {raster,virtual,fast}
                         Screen driver (default: raster)
   -d DISK, --disk DISK  Disk (t64) (default: None)
+  -p PROGRAM, --program PROGRAM
+                        (PRG) file to store on a temporary disk image. Useful with --autorun (default: None)
   -c, --console         Show screen in console (chars only) (default: False)
   -t LOADSTATE, --loadstate LOADSTATE
                         Load state from file (default: False)

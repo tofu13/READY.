@@ -1,4 +1,7 @@
 import argparse
+import pathlib
+
+import d64
 
 import config
 from libs import hardware
@@ -39,7 +42,17 @@ def main():
         cia_b = hardware.cia.CIA_B(memory, bus)
 
         diskdrive = hardware.disk_drive.Drive()
-        if disk := args.disk:
+        if program := args.program:
+            d64.DiskImage.create("d64", pathlib.Path("tempdisk.d64"), b"TEMP", b"00")
+            with (
+                d64.DiskImage("tempdisk.d64", "w") as image,
+                image.path(b"RUNME.PRG").open("w", "PRG") as f_out,
+                open(program, "rb") as f_in,
+            ):
+                f_out.write(f_in.read())
+            diskdrive.set_imagefile("tempdisk.d64")
+
+        elif disk := args.disk:
             diskdrive.set_imagefile(disk)
 
         c64 = hardware.machine.Machine(
