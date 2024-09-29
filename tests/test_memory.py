@@ -25,24 +25,24 @@ def memory_with_roms() -> Memory:
 
 
 def test_cpu_ports(memory_with_roms):
-    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.loram_port is True
+    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.io_port is True
 
-    # Make only hiram port writable
-    memory_with_roms.cpu_write(0x00, 0x01)
+    # Make only loram port writable
+    memory_with_roms.cpu_write(0x00, 0b001)
 
     # Try to reset all ports
-    memory_with_roms.cpu_write(0x01, 0x00)
+    memory_with_roms.cpu_write(0x01, 0b000)
 
-    assert memory_with_roms.hiram_port is False
-    assert memory_with_roms.loram_port is True
+    assert memory_with_roms.loram_port is False
+    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.io_port is True
 
     # Restore ports
-    memory_with_roms.cpu_write(0x01, 0x07)
-    assert memory_with_roms.hiram_port is True
+    memory_with_roms.cpu_write(0x01, 0b111)
     assert memory_with_roms.loram_port is True
+    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.io_port is True
 
 

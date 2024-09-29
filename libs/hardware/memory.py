@@ -68,7 +68,7 @@ class Memory:
             mask = self.ram[0x00]
             self.ram[0x01] = ((255 - mask) & self.ram[0x01]) | (mask & value)
             # Update internal flags
-            self.io_port, self.loram_port, self.hiram_port = map(
+            self.io_port, self.hiram_port, self.loram_port = map(
                 bool, map(int, f"{self.ram[0x01] & 0x7:03b}")
             )
             return
