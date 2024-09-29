@@ -9,7 +9,13 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    autotype = 'load "*",8,1|run:|' if args.autorun else args.autotype or ""
+    autotype = (
+        'load "*",8,1|run:|'
+        if args.autorun
+        else 'load "$",8|list:|'
+        if args.autodir
+        else args.autotype or ""
+    )
     autotype = autotype.replace("|", "\n")
 
     if args.loadstate:

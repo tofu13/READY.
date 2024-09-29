@@ -52,6 +52,7 @@ options:
   -t LOADSTATE, --loadstate LOADSTATE
                         Load state from file (default: False)
   -ar, --autorun        Autorun * from disk (default: False)
+  -ad, --autodir        Autodir (default: False)
   -at AUTOTYPE, --autotype AUTOTYPE
                         Autotype command. Use | for return key (default: None)
   -ds DISPLAY_SCALE, --display-scale DISPLAY_SCALE

@@ -35,6 +35,12 @@ def create_parser():
         default=False,
     )
     parser.add_argument(
+        "-ad",
+        "--autodir",
+        action="store_true",
+        help="Autodir",
+    )
+    parser.add_argument(
         "-at",
         "--autotype",
         action="store",
