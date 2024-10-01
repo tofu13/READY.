@@ -1,4 +1,5 @@
 import argparse
+import logging
 import pathlib
 
 import d64
@@ -11,6 +12,9 @@ from libs.parser import create_parser
 def main():
     parser = create_parser()
     args = parser.parse_args()
+    logging.basicConfig(
+        filename=config.LOGFILE, filemode="w", format="%(message)s", level=logging.DEBUG
+    )
 
     autotype = (
         'load "*",8,1|run:|'

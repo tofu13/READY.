@@ -4,6 +4,8 @@ ROMS_FOLDER = "roms"
 # Path to testing ROM files
 TESTING_ROMS_FOLDER = "tests/roms"
 
+LOGFILE = "logready"
+
 # Screen driver
 # - raster: full simulation, slower
 # - fast: partial simulation, faster
