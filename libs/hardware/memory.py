@@ -47,9 +47,11 @@ class Memory:
 
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
-        if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
+        if address < 0xA000:  # Maybe helps, maybe not
+            return self.ram[address]
+        elif 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
             return self.rom_basic[address - 0xA000]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram_port:
+        elif 0xE000 <= address and self.hiram_port:
             return self.rom_kernal[address - 0xE000]
         elif 0xD000 <= address <= 0xDFFF:
             if not self.io_port and (self.hiram_port or self.loram_port):
@@ -98,7 +100,7 @@ class Memory:
         """
         if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
             lo, hi = self.rom_basic[address - 0xA000 : address - 0xA000 + 2]
-        elif 0xE000 <= address <= 0xFFFF and self.hiram_port:
+        elif 0xE000 <= address and self.hiram_port:
             lo, hi = self.rom_kernal[address - 0xE000 : address - 0xE000 + 2]
         else:
             lo, hi = self.ram[address : address + 2]
