@@ -61,4 +61,13 @@ def create_parser():
         default=2.0,
         help="Display scale factor",
     )
+    parser.add_argument(
+        "-ll",
+        "--loglevel",
+        type=int,
+        action="store",
+        default=config.LOGLEVEL,
+        help="Log level ",
+    )
+
     return parser

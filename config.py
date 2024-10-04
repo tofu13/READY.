@@ -1,3 +1,5 @@
+import logging
+
 # Path to ROM files
 ROMS_FOLDER = "roms"
 
@@ -5,6 +7,7 @@ ROMS_FOLDER = "roms"
 TESTING_ROMS_FOLDER = "tests/roms"
 
 LOGFILE = "logready"
+LOGLEVEL = logging.WARNING
 
 # Screen driver
 # - raster: full simulation, slower

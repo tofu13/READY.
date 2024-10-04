@@ -13,7 +13,7 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
     logging.basicConfig(
-        filename=config.LOGFILE, filemode="w", format="%(message)s", level=logging.DEBUG
+        filename=config.LOGFILE, filemode="w", format="%(message)s", level=args.loglevel
     )
 
     autotype = (
