@@ -257,11 +257,6 @@ class Machine(PatchMixin):
             self.monitor.cmdloop()
             self.monitor_active = False
 
-        if self.tracepoints:
-            for start, end in self.tracepoints:
-                if start <= self.cpu.PC <= end:
-                    print(self.cpu)
-
         if (patch := self.patches.get(self.cpu.PC)) is not None:
             patch()
 

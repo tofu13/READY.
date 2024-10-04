@@ -22,3 +22,5 @@ QUICK_BOOT = True
 # Keymap
 # KEYMAP = "en"
 KEYMAP = "it"
+
+TRACE_EXEC = set(range(0xA000, 0xB000))
