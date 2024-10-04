@@ -321,9 +321,9 @@ class CPU:
         # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows,
         # the address wraps around within page 0). The resulting address is used as a pointer to the data being
         # accessed.
-        base = self.memory.cpu_read(self.PC) + self.X
+        base = (self.memory.cpu_read(self.PC) + self.X) & 0xFF
         self.PC += 1
-        return self.memory.read_address(self.memory.cpu_read(base))
+        return self.memory.read_address_zp(base)
 
     def addressing_IND_Y(self):
         base = self.memory.cpu_read(self.PC)
