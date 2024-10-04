@@ -67,6 +67,17 @@ def test_read_read_address(memory_with_roms):
     assert memory_with_roms.read_address(0xA000) == 0x914F  # value from test roms
 
 
+def test_read_read_address_zp(memory_with_roms):
+    memory_with_roms[0xFC] = 0xCD
+    memory_with_roms[0xFD] = 0xAB
+
+    memory_with_roms[0xFF] = 0x34
+    memory_with_roms[0x00] = 0x12
+
+    assert memory_with_roms.read_address_zp(0xFC) == 0xABCD
+    assert memory_with_roms.read_address_zp(0xFF) == 0x1234
+
+
 def test_memory_as_seen_by_cpu(memory_with_roms):
     memory_with_roms.cpu_write(0xC000, 42)
     assert memory_with_roms.cpu_read(0xC000) == 42

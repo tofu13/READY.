@@ -106,6 +106,14 @@ class Memory:
             lo, hi = self.ram[address : address + 2]
         return hi * 256 + lo
 
+    def read_address_zp(self, address: int) -> int:
+        """
+        Optimized consecutive reads at zeropage (with wraparound)
+        Return big endian word (16-bit address)
+        """
+        lo, hi = self.ram[address], self.ram[(address + 1) & 0xFF]
+        return hi * 256 + lo
+
     def dump(
         self,
         start: Optional[int] = None,
