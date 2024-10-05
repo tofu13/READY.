@@ -6,7 +6,7 @@ import d64
 
 import config
 from libs import hardware
-from libs.parser import create_parser
+from libs.parser import create_parser, is_d64_image
 
 
 def main():
@@ -15,15 +15,6 @@ def main():
     logging.basicConfig(
         filename=config.LOGFILE, filemode="w", format="%(message)s", level=args.loglevel
     )
-
-    autotype = (
-        'load "*",8,1|run:|'
-        if args.autorun
-        else 'load "$",8|list:|'
-        if args.autodir
-        else args.autotype or ""
-    )
-    autotype = autotype.replace("|", "\n")
 
     if args.loadstate:
         c64 = hardware.machine.Machine.from_file(args.loadstate)
@@ -46,18 +37,32 @@ def main():
         cia_b = hardware.cia.CIA_B(memory, bus)
 
         diskdrive = hardware.disk_drive.Drive()
-        if program := args.program:
-            d64.DiskImage.create("d64", pathlib.Path("tempdisk.d64"), b"TEMP", b"00")
-            with (
-                d64.DiskImage("tempdisk.d64", "w") as image,
-                image.path(b"RUNME.PRG").open("w", "PRG") as f_out,
-                open(program, "rb") as f_in,
-            ):
-                f_out.write(f_in.read())
-            diskdrive.set_imagefile("tempdisk.d64")
+        if args.datafile:
+            args.autorun = not args.no_autorun
+            if is_d64_image(args.datafile):
+                diskdrive.set_imagefile(args.datafile)
+            else:
+                d64.DiskImage.create(
+                    "d64", pathlib.Path("tempdisk.d64"), b"TEMP", b"00"
+                )
+                with (
+                    d64.DiskImage("tempdisk.d64", "w") as image,
+                    image.path(b"RUNME.PRG").open("w", "PRG") as f_out,
+                    args.datafile.open("rb") as f_in,
+                ):
+                    f_out.write(f_in.read())
+                diskdrive.set_imagefile("tempdisk.d64")
 
-        elif disk := args.disk:
-            diskdrive.set_imagefile(disk)
+        autotype = (
+            'load "$",8|list:|'
+            if args.autodir
+            else args.autotype
+            if args.autotype
+            else 'load "*",8,1|run:|'
+            if args.autorun
+            else ""
+        )
+        autotype = autotype.replace("|", "\n")
 
         c64 = hardware.machine.Machine(
             memory=memory,
