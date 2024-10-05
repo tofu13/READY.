@@ -257,7 +257,9 @@ class Machine(PatchMixin):
             self.monitor.cmdloop()
             self.monitor_active = False
 
-        if (patch := self.patches.get(self.cpu.PC)) is not None:
+        if (
+            patch := self.patches.get(self.cpu.PC)
+        ) is not None and self.memory.hiram_port:
             patch()
 
         # Run VIC-II
