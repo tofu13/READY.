@@ -222,7 +222,7 @@ class VIC_II:
             case 0x18:
                 self.video_matrix_base_address = (value & 0b11110000) << 6
                 self.character_generator_base_address = (value & 0b00001110) << 10
-                self.bitmap_base_address = self.character_generator_base_address & 2**13
+                self.bitmap_base_address = (value & 0b00001000) << 10
             case 0x19:
                 # Ack irqs
                 if value & 0b0001:
@@ -416,7 +416,7 @@ class RasterScreen(VIC_II):
             pixel_pointer = self.raster_y * VIDEO_SIZE_H + self.raster_x
             if (
                 24 <= self.raster_x <= 343
-                and 48 <= self.raster_y <= 250
+                and 48 <= self.raster_y <= 247
                 and self._frame_on
             ):
                 # Raster is in the display area
