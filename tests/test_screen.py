@@ -65,6 +65,11 @@ def test_VIC_II_registers(vic_ii):
     assert vic_ii.X_SCROLL == 7
 
 
+def test_VIC_II_registers_disconnected(vic_ii):
+    for i in range(0xD030, 0xD040):
+        assert vic_ii.read_registers(i) == 0xFF
+
+
 def test_VIC_II_light_pen(vic_ii):
     assert vic_ii.read_registers(0xD013) == 0
     assert vic_ii.read_registers(0xD014) == 0
@@ -96,21 +101,35 @@ def test_VIC_II_colors(memory, vic_ii):
     assert vic_ii.sprite_multicolor_2 == 15
 
 
-def test_VIC_II_addressing(memory, vic_ii):
-    vic_ii.write_registers(0xD018, 0x10)
-    assert vic_ii.video_matrix_base_address == 0x0400
-
-    vic_ii.write_registers(0xD018, 0xF0)
-    assert vic_ii.video_matrix_base_address == 0x3C00
-
-    vic_ii.write_registers(0xD018, 0x04)
-    assert vic_ii.character_generator_base_address == 0x1000
-
-    vic_ii.write_registers(0xD018, 0x05)
-    assert vic_ii.character_generator_base_address == 0x1000
-
-    vic_ii.write_registers(0xD018, 0x0A)
-    assert vic_ii.character_generator_base_address == 0x2800
+@pytest.mark.parametrize(
+    (
+        "value",
+        "video_matrix_base_address",
+        "character_generator_base_address",
+        "bitmap_base_address",
+    ),
+    [
+        (0b00000000, 0x0000, 0x0000, 0x0000),
+        (0b00010101, 0x0400, 0x1000, 0x0000),
+        (0b11110000, 0x3C00, 0x0000, 0x0000),
+        (0b00000100, 0x0000, 0x1000, 0x0000),
+        (0b00000101, 0x0000, 0x1000, 0x0000),
+        (0b00001010, 0x0000, 0x2800, 0x2000),
+        (0b00001111, 0x0000, 0x3800, 0x2000),
+    ],
+)
+def test_VIC_II_addressing(
+    memory,
+    vic_ii,
+    value,
+    video_matrix_base_address,
+    character_generator_base_address,
+    bitmap_base_address,
+):
+    vic_ii.write_registers(0xD018, value)
+    assert vic_ii.video_matrix_base_address == video_matrix_base_address
+    assert vic_ii.character_generator_base_address == character_generator_base_address
+    assert vic_ii.bitmap_base_address == bitmap_base_address
 
 
 def test_VIC_II_sprites(memory, vic_ii):

@@ -25,24 +25,24 @@ def memory_with_roms() -> Memory:
 
 
 def test_cpu_ports(memory_with_roms):
-    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.loram_port is True
+    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.io_port is True
 
-    # Make only hiram port writable
-    memory_with_roms.cpu_write(0x00, 0x01)
+    # Make only loram port writable
+    memory_with_roms.cpu_write(0x00, 0b001)
 
     # Try to reset all ports
-    memory_with_roms.cpu_write(0x01, 0x00)
+    memory_with_roms.cpu_write(0x01, 0b000)
 
-    assert memory_with_roms.hiram_port is False
-    assert memory_with_roms.loram_port is True
+    assert memory_with_roms.loram_port is False
+    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.io_port is True
 
     # Restore ports
-    memory_with_roms.cpu_write(0x01, 0x07)
-    assert memory_with_roms.hiram_port is True
+    memory_with_roms.cpu_write(0x01, 0b111)
     assert memory_with_roms.loram_port is True
+    assert memory_with_roms.hiram_port is True
     assert memory_with_roms.io_port is True
 
 
@@ -65,6 +65,17 @@ def test_read_read_address(memory_with_roms):
 
     assert memory_with_roms.read_address(0xFFFE) == 0x6810  # value from test roms
     assert memory_with_roms.read_address(0xA000) == 0x914F  # value from test roms
+
+
+def test_read_read_address_zp(memory_with_roms):
+    memory_with_roms[0xFC] = 0xCD
+    memory_with_roms[0xFD] = 0xAB
+
+    memory_with_roms[0xFF] = 0x34
+    memory_with_roms[0x00] = 0x12
+
+    assert memory_with_roms.read_address_zp(0xFC) == 0xABCD
+    assert memory_with_roms.read_address_zp(0xFF) == 0x1234
 
 
 def test_memory_as_seen_by_cpu(memory_with_roms):

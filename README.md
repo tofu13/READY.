@@ -39,24 +39,29 @@ python READY..py
 python READY..py --help
 ```
 ```
-usage: READY..py [-h] [-s {raster,virtual,fast}] [-d DISK] [-c] [-t LOADSTATE] [-ar] [-at AUTOTYPE] [-ds DISPLAY_SCALE]
+usage: READY..py [-h] [-s {raster,virtual,fast}] [-c] [-t LOADSTATE] [-ar] [-ad] [-at AUTOTYPE] [-noar] [-ds DISPLAY_SCALE] [-ll LOGLEVEL] [datafile]
 
 An educational C=64 emulator.
+
+positional arguments:
+  datafile              D64 image file or PRG (autodetect). Implies --autorun unless one of --autodir|--autoype|--no-autorun is set (default: None)
 
 options:
   -h, --help            show this help message and exit
   -s {raster,virtual,fast}, --screen {raster,virtual,fast}
                         Screen driver (default: raster)
-  -d DISK, --disk DISK  Disk (t64) (default: None)
   -c, --console         Show screen in console (chars only) (default: False)
   -t LOADSTATE, --loadstate LOADSTATE
                         Load state from file (default: False)
   -ar, --autorun        Autorun * from disk (default: False)
+  -ad, --autodir        Autodir (default: False)
   -at AUTOTYPE, --autotype AUTOTYPE
-                        Autotype command. Use | for return key (default: None)
+                        Autotype command. Use | for return key (default: )
+  -noar, --no-autorun   Disable autorun when datafile is set (default: False)
   -ds DISPLAY_SCALE, --display-scale DISPLAY_SCALE
                         Display scale factor (default: 2.0)
-```
+  -ll LOGLEVEL, --loglevel LOGLEVEL
+                        Log level (default: 30)```
 
 ### Configuration
 
@@ -89,8 +94,8 @@ See [config.py](config.py) for available parameters:
 - F10 paste
 - F11 enter monitor
 - F12 reset
-- RIGHT_ALT + P: PLAY on datassette
-- RIGHT_ALT + S: STOP on datassette
+- RIGHT_CTRL + P: PLAY on datassette
+- RIGHT_CTRL + S: STOP on datassette
 ```
 
 #### Keymaps

@@ -1,4 +1,5 @@
 import argparse
+import pathlib
 
 import config
 
@@ -9,6 +10,13 @@ def create_parser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
+        "datafile",
+        nargs="?",
+        type=pathlib.Path,
+        default=None,
+        help="D64 image file or PRG (autodetect). Implies --autorun unless one of --autodir|--autoype|--no-autorun is set",
+    )
+    parser.add_argument(
         "-s",
         "--screen",
         action="store",
@@ -16,7 +24,6 @@ def create_parser():
         default=config.SCREEN,
         choices=["raster", "virtual", "fast"],
     )
-    parser.add_argument("-d", "--disk", action="store", help="Disk (t64)", type=str)
     parser.add_argument(
         "-c",
         "--console",
@@ -35,11 +42,25 @@ def create_parser():
         default=False,
     )
     parser.add_argument(
+        "-ad",
+        "--autodir",
+        action="store_true",
+        help="Autodir",
+    )
+    parser.add_argument(
         "-at",
         "--autotype",
         action="store",
         help="Autotype command. Use | for return key",
     )
+    parser.add_argument(
+        "-noar",
+        "--no-autorun",
+        action="store_true",
+        default=False,
+        help="Disable autorun when datafile is set",
+    )
+
     parser.add_argument(
         "-ds",
         "--display-scale",
@@ -48,4 +69,20 @@ def create_parser():
         default=2.0,
         help="Display scale factor",
     )
+    parser.add_argument(
+        "-ll",
+        "--loglevel",
+        type=int,
+        action="store",
+        default=config.LOGLEVEL,
+        help="Log level ",
+    )
+
     return parser
+
+
+def is_d64_image(filepath: pathlib.Path) -> bool:
+    """
+    Trivial detection of D64 filetype
+    """
+    return filepath.stat().st_size == 174848

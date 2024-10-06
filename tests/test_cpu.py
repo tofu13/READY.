@@ -151,7 +151,7 @@ def test_cpu_save_state(cpu):
         ("ZP_X", 0x03, 1),
         ("ZP_Y", 0x04, 1),
         ("IND", 0x1234, 2),
-        ("X_IND", 0xABCD, 1),
+        ("X_IND", 0x1234, 1),
         ("IND_Y", 0x34A2, 1),
     ],
 )
@@ -160,6 +160,7 @@ def test_cpu_addressing_methods(cpu, method, expected, advance):
     cpu.memory.cpu_write(0xC001, 0xC0)
     cpu.memory.cpu_write(0xC002, 0x34)
     cpu.memory.cpu_write(0xC003, 0x12)
+    cpu.memory.cpu_write(0xC004, 0xDD)
     cpu.memory.cpu_write(0x0002, 0xA0)
     cpu.memory.cpu_write(0x0003, 0x34)
     cpu.memory.cpu_write(0x0004, 0x12)

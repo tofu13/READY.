@@ -1,8 +1,13 @@
+import logging
+
 # Path to ROM files
 ROMS_FOLDER = "roms"
 
 # Path to testing ROM files
 TESTING_ROMS_FOLDER = "tests/roms"
+
+LOGFILE = "logready"
+LOGLEVEL = logging.WARNING
 
 # Screen driver
 # - raster: full simulation, slower
@@ -17,3 +22,5 @@ QUICK_BOOT = True
 # Keymap
 # KEYMAP = "en"
 KEYMAP = "it"
+
+TRACE_EXEC = set(range(0xA000, 0xB000))

@@ -1,3 +1,7 @@
+import logging
+
+from config import TRACE_EXEC
+
 from .constants import BITVALUES, OPCODES
 
 
@@ -142,10 +146,10 @@ class CPU:
             if self._instruction:
                 self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
                 self._fetching = False
-                if not is_legal:
-                    print(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
+                # if not is_legal and self._instruction != "JAM":
+                #    logging.warning(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
             else:
-                print(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
+                logging.warning(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
             self.PC += 1
             return
 
@@ -154,8 +158,9 @@ class CPU:
             getattr(self, self._instruction)(address)
             self._fetching = True
 
-        # if 0x000 <= self.PC <= 0x800:
-        #    logging.info(".C:%s", self)
+        if self.PC in TRACE_EXEC:
+            logging.debug(self)
+
         # Handle nmi if any occured
         if self.bus.nmi:
             self.nmi()
@@ -321,9 +326,9 @@ class CPU:
         # An 8-bit zero-page address and the X register are added, without carry (if the addition overflows,
         # the address wraps around within page 0). The resulting address is used as a pointer to the data being
         # accessed.
-        base = self.memory.cpu_read(self.PC) + self.X
+        base = (self.memory.cpu_read(self.PC) + self.X) & 0xFF
         self.PC += 1
-        return self.memory.read_address(self.memory.cpu_read(base))
+        return self.memory.read_address_zp(base)
 
     def addressing_IND_Y(self):
         base = self.memory.cpu_read(self.PC)
@@ -598,7 +603,6 @@ class CPU:
         self.flag_C = True
 
     def SED(self, address):
-        print("Decimal  mode on")
         self.flag_D = True
 
     def SEI(self, address):
@@ -641,6 +645,6 @@ class CPU:
     # region Illegal Instructions
 
     def JAM(self, address):
-        print(f"Got JAM @ ${self.PC:04X}")
+        logging.warning(f"Got JAM @ ${self.PC-1:04X}")
 
     # endregion
