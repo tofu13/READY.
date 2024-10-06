@@ -73,13 +73,19 @@ PALETTE = [[q >> 16, (q >> 8) & 0xFF, q & 0xFF] for q in COLORS]
 BITVALUES = [2**k for k in range(8)]
 BITRANGE = [(7 - k, 2**k) for k in range(8)]
 BYTEBOOLEANS = [[bool(int(j)) for j in f"{i:08b}"] for i in range(256)]
-PIXELATOR_BITMAP = [
-    [
-        [bytearray(fg if p else bg for p in BYTEBOOLEANS[b]) for bg in range(16)]
-        for fg in range(16)
-    ]
+
+
+# Matrix filled with all combinations of pixels, foreground and background
+# Each element is a bytearray of 8 color values to be pasted into the bitmap frame
+# Access PIXELATOR_BITMAP[pixels * 256 + foreground_color * 16 + background_color]
+# (16 bit address ppppppppFFFFBBBB p=pixels, F=foreground, B=background)
+# Where pixel is the byte value from video ram
+PIXELATOR_BITMAP = tuple(
+    bytearray(fg if p else bg for p in BYTEBOOLEANS[b])
     for b in range(256)
-]
+    for fg in range(16)
+    for bg in range(16)
+)
 BYTEPAIRS = [[i >> 6 & 3, i >> 4 & 3, i >> 2 & 3, i & 3] for i in range(256)]
 
 OPCODE_MAP = {

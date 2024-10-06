@@ -457,8 +457,8 @@ class RasterScreen(VIC_II):
                             self.color_buffer[matrix_column], colors, pixels
                         )
                     else:
-                        self.frame[pixel_range] = PIXELATOR_BITMAP[pixels][colors >> 4][
-                            colors & 0x0F
+                        self.frame[pixel_range] = PIXELATOR_BITMAP[
+                            pixels * 0x100 + colors
                         ]
                 # Text
                 else:
@@ -474,8 +474,8 @@ class RasterScreen(VIC_II):
                             char_color, pixels
                         )
                     else:
-                        self.frame[pixel_range] = PIXELATOR_BITMAP[pixels][char_color][
-                            self.background_color
+                        self.frame[pixel_range] = PIXELATOR_BITMAP[
+                            pixels * 256 + char_color * 16 + self.background_color
                         ]
 
                 # Empty pixels at left when X_SCROLL
