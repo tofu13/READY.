@@ -440,21 +440,21 @@ class CPU:
         result = self.A - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result += 255
+            result &= 0xFF
         self.setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result += 255
+            result &= 0xFF
         self.setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result += 255
+            result &=0xFF
         self.setNZ(result)
 
     def DEC(self, address):
