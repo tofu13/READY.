@@ -281,16 +281,22 @@ class CPU:
     def addressing_ABS_X(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is
         # added (with carry).
-        address = self.memory.read_address(self.PC)
+        address = self.memory.read_address(self.PC) + self.X
+        if address > 0xFFFF:
+            logging.warning(f"ABS,X overflow @ ${self.PC-1:0x4}")
+            address &= 0xFFFF
         self.PC += 2
-        return address + self.X
+        return address
 
     def addressing_ABS_Y(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is
         # added (with carry).
-        address = self.memory.read_address(self.PC)
+        address = self.memory.read_address(self.PC)  + self.Y
+        if address > 0xFFFF:
+            logging.warning("ABS,Y overflow @ ${self.PC-1:0x4}")
+            address &=0xFFFF
         self.PC += 2
-        return address + self.Y
+        return address
 
     def addressing_ZP_X(self):
         # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows,
