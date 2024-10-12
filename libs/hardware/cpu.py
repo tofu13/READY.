@@ -379,6 +379,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def BRK(self, address):
@@ -465,6 +466,7 @@ class CPU:
 
     def DEC(self, address):
         result = (self.memory.cpu_read(address) - 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
         self.memory.cpu_write(address, result)
         self.setNZ(result)
 
@@ -483,6 +485,7 @@ class CPU:
 
     def INC(self, address):
         value = (self.memory.cpu_read(address) + 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
         self.memory.cpu_write(address, value)
         self.setNZ(value)
 
@@ -524,6 +527,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def NOP(self, address):
@@ -556,6 +560,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def ROR(self, address):
@@ -567,6 +572,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def RTI(self, Address):
