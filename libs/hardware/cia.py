@@ -203,6 +203,9 @@ class CIA_A(CIA):
                 self.bus.irq_clear("timer_A")
 
                 return result
+            case 0x0E:
+                # TODO: what about other bits? Maybe disconnected
+                return int(self.timer_A_start)
         return 0
 
     def set_registers(self, address, value):
