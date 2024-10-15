@@ -127,47 +127,52 @@ class CPU:
         hi, lo = value // 10, value % 10
         return hi * 16 + lo
 
-    def clock(self) -> None:
+    def clock(self) -> bool:
         """
         Execute next instruction
+        Return True when an instruction is fully cexecuted
+        and CPU is ready to fetch a new one
         """
         if self.bus.memory_bus_required():
-            return
+            return False
 
         if self._cycles_left > 0:
             # Still working on last instruction
             self._cycles_left -= 1
-            return
+            return self._cycles_left == 0 and self._fetching
 
         if self._fetching:
+            # Handle nmi if any occured
+            if self.bus.nmi:
+                self.nmi()
+                return False
+
+            # Handle irq if any occured
+            elif self.bus.irq and not self.flag_I:
+                self.irq()
+                return False
+
+            # Fetch
             opcode = self.memory.cpu_read(self.PC)
-            # Fetch next istruction (memory read at PC, advance PC)
+            # Decode
             self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
             if self._instruction:
                 self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
                 self._fetching = False
-                # if not is_legal and self._instruction != "JAM":
-                #    logging.warning(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
             else:
                 logging.warning(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
-            self.PC += 1
-            return
+            return False
 
-        else:
-            address = self.addressing_methods[self._mode]()
-            getattr(self, self._instruction)(address)
-            self._fetching = True
+        # Execute
+        self.PC += 1
+        address = self.addressing_methods[self._mode]()
+        getattr(self, self._instruction)(address)
+        self._fetching = True
 
         if self.PC in TRACE_EXEC:
             logging.debug(self)
 
-        # Handle nmi if any occured
-        if self.bus.nmi:
-            self.nmi()
-
-        # Handle irq if any occured
-        elif self.bus.irq and not self.flag_I:
-            self.irq()
+        return self._cycles_left == 0
 
     def irq(self):
         """
