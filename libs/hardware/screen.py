@@ -233,7 +233,7 @@ class VIC_II:
                     self.irq_sprite_sprite_collision_occured = False
                 if value & 0b1000:
                     self.irq_lightpen_occured = False
-                if value & 0b1111:
+                if not self.any_irq_occured:  # and value & 0b1111: ## no need to check
                     self.bus.irq_clear("VIC-II")
             case 0x1A:
                 self.irq_raster_enabled = bool(value & 0b0001)
@@ -516,6 +516,7 @@ class RasterScreen(VIC_II):
             self.raster_y += 1
             # FIXME; very rough raster irq
             if self.irq_raster_enabled and self.irq_raster_line == self.raster_y:
+                self.irq_raster_occured = True
                 self.bus.irq_set("VIC-II")
             if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
