@@ -250,18 +250,6 @@ class Machine(PatchMixin):
         """
         Run a single step of all devices
         """
-        # Activate monitor on breakpoints
-        if self.breakpoints:
-            self.monitor_active |= self.cpu.PC in self.breakpoints
-        if self.monitor_active:
-            self.monitor.cmdloop()
-            self.monitor_active = False
-
-        if (
-            patch := self.patches.get(self.cpu.PC)
-        ) is not None and self.memory.hiram_port:
-            patch()
-
         # Run VIC-II
         frame = self.screen.clock(self._clock_counter)
 
@@ -276,7 +264,19 @@ class Machine(PatchMixin):
             self.pygame_clock.tick()  # Max 50 FPS
 
         # Run CPU
-        self.cpu.clock()
+        if self.cpu.clock():
+            # CPU is ready to fetch, it's the right moment to...
+            # - Activate monitor on breakpoints
+            if self.breakpoints:
+                self.monitor_active |= self.cpu.PC in self.breakpoints
+            if self.monitor_active:
+                self.monitor.cmdloop()
+                self.monitor_active = False
+            # Apply patches
+            if (
+                patch := self.patches.get(self.cpu.PC)
+            ) is not None and self.memory.hiram_port:
+                patch()
 
         # Run CIA A
         self.ciaA.clock(self.keys_pressed)
