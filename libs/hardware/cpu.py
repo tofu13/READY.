@@ -127,47 +127,52 @@ class CPU:
         hi, lo = value // 10, value % 10
         return hi * 16 + lo
 
-    def clock(self) -> None:
+    def clock(self) -> bool:
         """
         Execute next instruction
+        Return True when an instruction is fully cexecuted
+        and CPU is ready to fetch a new one
         """
         if self.bus.memory_bus_required():
-            return
+            return False
 
         if self._cycles_left > 0:
             # Still working on last instruction
             self._cycles_left -= 1
-            return
+            return self._cycles_left == 0 and self._fetching
 
         if self._fetching:
+            # Handle nmi if any occured
+            if self.bus.nmi:
+                self.nmi()
+                return False
+
+            # Handle irq if any occured
+            elif self.bus.irq and not self.flag_I:
+                self.irq()
+                return False
+
+            # Fetch
             opcode = self.memory.cpu_read(self.PC)
-            # Fetch next istruction (memory read at PC, advance PC)
+            # Decode
             self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
             if self._instruction:
                 self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
                 self._fetching = False
-                # if not is_legal and self._instruction != "JAM":
-                #    logging.warning(f"Illegal opcode {opcode:02X} @ ${self.PC:04X}")
             else:
                 logging.warning(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
-            self.PC += 1
-            return
+            return False
 
-        else:
-            address = self.addressing_methods[self._mode]()
-            getattr(self, self._instruction)(address)
-            self._fetching = True
+        # Execute
+        self.PC += 1
+        address = self.addressing_methods[self._mode]()
+        getattr(self, self._instruction)(address)
+        self._fetching = True
 
         if self.PC in TRACE_EXEC:
             logging.debug(self)
 
-        # Handle nmi if any occured
-        if self.bus.nmi:
-            self.nmi()
-
-        # Handle irq if any occured
-        elif self.bus.irq and not self.flag_I:
-            self.irq()
+        return self._cycles_left == 0
 
     def irq(self):
         """
@@ -281,16 +286,22 @@ class CPU:
     def addressing_ABS_X(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the X register is
         # added (with carry).
-        address = self.memory.read_address(self.PC)
+        address = self.memory.read_address(self.PC) + self.X
+        if address > 0xFFFF:
+            logging.warning(f"ABS,X overflow @ ${self.PC-1:0x4}")
+            address &= 0xFFFF
         self.PC += 2
-        return address + self.X
+        return address
 
     def addressing_ABS_Y(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is
         # added (with carry).
-        address = self.memory.read_address(self.PC)
+        address = self.memory.read_address(self.PC)  + self.Y
+        if address > 0xFFFF:
+            logging.warning("ABS,Y overflow @ ${self.PC-1:0x4}")
+            address &=0xFFFF
         self.PC += 2
-        return address + self.Y
+        return address
 
     def addressing_ZP_X(self):
         # An 8-bit address is provided, to which the X register is added (without carry - if the addition overflows,
@@ -373,6 +384,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def BRK(self, address):
@@ -440,25 +452,26 @@ class CPU:
         result = self.A - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result += 255
+            result &= 0xFF
         self.setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result += 255
+            result &= 0xFF
         self.setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result += 255
+            result &=0xFF
         self.setNZ(result)
 
     def DEC(self, address):
         result = (self.memory.cpu_read(address) - 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
         self.memory.cpu_write(address, result)
         self.setNZ(result)
 
@@ -477,6 +490,7 @@ class CPU:
 
     def INC(self, address):
         value = (self.memory.cpu_read(address) + 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
         self.memory.cpu_write(address, value)
         self.setNZ(value)
 
@@ -518,6 +532,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def NOP(self, address):
@@ -550,6 +565,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def ROR(self, address):
@@ -561,6 +577,7 @@ class CPU:
         if address is None:
             self.A = result
         else:
+            self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
             self.memory.cpu_write(address, result)
 
     def RTI(self, Address):

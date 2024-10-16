@@ -12,18 +12,16 @@ SYMBOLS = {
     "R6510": 0x0001,
 }
 
-CLOCKS_PER_EVENT_SERVING = (
-    25000  # Clock cycles between system event serving (keyboard scan, ...)
-)
-CLOCKS_PER_CONSOLE_REFRESH = (
-    50000  # Clock cycles between console screen (when enabled) updates
-)
-CLOCKS_PER_FRAME = (
-    18656  # Clock cycles between frame update (non-raster screen drivers)
-)
-CLOCKS_PER_PERFORMANCE_REFRESH = (
-    250000  # CLocks cycles between refresh of FPS/perf values
-)
+# Clock cycles between frame update (non-raster screen drivers)
+CLOCKS_PER_FRAME = 18656
+
+# Frames between refresh of FPS/perf values
+FRAMES_PER_PERFORMANCE_REFRESH = 15
+
+# Frames between console screen (when enabled) updates
+FRAMES_PER_CONSOLE_REFRESH = 1
+
+CLOCKS_PER_PERFORMANCE_REFRESH = CLOCKS_PER_FRAME * FRAMES_PER_PERFORMANCE_REFRESH
 
 CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER = 10  # How many chars to inject into buffer at once
 

@@ -33,15 +33,19 @@ def cia_a(memory, bus):
 
 
 def test_CIA_timer_A(cia):
+    # Enable interrupts
+    cia.irq_timer_A_enable = True
+    cia.timer_A_restart_after_underflow = True
     assert cia.timer_A == 0
 
     cia.timer_A_latch = 0x0002
     cia.timer_A_load()
+    cia.timer_A_start = True
+
     assert cia.timer_A == 0x0002
     assert cia.timer_A_lo == 0x02
     assert cia.timer_A_hi == 0x00
 
-    cia.timer_A_start = True
     cia.clock()
     assert cia.timer_A == 0x0001
     assert cia.timer_A_lo == 0x01
@@ -50,7 +54,6 @@ def test_CIA_timer_A(cia):
     cia.clock()
     assert cia.interrupt_occured is False
 
-    cia.timer_A_restart_after_underflow = True
     cia.clock()
     assert cia.interrupt_occured is True
     assert cia.timer_A == 0x0002
@@ -151,3 +154,39 @@ def test_CIA_A_keyboard(pressed, column, expected, cia_a):
     cia_a.memory.cpu_write(0xDC00, 0xFF - column)
     cia_a.clock(pressed)
     assert cia_a.memory.cpu_read(0xDC01) == 0xFF - expected
+
+
+def test_CIA_A_irq_registers(cia_a):
+    assert cia_a.irq_timer_A_enable is False
+    assert cia_a.irq_timer_B_enable is False
+    assert cia_a.irq_TOD_enable is False
+    assert cia_a.irq_IO_enable is False
+    assert cia_a.irq_FLAG_enable is False
+
+    cia_a.set_registers(0xDC0D, 0b10010101)
+    assert cia_a.irq_timer_A_enable is True
+    assert cia_a.irq_timer_B_enable is False
+    assert cia_a.irq_TOD_enable is True
+    assert cia_a.irq_IO_enable is False
+    assert cia_a.irq_FLAG_enable is True
+
+    cia_a.set_registers(0xDC0D, 0b00010001)
+    assert cia_a.irq_timer_A_enable is False
+    assert cia_a.irq_timer_B_enable is False
+    assert cia_a.irq_TOD_enable is True
+    assert cia_a.irq_IO_enable is False
+    assert cia_a.irq_FLAG_enable is False
+
+    cia_a.set_registers(0xDC0D, 0b11111111)
+    assert cia_a.irq_timer_A_enable is True
+    assert cia_a.irq_timer_B_enable is True
+    assert cia_a.irq_TOD_enable is True
+    assert cia_a.irq_IO_enable is True
+    assert cia_a.irq_FLAG_enable is True
+
+    cia_a.set_registers(0xDC0D, 0b00011111)
+    assert cia_a.irq_timer_A_enable is False
+    assert cia_a.irq_timer_B_enable is False
+    assert cia_a.irq_TOD_enable is False
+    assert cia_a.irq_IO_enable is False
+    assert cia_a.irq_FLAG_enable is False

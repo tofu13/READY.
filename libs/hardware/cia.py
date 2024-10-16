@@ -18,6 +18,11 @@ class CIA:
         "timer_B_underflow",
         "timer_B_restart_after_underflow",
         "tod_zero",
+        "irq_timer_A_enable",
+        "irq_timer_B_enable",
+        "irq_TOD_enable",
+        "irq_IO_enable",
+        "irq_FLAG_enable",
         "interrupt_occured",
     ]
 
@@ -39,6 +44,12 @@ class CIA:
         self.timer_B_underflow: bool = False
         self.timer_B_restart_after_underflow: bool = False
 
+        self.irq_timer_A_enable: bool = False
+        self.irq_timer_B_enable: bool = False
+        self.irq_TOD_enable: bool = False
+        self.irq_IO_enable: bool = False
+        self.irq_FLAG_enable: bool = False
+
         self.tod_zero = perf_counter()
         self.interrupt_occured = False
 
@@ -48,7 +59,7 @@ class CIA:
             self.timer_A -= 1
             if self.timer_A < 0:
                 self.timer_A_underflow = True
-                self.interrupt_occured = True
+                self.interrupt_occured = self.irq_timer_A_enable
                 if self.timer_A_restart_after_underflow:
                     self.timer_A_load()
                 else:
@@ -192,6 +203,9 @@ class CIA_A(CIA):
                 self.bus.irq_clear("timer_A")
 
                 return result
+            case 0x0E:
+                # TODO: what about other bits? Maybe disconnected
+                return int(self.timer_A_start)
         return 0
 
     def set_registers(self, address, value):
@@ -203,9 +217,19 @@ class CIA_A(CIA):
                 "Set hi byte of timer_A"
                 self.timer_A_latch = value * 256 + self.timer_A_latch % 256
             case 0x0D:
-                # TODO: set interrupt sources
-                # source = bool(value & 0b10000000)
-                pass
+                # Enable/Disable IRQ sources
+                # Value of bit #7 enables/disables
+                enable = bool(value & 0b10000000)
+                if value & 0b00001:
+                    self.irq_timer_A_enable = enable
+                if value & 0b00010:
+                    self.irq_timer_B_enable = enable
+                if value & 0b00100:
+                    self.irq_TOD_enable = enable
+                if value & 0b01000:
+                    self.irq_IO_enable = enable
+                if value & 0b10000:
+                    self.irq_FLAG_enable = enable
 
             case 0x0E:
                 # Bit 0: 0 = Stop timer; 1 = Start timer
