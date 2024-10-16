@@ -13,6 +13,8 @@ from libs.hardware.constants import (
     CLOCKS_PER_PERFORMANCE_REFRESH,
     FRAMES_PER_CONSOLE_REFRESH,
     FRAMES_PER_PERFORMANCE_REFRESH,
+    NUMPAD_CYCLE,
+    NUMPAD_MODE,
     PALETTE,
     PETSCII,
     REAL_VIDEO_SIZE,
@@ -106,6 +108,7 @@ class Machine(PatchMixin):
         "_frame_counter",
         "_last_perf_timer",
         "_current_fps",
+        "_numpad_mode",
         # Unpickables
         "monitor",
         "display",
@@ -152,7 +155,7 @@ class Machine(PatchMixin):
         self._clock_counter = 0
         self._frame_counter = 0
 
-        self.caption = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
+        self.caption = "Commodore 64 {} {:.1f} FPS {:.1f}% performance"
         self.display_size = (
             REAL_VIDEO_SIZE[0] * display_scale,
             REAL_VIDEO_SIZE[1] * display_scale,
@@ -160,6 +163,7 @@ class Machine(PatchMixin):
 
         self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
+        self.set_numpad_mode(NUMPAD_MODE.NUM)
 
         self.paste_buffer = list(autotype)
 
@@ -308,6 +312,7 @@ class Machine(PatchMixin):
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
                 self.caption.format(
+                    self._numpad_mode,
                     self.pygame_clock.get_fps(),
                     CLOCKS_PER_PERFORMANCE_REFRESH
                     / 10000
@@ -348,6 +353,8 @@ class Machine(PatchMixin):
                     signal = SIGNALS.RESET
                 elif event.key == pygame.K_F11:
                     signal = SIGNALS.MONITOR
+                elif event.key == pygame.K_NUMLOCK:
+                    self.set_numpad_mode(next(NUMPAD_CYCLE))
                 elif event.key == pygame.K_F10:
                     # F10 -> paste text
                     try:
@@ -445,6 +452,9 @@ class Machine(PatchMixin):
         for row in range(25):
             dump += "".join(data_char[row * 40 : (row + 1) * 40 - 1]) + "\n"
         return dump
+
+    def set_numpad_mode(self, mode: NUMPAD_MODE):
+        self._numpad_mode = mode
 
 
 def DefaultMachine() -> Machine:
