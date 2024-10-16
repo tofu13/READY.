@@ -10,9 +10,9 @@ from libs import hardware
 from libs.hardware.constants import (
     ASPECT_RATIO,
     CHARS_TO_PASTE_INTO_KEYBOARD_BUFFER,
-    CLOCKS_PER_CONSOLE_REFRESH,
-    CLOCKS_PER_EVENT_SERVING,
     CLOCKS_PER_PERFORMANCE_REFRESH,
+    FRAMES_PER_CONSOLE_REFRESH,
+    FRAMES_PER_PERFORMANCE_REFRESH,
     PALETTE,
     PETSCII,
     REAL_VIDEO_SIZE,
@@ -103,6 +103,7 @@ class Machine(PatchMixin):
         "breakpoints",
         "tracepoints",
         "_clock_counter",
+        "_frame_counter",
         "_last_perf_timer",
         "_current_fps",
         # Unpickables
@@ -149,6 +150,7 @@ class Machine(PatchMixin):
 
         self.input_buffer = ""
         self._clock_counter = 0
+        self._frame_counter = 0
 
         self.caption = "Commodore 64 (Text) {:.1f} FPS {:.1f}% performance"
         self.display_size = (
@@ -245,10 +247,11 @@ class Machine(PatchMixin):
 
         while True:
             self.clock()
+            self._clock_counter += 1
 
     def clock(self):
         """
-        Run a single step of all devices
+        Clocks all devices
         """
         # Run VIC-II
         frame = self.screen.clock(self._clock_counter)
@@ -260,8 +263,12 @@ class Machine(PatchMixin):
             frame.set_palette(PALETTE)
             self.display.blit(frame, (0, 0))
             pygame.display.flip()
+            self._frame_counter += 1
             # Get FPS
             self.pygame_clock.tick()  # Max 50 FPS
+
+            # Run service once a frame (good guess and not configurable)
+            self.service()
 
         # Run CPU
         if self.cpu.clock():
@@ -278,26 +285,25 @@ class Machine(PatchMixin):
             ) is not None and self.memory.hiram_port:
                 patch()
 
-        # Run CIA A
+        # Run CIAs
         self.ciaA.clock(self.keys_pressed)
         self.ciaB.clock()
 
-        self._clock_counter += 1
-        if self._clock_counter % CLOCKS_PER_EVENT_SERVING == 0:
-            self.signal = self.manage_events()
-            if self.signal is SIGNALS.RESET:
-                self.cpu.PC = 0xFCE2
-                self.signal = SIGNALS.NONE
-            elif self.signal is SIGNALS.MONITOR:
-                self.monitor_active = True
-                self.signal = SIGNALS.NONE
+    def service(self):
+        self.signal = self.manage_events()
+        if self.signal is SIGNALS.RESET:
+            self.cpu.PC = 0xFCE2
+            self.signal = SIGNALS.NONE
+        elif self.signal is SIGNALS.MONITOR:
+            self.monitor_active = True
+            self.signal = SIGNALS.NONE
 
-        if self.console and self._clock_counter % CLOCKS_PER_CONSOLE_REFRESH == 0:
+        if self.console and self._frame_counter % FRAMES_PER_CONSOLE_REFRESH == 0:
             # Send screen to console
             print("\033[H\033[1J", end="")  # Clear screen
             print(self.screendump())
 
-        if self._clock_counter % CLOCKS_PER_PERFORMANCE_REFRESH == 0:
+        if self._frame_counter % FRAMES_PER_PERFORMANCE_REFRESH == 0:
             _perf_timer = time.perf_counter()
             pygame.display.set_caption(
                 # 100% : 1000000 clocks/s = perf% : CLOCK_PER_PERFORMANCE_REFRESH
