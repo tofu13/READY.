@@ -455,6 +455,7 @@ class Machine(PatchMixin):
 
     def set_numpad_mode(self, mode: NUMPAD_MODE):
         self._numpad_mode = mode
+        self.ciaA.set_numpad_mode(mode)
 
 
 def DefaultMachine() -> Machine:
