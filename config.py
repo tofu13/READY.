@@ -7,7 +7,9 @@ ROMS_FOLDER = "roms"
 TESTING_ROMS_FOLDER = "tests/roms"
 
 LOGFILE = "logready"
-LOGLEVEL = logging.WARNING
+LOGFILE = "/dev/stdout"
+LOGLEVEL = logging.DEBUG
+# LOGLEVEL = logging.WARNING
 
 # Screen driver
 # - raster: full simulation, slower
@@ -23,4 +25,5 @@ QUICK_BOOT = True
 # KEYMAP = "en"
 KEYMAP = "it"
 
-TRACE_EXEC = set(range(0xA000, 0xB000))
+TRACE_EXEC = set(range(0x0100, 0xA000))
+TRACE_EXEC = {}

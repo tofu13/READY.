@@ -94,6 +94,8 @@ See [config.py](config.py) for available parameters:
 - F10 paste
 - F11 enter monitor
 - F12 reset
+- NUMLOCK: cycle trough numpad modes: NUMeric/JoystickPort1/JoystickPort2 
+- NUMPAD 0 2 4 6 8: joystick fire and directions
 - RIGHT_CTRL + P: PLAY on datassette
 - RIGHT_CTRL + S: STOP on datassette
 ```

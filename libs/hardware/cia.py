@@ -1,6 +1,6 @@
 from time import perf_counter
 
-from .constants import BITVALUES, KEYBOARD
+from .constants import BITVALUES, JOYSTICK_MAP, KEYBOARD, NUMPAD_MODE, NUMPAD_NUMS
 
 
 class CIA:
@@ -104,6 +104,7 @@ class CIA:
 class CIA_A(CIA):
     __slots__ = [
         "keys_pressed",
+        "numpad_mode",
     ]
 
     def __init__(self, memory, bus):
@@ -112,7 +113,17 @@ class CIA_A(CIA):
         self.memory.read_watchers.append((0xDC00, 0xDCFF, self.get_registers))
         self.memory.write_watchers.append((0xDC00, 0xDCFF, self.set_registers))
 
+        self.set_numpad_mode(NUMPAD_MODE.NUM)
         self.keys_pressed = set()
+
+    def set_numpad_mode(self, mode: NUMPAD_MODE):
+        self.numpad_mode = mode
+        match mode:
+            case NUMPAD_MODE.NUM:
+                KEYBOARD.update(NUMPAD_NUMS)
+            case NUMPAD_MODE.JP1 | NUMPAD_MODE.JP2:
+                for key in NUMPAD_NUMS.keys():
+                    KEYBOARD.pop(key, None)
 
     def clock(self, keys_pressed: set):
         """
@@ -130,6 +141,13 @@ class CIA_A(CIA):
     def get_registers(self, address):
         # Registers repeated every 0x10
         match address & 0x0F:
+            case 0x00:
+                value = 0xFF  # Bits #5-#6-#7 disconnected
+                if self.numpad_mode is NUMPAD_MODE.JP2:
+                    for kmap, val in JOYSTICK_MAP.items():
+                        if kmap in self.keys_pressed:
+                            value -= val
+                return value
             case 0x01:
                 if not self.keys_pressed:
                     # Shortcut
@@ -144,11 +162,15 @@ class CIA_A(CIA):
                         keys_pressed.difference_update(kmap)
                         # break
 
-                k = 0x00
+                value = 0xFF
                 for k_col, k_row in c64keys:
                     if col & k_col:
-                        k |= k_row
-                return 255 - k
+                        value -= k_row
+                if self.numpad_mode is NUMPAD_MODE.JP1:
+                    for kmap, val in JOYSTICK_MAP.items():
+                        if kmap in self.keys_pressed:
+                            value -= val
+                return value
             case 0x04:
                 return self.timer_A % 256
             case 0x05:

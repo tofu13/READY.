@@ -1,5 +1,6 @@
 import enum
 import re
+from itertools import cycle
 
 import pygame
 
@@ -518,6 +519,15 @@ class SIGNALS(enum.Enum):
     MONITOR = enum.auto()
 
 
+class NUMPAD_MODE(enum.Enum):
+    NUM = enum.auto()
+    JP1 = enum.auto()
+    JP2 = enum.auto()
+
+
+NUMPAD_CYCLE = cycle(NUMPAD_MODE)
+
+
 class C64_KEYS(enum.Enum):
     INS_DEL = (0x01, 0x01)
     RETURN = (0x01, 0x02)
@@ -756,16 +766,6 @@ KEYBOARD.update(
         frozenset((pygame.K_7,)): {C64_KEYS.NUMBER_7},
         frozenset((pygame.K_8,)): {C64_KEYS.NUMBER_8},
         frozenset((pygame.K_9,)): {C64_KEYS.NUMBER_9},
-        frozenset((pygame.K_KP0,)): {C64_KEYS.NUMBER_0},
-        frozenset((pygame.K_KP1,)): {C64_KEYS.NUMBER_1},
-        frozenset((pygame.K_KP2,)): {C64_KEYS.NUMBER_2},
-        frozenset((pygame.K_KP3,)): {C64_KEYS.NUMBER_3},
-        frozenset((pygame.K_KP4,)): {C64_KEYS.NUMBER_4},
-        frozenset((pygame.K_KP5,)): {C64_KEYS.NUMBER_5},
-        frozenset((pygame.K_KP6,)): {C64_KEYS.NUMBER_6},
-        frozenset((pygame.K_KP7,)): {C64_KEYS.NUMBER_7},
-        frozenset((pygame.K_KP8,)): {C64_KEYS.NUMBER_8},
-        frozenset((pygame.K_KP9,)): {C64_KEYS.NUMBER_9},
         frozenset((pygame.K_KP_ENTER,)): {C64_KEYS.RETURN},
         frozenset((pygame.K_KP_PLUS,)): {C64_KEYS.PLUS},
         frozenset((pygame.K_KP_MINUS,)): {C64_KEYS.MINUS},
@@ -808,3 +808,24 @@ KEYBOARD.update(
         frozenset((pygame.K_F8,)): {C64_KEYS.LEFT_SHIFT, C64_KEYS.F7_F8},
     }
 )
+
+NUMPAD_NUMS = {
+    frozenset((pygame.K_KP0,)): {C64_KEYS.NUMBER_0},
+    frozenset((pygame.K_KP1,)): {C64_KEYS.NUMBER_1},
+    frozenset((pygame.K_KP2,)): {C64_KEYS.NUMBER_2},
+    frozenset((pygame.K_KP3,)): {C64_KEYS.NUMBER_3},
+    frozenset((pygame.K_KP4,)): {C64_KEYS.NUMBER_4},
+    frozenset((pygame.K_KP5,)): {C64_KEYS.NUMBER_5},
+    frozenset((pygame.K_KP6,)): {C64_KEYS.NUMBER_6},
+    frozenset((pygame.K_KP7,)): {C64_KEYS.NUMBER_7},
+    frozenset((pygame.K_KP8,)): {C64_KEYS.NUMBER_8},
+    frozenset((pygame.K_KP9,)): {C64_KEYS.NUMBER_9},
+}
+
+JOYSTICK_MAP = {
+    (pygame.K_KP8): 1,
+    (pygame.K_KP2): 2,
+    (pygame.K_KP4): 4,
+    (pygame.K_KP6): 8,
+    (pygame.K_KP0): 16,
+}
