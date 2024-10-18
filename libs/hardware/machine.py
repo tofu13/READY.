@@ -60,15 +60,11 @@ class PatchMixin:
         data = self.memory[0x95]
         self.outfile.write(bytes([data]))
         self.cpu.PC = 0xEDAC  # Jump to RTS
-        # TODO: ok salva. Ora distingui l'apertura del file dai dati
 
     def patch_RDBYTE(self):  # fix name
         self.cpu.A, eof = next(self.byteprovider)
         if eof:
             self.memory[0x90] |= 0x40
-        # else:
-        #    self.memory[0x90] &= 0xBF
-        # print(f"Read byte from serial bus {chr(self.cpu.A)} {hex(self.cpu.A)}")
         self.cpu.PC = 0xEE84
 
     def patch_SETNAM(self):
@@ -141,8 +137,6 @@ class Machine(PatchMixin):
 
         self.monitor_active = False
 
-        # Default processor I/O
-        self.memory[0] = 47
         # Default processor ports  (HIRAM, LORAM, CHARGEN = 1)
         self.memory[1] = 55
         # Assert datassette stopped
@@ -166,8 +160,6 @@ class Machine(PatchMixin):
         self.set_numpad_mode(NUMPAD_MODE.NUM)
 
         self.paste_buffer = list(autotype)
-
-        # self.cpu.breakpoints.add(0xF4C4)
 
         self.patches = {
             0xF4C4: self.patch_IECIN,

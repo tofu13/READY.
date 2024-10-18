@@ -89,7 +89,7 @@ class CIA:
     def tod(self) -> tuple:
         """
         TOD value
-        :return: tuple (10th sec, sec, min, hours)
+        return: tuple (10th sec, sec, min, hours)
         """
         tod = perf_counter() - self.tod_zero
         int_tod = int(tod)
@@ -122,13 +122,10 @@ class CIA_A(CIA):
             case NUMPAD_MODE.NUM:
                 KEYBOARD.update(NUMPAD_NUMS)
             case NUMPAD_MODE.JP1 | NUMPAD_MODE.JP2:
-                for key in NUMPAD_NUMS.keys():
+                for key in NUMPAD_NUMS:
                     KEYBOARD.pop(key, None)
 
     def clock(self, keys_pressed: set):
-        """
-        Execute CIA stuff
-        """
         # Save keys pressed
         self.keys_pressed = keys_pressed
 

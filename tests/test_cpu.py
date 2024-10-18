@@ -176,7 +176,7 @@ def test_cpu_addressing_methods(cpu, method, expected, advance):
 
 
 @pytest.mark.parametrize(
-    ["carry_in", "accumulator", "operand", "result", "C", "Z"],
+    ("carry_in", "accumulator", "operand", "result", "C", "Z"),
     [
         (False, 0x00, 0x00, 0x00, False, True),
         (True, 0x00, 0x00, 0x01, False, False),
@@ -198,7 +198,7 @@ def test_decimal_ADC(cpu, carry_in, accumulator, operand, result, C, Z):
 
 
 @pytest.mark.parametrize(
-    ["carry_in", "accumulator", "operand", "result", "C", "Z"],
+    ("carry_in", "accumulator", "operand", "result", "C", "Z"),
     [
         (True, 0x00, 0x00, 0x00, False, True),
         (True, 0x46, 0x12, 0x34, True, False),

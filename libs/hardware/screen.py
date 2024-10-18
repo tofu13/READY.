@@ -485,13 +485,13 @@ class RasterScreen(VIC_II):
                     self.frame[pixel_pointer : pixel_pointer + self.X_SCROLL] = (
                         self.background_color,
                     ) * self.X_SCROLL
+
                 # Empty pixels at top
-                elif 51 <= self.raster_y < 48 + self.Y_SCROLL:
-                    self.frame[pixel_pointer : pixel_pointer + 8] = (
-                        self._cached_background_color_pack
-                    )
                 # Empty pixels at bottom
-                elif self.raster_y > 247 + self.Y_SCROLL:
+                elif (
+                    51 <= self.raster_y < 48 + self.Y_SCROLL
+                    or self.raster_y > 247 + self.Y_SCROLL
+                ):
                     self.frame[pixel_pointer : pixel_pointer + 8] = (
                         self._cached_background_color_pack
                     )
@@ -514,8 +514,8 @@ class RasterScreen(VIC_II):
         if self.raster_x >= SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
-            # FIXME; very rough raster irq
             if self.irq_raster_enabled and self.irq_raster_line == self.raster_y:
+                # Raster IRQ
                 self.irq_raster_occured = True
                 self.bus.irq_set("VIC-II")
             if self.raster_y >= SCAN_AREA_V:
