@@ -149,8 +149,7 @@ class CIA_A(CIA):
                 if not self.keys_pressed:
                     # Shortcut
                     return 0xFF
-                col = 255 - self.memory[0xDC00]  # Invert bits
-
+                # Translate pressed keys into c64 keys
                 c64keys = []
                 keys_pressed = self.keys_pressed.copy()
                 for kmap, val in KEYBOARD.items():
@@ -159,10 +158,15 @@ class CIA_A(CIA):
                         keys_pressed.difference_update(kmap)
                         # break
 
-                value = 0xFF
+                # Compute matrix value
+                selected_column = 255 - self.memory[0xDC00]  # Invert bits
+                value = 0x00
                 for k_col, k_row in c64keys:
-                    if col & k_col:
-                        value -= k_row
+                    if selected_column & k_col:
+                        value |= k_row
+                value = 255 - value
+
+                # Mix joystick port 1
                 if self.numpad_mode is NUMPAD_MODE.JP1:
                     for kmap, val in JOYSTICK_MAP.items():
                         if kmap in self.keys_pressed:
