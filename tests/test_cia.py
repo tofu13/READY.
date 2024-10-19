@@ -75,6 +75,7 @@ def test_CIA_tod(cia):
     ("pressed", "column", "expected"),
     [
         (set(), 0x00, 0x00),
+        # Single keys
         ({pygame.K_DELETE}, 0x01, 0x01),
         ({pygame.K_RETURN}, 0x01, 0x02),
         ({pygame.K_KP_ENTER}, 0x01, 0x02),
@@ -147,6 +148,21 @@ def test_CIA_tod(cia):
         ({pygame.K_LALT}, 0x80, 0x20),
         ({pygame.K_q}, 0x80, 0x40),
         ({pygame.K_ESCAPE}, 0x80, 0x80),
+        # Multiple keys
+        ({pygame.K_INSERT}, 0x02, 0x80),
+        ({pygame.K_INSERT}, 0x01, 0x01),
+        ({pygame.K_LEFT}, 0x02, 0x80),
+        ({pygame.K_LEFT}, 0x01, 0x04),
+        ({pygame.K_F8}, 0x02, 0x80),
+        ({pygame.K_F8}, 0x01, 0x08),
+        ({pygame.K_F2}, 0x02, 0x80),
+        ({pygame.K_F2}, 0x01, 0x10),
+        ({pygame.K_F4}, 0x02, 0x80),
+        ({pygame.K_F4}, 0x01, 0x20),
+        ({pygame.K_F6}, 0x02, 0x80),
+        ({pygame.K_F6}, 0x01, 0x40),
+        ({pygame.K_UP}, 0x02, 0x80),
+        ({pygame.K_UP}, 0x01, 0x80),
     ],
 )
 def test_CIA_A_keyboard(pressed, column, expected, cia_a):

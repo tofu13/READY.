@@ -323,7 +323,7 @@ def test_VIC_II_raster_bad_lines_lock_CPU(vic_ii_raster):
     ],
 )
 def test_VIC_II_raster_pixelate_bitmap(vic_ii_raster, pixels, expected):
-    assert PIXELATOR_BITMAP[pixels][1][0] == bytearray(expected)
+    assert PIXELATOR_BITMAP[pixels * 256 + 1 * 16 + 0] == bytearray(expected)
 
 
 @pytest.mark.parametrize(

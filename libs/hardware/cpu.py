@@ -5,7 +5,6 @@ from config import TRACE_EXEC
 from .constants import BITVALUES, OPCODES
 
 
-# noinspection PyPep8Naming
 class CPU:
     __slots__ = [
         "A",
@@ -296,10 +295,10 @@ class CPU:
     def addressing_ABS_Y(self):
         # Data is accessed using a 16-bit address specified as a constant, to which the value of the Y register is
         # added (with carry).
-        address = self.memory.read_address(self.PC)  + self.Y
+        address = self.memory.read_address(self.PC) + self.Y
         if address > 0xFFFF:
             logging.warning("ABS,Y overflow @ ${self.PC-1:0x4}")
-            address &=0xFFFF
+            address &= 0xFFFF
         self.PC += 2
         return address
 
@@ -466,7 +465,7 @@ class CPU:
         result = self.Y - self.memory.cpu_read(address)
         self.flag_C = result >= 0
         if result < 0:
-            result &=0xFF
+            result &= 0xFF
         self.setNZ(result)
 
     def DEC(self, address):

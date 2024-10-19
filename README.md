@@ -61,7 +61,8 @@ options:
   -ds DISPLAY_SCALE, --display-scale DISPLAY_SCALE
                         Display scale factor (default: 2.0)
   -ll LOGLEVEL, --loglevel LOGLEVEL
-                        Log level (default: 30)```
+                        Log level (default: 30)
+```
 
 ### Configuration
 
@@ -70,6 +71,7 @@ See [config.py](config.py) for available parameters:
 ### Keyboard mapping
 
 #### Default keys
+
 ```
 - PAGE_DOWN: <RESTORE>
 - PAGE_UP: <UP_ARROW>

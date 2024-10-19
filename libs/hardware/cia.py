@@ -89,7 +89,7 @@ class CIA:
     def tod(self) -> tuple:
         """
         TOD value
-        :return: tuple (10th sec, sec, min, hours)
+        return: tuple (10th sec, sec, min, hours)
         """
         tod = perf_counter() - self.tod_zero
         int_tod = int(tod)
@@ -122,13 +122,10 @@ class CIA_A(CIA):
             case NUMPAD_MODE.NUM:
                 KEYBOARD.update(NUMPAD_NUMS)
             case NUMPAD_MODE.JP1 | NUMPAD_MODE.JP2:
-                for key in NUMPAD_NUMS.keys():
+                for key in NUMPAD_NUMS:
                     KEYBOARD.pop(key, None)
 
     def clock(self, keys_pressed: set):
-        """
-        Execute CIA stuff
-        """
         # Save keys pressed
         self.keys_pressed = keys_pressed
 
@@ -152,8 +149,7 @@ class CIA_A(CIA):
                 if not self.keys_pressed:
                     # Shortcut
                     return 0xFF
-                col = 255 - self.memory[0xDC00]  # Invert bits
-
+                # Translate pressed keys into c64 keys
                 c64keys = []
                 keys_pressed = self.keys_pressed.copy()
                 for kmap, val in KEYBOARD.items():
@@ -162,10 +158,15 @@ class CIA_A(CIA):
                         keys_pressed.difference_update(kmap)
                         # break
 
-                value = 0xFF
+                # Compute matrix value
+                selected_column = 255 - self.memory[0xDC00]  # Invert bits
+                value = 0x00
                 for k_col, k_row in c64keys:
-                    if col & k_col:
-                        value -= k_row
+                    if selected_column & k_col:
+                        value |= k_row
+                value = 255 - value
+
+                # Mix joystick port 1
                 if self.numpad_mode is NUMPAD_MODE.JP1:
                     for kmap, val in JOYSTICK_MAP.items():
                         if kmap in self.keys_pressed:
