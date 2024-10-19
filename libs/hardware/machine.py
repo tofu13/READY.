@@ -157,7 +157,7 @@ class Machine(PatchMixin):
 
         self._last_perf_timer = time.perf_counter()
         self._current_fps = 0.0
-        self.set_numpad_mode(NUMPAD_MODE.NUM)
+        self.set_numpad_mode(next(NUMPAD_CYCLE))
 
         self.paste_buffer = list(autotype)
 
