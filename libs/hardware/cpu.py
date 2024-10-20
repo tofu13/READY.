@@ -5,6 +5,7 @@ from config import TRACE_EXEC
 from .constants import BITVALUES, OPCODES
 
 
+# noinspection PyPep8Naming
 class CPU:
     __slots__ = [
         "A",
@@ -663,4 +664,172 @@ class CPU:
     def JAM(self, address):
         logging.warning(f"Got JAM @ ${self.PC-1:04X}")
 
+    def ALR(self, address):
+        # AND oper + LSR
+        # A AND oper, 0 -> [76543210] -> C
+        value = self.A & self.memory.cpu_read(address)
+        self.flag_C = value & 0x01
+        result = value >> 1
+        self.setNZ(result)
+        self.A = result
+
+    def ANC(self, address):
+        # AND oper + set C as ASL
+        # A AND oper, bit(7) -> C
+        result = self.A & self.memory.cpu_read(address)
+        self.setNZ(result)
+        self.A = result
+        self.flag_C = bool(result & 0x80)
+
+    def ANE(self, address):
+        # (A OR CONST) AND X AND oper -> A
+        # TODO
+        pass
+
+    def ARR(self, address):
+        # AND oper + ROR
+        result = (self.A & self.memory.cpu_read(address)) >> 1
+        # C is bit 6
+        self.flag_C = result & 0x40
+        # V is bit 6 xor bit 5
+        self.flag_V = (result & 0x40) ^ (result & 0x20)
+        self.setNZ(result)
+        self.A = result
+
+    def DCP(self, address):
+        # DEC oper + CMP oper
+        # M - 1 -> M, A - M
+        result = (self.memory.cpu_read(address) - 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
+        self.memory.cpu_write(address, result)
+        result = self.A - result
+        self.flag_C = result >= 0
+        if result < 0:
+            result &= 0xFF
+        self.setNZ(result)
+
+    def ISC(self, address):
+        # INC oper + SBC oper
+        # M + 1 -> M, A - M - C -> A
+        value = (self.memory.cpu_read(address) + 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
+        self.memory.cpu_write(address, value)
+        # TODO BCD mode
+        result = self.A - value - (1 - self.flag_C)
+        self.setNZ(result & 0xFF)
+        self.flag_C = result >= 0x00
+        self.flag_V = bool(
+            (self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80
+        )
+        self.A = result & 0xFF
+
+    def LAS(self, address):
+        # LDA/TSX oper
+        # M AND SP -> A, X, SP
+        value = self.memory.cpu_read(address) & self.SP
+        self.A = self.X = self.SP = value
+        self.setNZ(value)
+
+    def LAX(self, address):
+        # LDA oper + LDX oper
+        # M -> A -> X
+        self.A = self.memory.cpu_read(address)
+        self.X = self.A
+        self.setNZ(self.A)
+
+    def LXA(self, address):
+        # (A OR CONST) AND X AND oper -> A
+        # TODO
+        pass
+
+    def RLA(self, address):
+        # ROL oper + AND oper
+        # M = C <- [76543210] <- C, A AND M -> A
+        value = self.memory.cpu_read(address)
+        _carrytemp = value >= 0x80
+        result = ((value << 1) | self.flag_C) & 0xFF
+        self.flag_C = _carrytemp
+        self.memory.cpu_write(address, result)
+        self.A &= result
+        self.setNZ(self.A)
+
+    def RRA(self, address):
+        # ROR oper + ADC oper
+        # M = C -> [76543210] -> C, A + M + C -> A, C
+        # TODO: BCD mode
+        value = self.memory.cpu_read(address)
+        _carrytemp = value & 0x01
+        result = ((value >> 1) | self.flag_C << 7) & 0xFF
+        self.memory.cpu_write(address, result)
+
+        result = result + self.A + self.flag_C
+        self.setNZ(result & 0xFF)
+        self.flag_C = result > 0xFF
+        self.flag_V = bool(
+            (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
+        )
+        self.A = result & 0xFF
+
+    def SAX(self, address):
+        # A and X are put on the bus at the same time
+        # (resulting effectively in an AND operation) and stored in M
+        # A AND X -> M
+        self.memory.cpu_write(address, self.A and self.X)
+
+    def SHA(self, address):
+        # Stores A AND X AND (high-byte of addr. + 1) at addr
+        # high_byte = address // 0x100
+        # TODO (get original operand...)
+        pass
+
+    def SHX(self, address):
+        # Stores X AND (high-byte of addr. + 1) at addr.
+        # high_byte = address // 0x100
+        # TODO (get original operand...)
+        pass
+
+    def SHY(self, address):
+        # Stores Y AND X AND (high-byte of addr. + 1) at addr
+        # high_byte = address // 0x100
+        # TODO (get original operand...)
+        pass
+
+    def SLO(self, address):
+        # ASL oper + ORA oper
+        # M = C <- [76543210] <- 0, A OR M -> A
+        value = self.memory.cpu_read(address)
+        self.flag_C = value >= 0x80
+        result = (value << 1) & 0xFF
+        self.A |= result
+        self.setNZ(self.A)
+
+    def SRE(self, address):
+        # LSR oper + EOR oper
+        # M = 0 -> [76543210] -> C, A EOR M -> A
+        value = self.memory.cpu_read(address)
+        self.flag_C = value & 0x01
+        result = value >> 1
+        self.memory.cpu_write(address, result)
+        self.A = self.A ^ result
+        self.setNZ(self.A)
+
+    def SBX(self, address):
+        # CMP and DEX at once, sets flags like CMP
+        # (A AND X) - oper -> X
+        result = (self.A & self.X) - self.memory.cpu_read(address)
+        self.flag_C = result >= 0
+        if result < 0:
+            result &= 0xFF
+        self.setNZ(result)
+        self.X = result
+
+    def TAS(self, address):
+        # Puts A AND X in SP and stores A AND X AND (high-byte of addr. + 1) at addr.
+        # TODO
+        pass
+
+    def USBC(self, address):
+        # (A OR CONST) AND X AND oper -> A
+        # same as SBC
+        pass
     # endregion
