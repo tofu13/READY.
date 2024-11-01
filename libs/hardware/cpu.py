@@ -359,18 +359,14 @@ class CPU:
             result = A + value + self.flag_C
             self.setNZ(result & 0xFF)  # ?
             self.flag_C = result > 99
-            self.flag_V = bool(
-                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-            )  # ???
+            self.flag_V = bool((self.A ^ result) & (value ^ result) & 0x80)  # ???
             result = self.decimal_to_binary(result % 100)
         else:
             result = self.A + value + self.flag_C
             self.setNZ(result & 0xFF)
             self.flag_C = result > 0xFF
             # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            self.flag_V = bool(
-                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-            )
+            self.flag_V = bool((self.A ^ result) & (value ^ result) & 0x80)
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -600,22 +596,14 @@ class CPU:
             self.setNZ(result & 0xFF)
             self.flag_C = result > 0x00
             # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            self.flag_V = bool(
-                (self.A ^ result)
-                & ((0xFF - self.memory.cpu_read(address)) ^ result)
-                & 0x80
-            )
+            self.flag_V = bool((self.A ^ result) & ((0xFF - value) ^ result) & 0x80)
             result = self.decimal_to_binary(result % 100)
         else:
             result = self.A - value - (1 - self.flag_C)
             self.setNZ(result & 0xFF)
             self.flag_C = result >= 0x00
             # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            self.flag_V = bool(
-                (self.A ^ result)
-                & ((0xFF - self.memory.cpu_read(address)) ^ result)
-                & 0x80
-            )
+            self.flag_V = bool((self.A ^ result) & ((0xFF - value) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def SEC(self, address):
@@ -720,9 +708,7 @@ class CPU:
         result = self.A - value - (1 - self.flag_C)
         self.setNZ(result & 0xFF)
         self.flag_C = result >= 0x00
-        self.flag_V = bool(
-            (self.A ^ result) & ((0xFF - self.memory.cpu_read(address)) ^ result) & 0x80
-        )
+        self.flag_V = bool((self.A ^ result) & ((0xFF - value) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def LAS(self, address):
@@ -767,9 +753,7 @@ class CPU:
         result = result + self.A + self.flag_C
         self.setNZ(result & 0xFF)
         self.flag_C = result > 0xFF
-        self.flag_V = bool(
-            (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-        )
+        self.flag_V = bool((self.A ^ result) & (value ^ result) & 0x80)
         self.A = result & 0xFF
 
     def SAX(self, address):
