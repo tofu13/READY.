@@ -119,7 +119,7 @@ class CPU:
 
     @staticmethod
     def binary_to_decimal(value):
-        hi, lo = value >> 4, value & 0x0F
+        hi, lo = value // 0x10, value & 0x0F
         return hi * 10 + lo
 
     @staticmethod
@@ -159,6 +159,8 @@ class CPU:
             if self._instruction:
                 self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
                 self._fetching = False
+                if not is_legal:
+                    logging.warning(f"Illegal {self}")
             else:
                 logging.warning(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
             return False
@@ -209,7 +211,7 @@ class CPU:
         :param high: The high byte
         :return: 2-byte value
         """
-        return high << 8 | low
+        return high * 0x100 + low
 
     def pack_status_register(self):
         result = 0
@@ -248,7 +250,7 @@ class CPU:
         """
         Save processor status before IRQ or NMI
         """
-        self.push(self.PC >> 8)
+        self.push(self.PC // 0x100)
         self.push(self.PC & 0xFF)
         self.push(self.pack_status_register())
 
@@ -379,7 +381,7 @@ class CPU:
     def ASL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         self.flag_C = value >= 0x80
-        result = (value << 1) & 0xFF
+        result = (value * 2) & 0xFF
         self.setNZ(result)
         if address is None:
             self.A = result
@@ -507,7 +509,7 @@ class CPU:
 
     def JSR(self, address):
         value = self.PC - 1
-        self.push((value & 0xFF00) >> 8)  # save high byte of PC
+        self.push((value & 0xFF00) // 0x100)  # save high byte of PC
         self.push(value & 0x00FF)  # save low byte of PC
         self.PC = address
         self.indent += 1
@@ -527,7 +529,7 @@ class CPU:
     def LSR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         self.flag_C = value & 0x01
-        result = value >> 1
+        result = value // 2
         self.setNZ(result)
         if address is None:
             self.A = result
@@ -559,7 +561,7 @@ class CPU:
     def ROL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value << 1) | self.flag_C) & 0xFF
+        result = ((value * 2) | self.flag_C) & 0xFF
         self.setNZ(result)
         self.flag_C = _carrytemp
         if address is None:
@@ -571,7 +573,7 @@ class CPU:
     def ROR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value >> 1) | self.flag_C << 7) & 0xFF
+        result = ((value // 2) | self.flag_C * 0x80) & 0xFF
         self.setNZ(result)
         self.flag_C = _carrytemp
         if address is None:
@@ -669,7 +671,7 @@ class CPU:
         # A AND oper, 0 -> [76543210] -> C
         value = self.A & self.memory.cpu_read(address)
         self.flag_C = value & 0x01
-        result = value >> 1
+        result = value // 2
         self.setNZ(result)
         self.A = result
 
@@ -688,7 +690,7 @@ class CPU:
 
     def ARR(self, address):
         # AND oper + ROR
-        result = (self.A & self.memory.cpu_read(address)) >> 1
+        result = (self.A & self.memory.cpu_read(address)) // 2
         # C is bit 6
         self.flag_C = result & 0x40
         # V is bit 6 xor bit 5
@@ -747,7 +749,7 @@ class CPU:
         # M = C <- [76543210] <- C, A AND M -> A
         value = self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value << 1) | self.flag_C) & 0xFF
+        result = ((value * 2) | self.flag_C) & 0xFF
         self.flag_C = _carrytemp
         self.memory.cpu_write(address, result)
         self.A &= result
@@ -759,7 +761,7 @@ class CPU:
         # TODO: BCD mode
         value = self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value >> 1) | self.flag_C << 7) & 0xFF
+        result = ((value // 2) | self.flag_C * 0x80) & 0xFF
         self.memory.cpu_write(address, result)
 
         result = result + self.A + self.flag_C
@@ -799,7 +801,7 @@ class CPU:
         # M = C <- [76543210] <- 0, A OR M -> A
         value = self.memory.cpu_read(address)
         self.flag_C = value >= 0x80
-        result = (value << 1) & 0xFF
+        result = (value * 2) & 0xFF
         self.A |= result
         self.setNZ(self.A)
 
@@ -808,7 +810,7 @@ class CPU:
         # M = 0 -> [76543210] -> C, A EOR M -> A
         value = self.memory.cpu_read(address)
         self.flag_C = value & 0x01
-        result = value >> 1
+        result = value // 2
         self.memory.cpu_write(address, result)
         self.A = self.A ^ result
         self.setNZ(self.A)
