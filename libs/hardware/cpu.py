@@ -449,22 +449,19 @@ class CPU:
     def CMP(self, address):
         result = self.A - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def DEC(self, address):
@@ -694,8 +691,7 @@ class CPU:
         self.memory.cpu_write(address, result)
         result = self.A - result
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def ISC(self, address):
@@ -804,8 +800,7 @@ class CPU:
         # (A AND X) - oper -> X
         result = (self.A & self.X) - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
         self.X = result
 
