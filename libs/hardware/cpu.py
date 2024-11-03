@@ -156,13 +156,10 @@ class CPU:
             opcode = self.memory.cpu_read(self.PC)
             # Decode
             self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
-            if self._instruction:
-                self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
-                self._fetching = False
-                if not is_legal:
-                    logging.warning(f"Illegal {self}")
-            else:
-                logging.warning(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
+            self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
+            self._fetching = False
+            if not is_legal:
+                logging.debug(f"Illegal {self}")
             return False
 
         # Execute
@@ -580,7 +577,7 @@ class CPU:
         self.PC = self.make_address(self.pop(), self.pop())
 
     def RTS(self, address):
-        value = self.pop() + (self.pop() << 8)
+        value = self.make_address(self.pop(), self.pop())
         self.PC = value + 1
         self.indent -= 1
 
@@ -813,4 +810,5 @@ class CPU:
         # (A OR CONST) AND X AND oper -> A
         # same as SBC
         pass
+
     # endregion
