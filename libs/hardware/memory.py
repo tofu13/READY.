@@ -6,6 +6,7 @@ from libs.hardware.constants import OPCODES, SCREEN_CHARCODE
 class Memory:
     __slots__ = [
         "ram",
+        "ram_color",
         "rom_basic",
         "rom_kernal",
         "rom_chargen",
@@ -21,9 +22,10 @@ class Memory:
     def __init__(self, ram=None, roms=None):
         """
         Memory class that implements PLA for routing reads and write
-        to/from RAM, ROMS, I/O.
+        to/from RAM, ROMS, I/O, including color ram
         """
         self.ram = ram if ram is not None else bytearray(65536)
+        self.ram_color: bytearray = bytearray(1024)
         if roms is None:
             self.rom_basic = None
             self.rom_kernal = None
@@ -55,6 +57,8 @@ class Memory:
             return self.rom_basic[address - 0xA000]
         elif 0xE000 <= address and self.hiram_port:
             return self.rom_kernal[address - 0xE000]
+        elif 0xD800 <= address <= 0xDBFF and self.io_port and self._any_ram:
+            return self.ram_color[address - 0xD800]
         elif 0xD000 <= address <= 0xDFFF:
             if self.io_port and self._any_ram:
                 # io_port on and RAM on -> I/O
@@ -84,14 +88,18 @@ class Memory:
             self._any_ram = self.hiram_port or self.loram_port
             return
 
-        if 0xD000 <= address <= 0xDFFF and self.io_port and self._any_ram:
+        elif 0xD800 <= address <= 0xDBFF and self.io_port and self._any_ram:
+            # Store only lower nibble to 4-bit color ram
+            self.ram_color[address - 0xD800] = value & 0x0F
+
+        elif 0xD000 <= address <= 0xDFFF and self.io_port and self._any_ram:
             for start, end, callback in self.write_watchers:
                 if start <= address <= end:
                     callback(address, value)
                     break
-
-        # Anyway, write into RAM
-        self.ram[address] = value
+        else:
+            # Ok, time to really write into RAM
+            self.ram[address] = value
 
     def vic_read(self, address: int) -> int:
         """Returns memory content as seen by VIC-II"""

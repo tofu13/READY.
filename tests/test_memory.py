@@ -149,6 +149,26 @@ def test_dump(memory_with_roms):
     )
 
 
+def test_ram_color(memory_with_roms):
+    # With I/O enabled
+    memory_with_roms.cpu_write(0xD800, 0x1F)
+    # Check only lower nibble wrote
+    assert memory_with_roms.ram_color[0] == 0x0F
+    # Check no RAM write
+    assert memory_with_roms[0xD800] == 0
+    # Check color_ram readable by cpu
+    assert memory_with_roms.cpu_read(0xD800) == 0x0F
+
+    # Now ALL RAM
+    memory_with_roms.cpu_write(1, 0)
+    memory_with_roms.cpu_write(0xD801, 0x2A)
+    # Check no ram_color write
+    assert memory_with_roms.ram_color[1] == 0
+    # Check RAM wrote
+    assert memory_with_roms[0xD801] == 0x2A
+    assert memory_with_roms.cpu_read(0xD801) == 0x2A
+
+
 @pytest.mark.parametrize(
     ("mem", "disassembled"),
     [

@@ -430,13 +430,13 @@ class RasterScreen(VIC_II):
                 # Bad lines
                 if self.raster_x == 24 and matrix_row_offset == 0:
                     char_pointer = self.video_matrix_base_address + matrix_row * 40
-                    color_pointer = 0xD800 + matrix_row * 40
+                    color_pointer = matrix_row * 40
 
                     self.char_buffer = bytearray(
                         self.memory.vic_read(i)
                         for i in range(char_pointer, char_pointer + 40)
                     )
-                    self.color_buffer = self.memory[
+                    self.color_buffer = self.memory.ram_color[
                         color_pointer : color_pointer + 40
                     ]  # Direct read from fixed color ram
                     # Steal cycles from CPU

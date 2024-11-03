@@ -24,6 +24,7 @@ class CIA:
         "irq_IO_enable",
         "irq_FLAG_enable",
         "interrupt_occured",
+        "keyboard_column",
     ]
 
     def __init__(self, memory, bus):
@@ -159,7 +160,7 @@ class CIA_A(CIA):
                         # break
 
                 # Compute matrix value
-                selected_column = 255 - self.memory[0xDC00]  # Invert bits
+                selected_column = 0xFF - self.keyboard_column  # Invert bits
                 value = 0x00
                 for k_col, k_row in c64keys:
                     if selected_column & k_col:
@@ -233,6 +234,9 @@ class CIA_A(CIA):
 
     def set_registers(self, address, value):
         match address & 0x0F:
+            case 0x00:
+                self.keyboard_column = value
+                # TODO: add paddle selection, bits #6 and #7
             case 0x04:
                 "Set lo byte of timer_A"
                 self.timer_A_latch = self.timer_A_latch // 256 + value
@@ -272,18 +276,22 @@ class CIA_A(CIA):
 
 
 class CIA_B(CIA):
-    __slots__ = []
+    __slots__ = [
+        "vic_bank",
+    ]
 
     def __init__(self, memory, bus):
         super().__init__(memory, bus)
-        # self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
+        self.memory.read_watchers.append((0xDD00, 0xDDFF, self.get_registers))
         self.memory.write_watchers.append((0xDD00, 0xDDFF, self.set_registers))
 
     def clock(self):
         return False
 
     def get_registers(self, address):
-        return 0
+        match address & 0x0F:
+            case 0x00:
+                return self.vic_bank
 
     def set_registers(self, address, value):
         match address & 0x0F:
@@ -292,4 +300,5 @@ class CIA_B(CIA):
                 # Here, at CIA_B's
                 # We'll set a MEMORY internal
                 # Used by the VIC
-                self.memory.vic_memory_bank = (3 - (value & 0b11)) << 14
+                self.vic_bank = value & 0b11
+                self.memory.vic_memory_bank = (3 - self.vic_bank) << 14
