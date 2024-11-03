@@ -5,6 +5,7 @@ from config import TRACE_EXEC
 from .constants import BITVALUES, OPCODES
 
 
+# noinspection PyPep8Naming
 class CPU:
     __slots__ = [
         "A",
@@ -118,7 +119,7 @@ class CPU:
 
     @staticmethod
     def binary_to_decimal(value):
-        hi, lo = value >> 4, value & 0x0F
+        hi, lo = value // 0x10, value & 0x0F
         return hi * 10 + lo
 
     @staticmethod
@@ -155,11 +156,10 @@ class CPU:
             opcode = self.memory.cpu_read(self.PC)
             # Decode
             self._instruction, self._mode, self._cycles_left, is_legal = OPCODES[opcode]
-            if self._instruction:
-                self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
-                self._fetching = False
-            else:
-                logging.warning(f"Unknown opcode {opcode:02X} @ ${self.PC:04X}")
+            self._cycles_left -= 2  # One for fetch, One pre-reserved for execute
+            self._fetching = False
+            if not is_legal:
+                logging.debug(f"Illegal {self}")
             return False
 
         # Execute
@@ -208,7 +208,7 @@ class CPU:
         :param high: The high byte
         :return: 2-byte value
         """
-        return high << 8 | low
+        return high * 0x100 + low
 
     def pack_status_register(self):
         result = 0
@@ -247,7 +247,7 @@ class CPU:
         """
         Save processor status before IRQ or NMI
         """
-        self.push(self.PC >> 8)
+        self.push(self.PC // 0x100)
         self.push(self.PC & 0xFF)
         self.push(self.pack_status_register())
 
@@ -356,18 +356,14 @@ class CPU:
             result = A + value + self.flag_C
             self.setNZ(result & 0xFF)  # ?
             self.flag_C = result > 99
-            self.flag_V = bool(
-                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-            )  # ???
+            self.flag_V = bool((self.A ^ result) & (value ^ result) & 0x80)  # ???
             result = self.decimal_to_binary(result % 100)
         else:
             result = self.A + value + self.flag_C
             self.setNZ(result & 0xFF)
             self.flag_C = result > 0xFF
             # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            self.flag_V = bool(
-                (self.A ^ result) & (self.memory.cpu_read(address) ^ result) & 0x80
-            )
+            self.flag_V = bool((self.A ^ result) & (value ^ result) & 0x80)
         self.A = result & 0xFF
 
     def AND(self, address):
@@ -378,7 +374,7 @@ class CPU:
     def ASL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         self.flag_C = value >= 0x80
-        result = (value << 1) & 0xFF
+        result = (value * 2) & 0xFF
         self.setNZ(result)
         if address is None:
             self.A = result
@@ -450,22 +446,19 @@ class CPU:
     def CMP(self, address):
         result = self.A - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def CPX(self, address):
         result = self.X - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def CPY(self, address):
         result = self.Y - self.memory.cpu_read(address)
         self.flag_C = result >= 0
-        if result < 0:
-            result &= 0xFF
+        result &= 0xFF
         self.setNZ(result)
 
     def DEC(self, address):
@@ -506,7 +499,7 @@ class CPU:
 
     def JSR(self, address):
         value = self.PC - 1
-        self.push((value & 0xFF00) >> 8)  # save high byte of PC
+        self.push((value & 0xFF00) // 0x100)  # save high byte of PC
         self.push(value & 0x00FF)  # save low byte of PC
         self.PC = address
         self.indent += 1
@@ -526,7 +519,7 @@ class CPU:
     def LSR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         self.flag_C = value & 0x01
-        result = value >> 1
+        result = value // 2
         self.setNZ(result)
         if address is None:
             self.A = result
@@ -558,7 +551,7 @@ class CPU:
     def ROL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value << 1) | self.flag_C) & 0xFF
+        result = ((value * 2) | self.flag_C) & 0xFF
         self.setNZ(result)
         self.flag_C = _carrytemp
         if address is None:
@@ -570,7 +563,7 @@ class CPU:
     def ROR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value >> 1) | self.flag_C << 7) & 0xFF
+        result = ((value // 2) | self.flag_C * 0x80) & 0xFF
         self.setNZ(result)
         self.flag_C = _carrytemp
         if address is None:
@@ -584,7 +577,7 @@ class CPU:
         self.PC = self.make_address(self.pop(), self.pop())
 
     def RTS(self, address):
-        value = self.pop() + (self.pop() << 8)
+        value = self.make_address(self.pop(), self.pop())
         self.PC = value + 1
         self.indent -= 1
 
@@ -597,22 +590,14 @@ class CPU:
             self.setNZ(result & 0xFF)
             self.flag_C = result > 0x00
             # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            self.flag_V = bool(
-                (self.A ^ result)
-                & ((0xFF - self.memory.cpu_read(address)) ^ result)
-                & 0x80
-            )
+            self.flag_V = bool((self.A ^ result) & ((0xFF - value) ^ result) & 0x80)
             result = self.decimal_to_binary(result % 100)
         else:
             result = self.A - value - (1 - self.flag_C)
             self.setNZ(result & 0xFF)
             self.flag_C = result >= 0x00
             # Thanks https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            self.flag_V = bool(
-                (self.A ^ result)
-                & ((0xFF - self.memory.cpu_read(address)) ^ result)
-                & 0x80
-            )
+            self.flag_V = bool((self.A ^ result) & ((0xFF - value) ^ result) & 0x80)
         self.A = result & 0xFF
 
     def SEC(self, address):
@@ -662,5 +647,168 @@ class CPU:
 
     def JAM(self, address):
         logging.warning(f"Got JAM @ ${self.PC-1:04X}")
+
+    def ALR(self, address):
+        # AND oper + LSR
+        # A AND oper, 0 -> [76543210] -> C
+        value = self.A & self.memory.cpu_read(address)
+        self.flag_C = value & 0x01
+        result = value // 2
+        self.setNZ(result)
+        self.A = result
+
+    def ANC(self, address):
+        # AND oper + set C as ASL
+        # A AND oper, bit(7) -> C
+        result = self.A & self.memory.cpu_read(address)
+        self.setNZ(result)
+        self.A = result
+        self.flag_C = bool(result & 0x80)
+
+    def ANE(self, address):
+        # (A OR CONST) AND X AND oper -> A
+        # TODO
+        pass
+
+    def ARR(self, address):
+        # AND oper + ROR
+        result = (self.A & self.memory.cpu_read(address)) // 2
+        # C is bit 6
+        self.flag_C = result & 0x40
+        # V is bit 6 xor bit 5
+        self.flag_V = (result & 0x40) ^ (result & 0x20)
+        self.setNZ(result)
+        self.A = result
+
+    def DCP(self, address):
+        # DEC oper + CMP oper
+        # M - 1 -> M, A - M
+        result = (self.memory.cpu_read(address) - 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
+        self.memory.cpu_write(address, result)
+        result = self.A - result
+        self.flag_C = result >= 0
+        result &= 0xFF
+        self.setNZ(result)
+
+    def ISC(self, address):
+        # INC oper + SBC oper
+        # M + 1 -> M, A - M - C -> A
+        value = (self.memory.cpu_read(address) + 1) & 0xFF
+        self.memory.cpu_write(address, 0xFF)  # Obscure CPU internal on RMW ops
+        self.memory.cpu_write(address, value)
+        # TODO BCD mode
+        result = self.A - value - (1 - self.flag_C)
+        self.setNZ(result & 0xFF)
+        self.flag_C = result >= 0x00
+        self.flag_V = bool((self.A ^ result) & ((0xFF - value) ^ result) & 0x80)
+        self.A = result & 0xFF
+
+    def LAS(self, address):
+        # LDA/TSX oper
+        # M AND SP -> A, X, SP
+        value = self.memory.cpu_read(address) & self.SP
+        self.A = self.X = self.SP = value
+        self.setNZ(value)
+
+    def LAX(self, address):
+        # LDA oper + LDX oper
+        # M -> A -> X
+        self.A = self.memory.cpu_read(address)
+        self.X = self.A
+        self.setNZ(self.A)
+
+    def LXA(self, address):
+        # (A OR CONST) AND X AND oper -> A
+        # TODO
+        pass
+
+    def RLA(self, address):
+        # ROL oper + AND oper
+        # M = C <- [76543210] <- C, A AND M -> A
+        value = self.memory.cpu_read(address)
+        _carrytemp = value >= 0x80
+        result = ((value * 2) | self.flag_C) & 0xFF
+        self.flag_C = _carrytemp
+        self.memory.cpu_write(address, result)
+        self.A &= result
+        self.setNZ(self.A)
+
+    def RRA(self, address):
+        # ROR oper + ADC oper
+        # M = C -> [76543210] -> C, A + M + C -> A, C
+        # TODO: BCD mode
+        value = self.memory.cpu_read(address)
+        _carrytemp = value & 0x01
+        result = ((value // 2) | self.flag_C * 0x80) & 0xFF
+        self.memory.cpu_write(address, result)
+
+        result = result + self.A + self.flag_C
+        self.setNZ(result & 0xFF)
+        self.flag_C = result > 0xFF
+        self.flag_V = bool((self.A ^ result) & (value ^ result) & 0x80)
+        self.A = result & 0xFF
+
+    def SAX(self, address):
+        # A and X are put on the bus at the same time
+        # (resulting effectively in an AND operation) and stored in M
+        # A AND X -> M
+        self.memory.cpu_write(address, self.A and self.X)
+
+    def SHA(self, address):
+        # Stores A AND X AND (high-byte of addr. + 1) at addr
+        # high_byte = address // 0x100
+        # TODO (get original operand...)
+        pass
+
+    def SHX(self, address):
+        # Stores X AND (high-byte of addr. + 1) at addr.
+        # high_byte = address // 0x100
+        # TODO (get original operand...)
+        pass
+
+    def SHY(self, address):
+        # Stores Y AND X AND (high-byte of addr. + 1) at addr
+        # high_byte = address // 0x100
+        # TODO (get original operand...)
+        pass
+
+    def SLO(self, address):
+        # ASL oper + ORA oper
+        # M = C <- [76543210] <- 0, A OR M -> A
+        value = self.memory.cpu_read(address)
+        self.flag_C = value >= 0x80
+        result = (value * 2) & 0xFF
+        self.A |= result
+        self.setNZ(self.A)
+
+    def SRE(self, address):
+        # LSR oper + EOR oper
+        # M = 0 -> [76543210] -> C, A EOR M -> A
+        value = self.memory.cpu_read(address)
+        self.flag_C = value & 0x01
+        result = value // 2
+        self.memory.cpu_write(address, result)
+        self.A = self.A ^ result
+        self.setNZ(self.A)
+
+    def SBX(self, address):
+        # CMP and DEX at once, sets flags like CMP
+        # (A AND X) - oper -> X
+        result = (self.A & self.X) - self.memory.cpu_read(address)
+        self.flag_C = result >= 0
+        result &= 0xFF
+        self.setNZ(result)
+        self.X = result
+
+    def TAS(self, address):
+        # Puts A AND X in SP and stores A AND X AND (high-byte of addr. + 1) at addr.
+        # TODO
+        pass
+
+    def USBC(self, address):
+        # (A OR CONST) AND X AND oper -> A
+        # same as SBC
+        pass
 
     # endregion
