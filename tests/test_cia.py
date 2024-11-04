@@ -2,7 +2,7 @@ import pygame
 import pytest
 
 from libs.hardware.bus import Bus
-from libs.hardware.cia import CIA, CIA_A
+from libs.hardware.cia import CIA, CIA_A, CIA_B
 from libs.hardware.memory import Memory
 
 
@@ -30,6 +30,11 @@ def cia(memory, bus) -> CIA:
 @pytest.fixture()
 def cia_a(memory, bus):
     return CIA_A(memory, bus)
+
+
+@pytest.fixture()
+def cia_b(memory, bus):
+    return CIA_B(memory, bus)
 
 
 def test_CIA_timer_A(cia):
@@ -206,3 +211,9 @@ def test_CIA_A_irq_registers(cia_a):
     assert cia_a.irq_TOD_enable is False
     assert cia_a.irq_IO_enable is False
     assert cia_a.irq_FLAG_enable is False
+
+
+def test_cia_b_registers(cia_b):
+    cia_b.set_registers(0x00, 254)
+    assert cia_b.vic_bank == 2
+    assert cia_b.get_registers(0x00) == 2
