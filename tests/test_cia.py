@@ -172,9 +172,22 @@ def test_CIA_tod(cia):
 )
 def test_CIA_A_keyboard(pressed, column, expected, cia_a):
     # Test only keymap-indipendent keys
-    cia_a.memory.cpu_write(0xDC00, 0xFF - column)
+    cia_a.set_registers(0x00, 0xFF - column)
     cia_a.clock(pressed)
-    assert cia_a.memory.cpu_read(0xDC01) == 0xFF - expected
+    assert cia_a.get_registers(0x01) == 0xFF - expected
+
+
+def test_CIA_A_registers(cia_a):
+    cia_a.set_registers(0x00, 0x42)
+    assert cia_a.keyboard_column == 0x42
+
+    cia_a.set_registers(0x05, 0x12)
+    cia_a.set_registers(0x04, 0x34)
+    assert cia_a.timer_A_latch == 0x1234
+
+    cia_a.timer_A_load()
+    assert cia_a.get_registers(0x05) == 0x12
+    assert cia_a.get_registers(0x04) == 0x34
 
 
 def test_CIA_A_irq_registers(cia_a):
@@ -184,28 +197,28 @@ def test_CIA_A_irq_registers(cia_a):
     assert cia_a.irq_IO_enable is False
     assert cia_a.irq_FLAG_enable is False
 
-    cia_a.set_registers(0xDC0D, 0b10010101)
+    cia_a.set_registers(0x0D, 0b10010101)
     assert cia_a.irq_timer_A_enable is True
     assert cia_a.irq_timer_B_enable is False
     assert cia_a.irq_TOD_enable is True
     assert cia_a.irq_IO_enable is False
     assert cia_a.irq_FLAG_enable is True
 
-    cia_a.set_registers(0xDC0D, 0b00010001)
+    cia_a.set_registers(0x0D, 0b00010001)
     assert cia_a.irq_timer_A_enable is False
     assert cia_a.irq_timer_B_enable is False
     assert cia_a.irq_TOD_enable is True
     assert cia_a.irq_IO_enable is False
     assert cia_a.irq_FLAG_enable is False
 
-    cia_a.set_registers(0xDC0D, 0b11111111)
+    cia_a.set_registers(0x0D, 0b11111111)
     assert cia_a.irq_timer_A_enable is True
     assert cia_a.irq_timer_B_enable is True
     assert cia_a.irq_TOD_enable is True
     assert cia_a.irq_IO_enable is True
     assert cia_a.irq_FLAG_enable is True
 
-    cia_a.set_registers(0xDC0D, 0b00011111)
+    cia_a.set_registers(0x0D, 0b00011111)
     assert cia_a.irq_timer_A_enable is False
     assert cia_a.irq_timer_B_enable is False
     assert cia_a.irq_TOD_enable is False
