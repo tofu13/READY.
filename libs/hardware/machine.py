@@ -100,6 +100,7 @@ class Machine(PatchMixin):
         "caps_lock",
         "breakpoints",
         "tracepoints",
+        "running",
         "_clock_counter",
         "_frame_counter",
         "_last_perf_timer",
@@ -148,6 +149,7 @@ class Machine(PatchMixin):
         self.input_buffer = ""
         self._clock_counter = 0
         self._frame_counter = 0
+        self.running: bool = True
 
         self.caption = "Commodore 64 {} {:.1f} FPS {:.1f}% performance"
         self.display_size = (
@@ -241,9 +243,10 @@ class Machine(PatchMixin):
         if address:
             self.cpu.PC = address
 
-        while True:
+        while self.running:
             self.clock()
             self._clock_counter += 1
+        pygame.quit()
 
     def clock(self):
         """
@@ -388,7 +391,7 @@ class Machine(PatchMixin):
                 )
 
             elif event.type == pygame.WINDOWCLOSE:
-                pygame.quit()
+                self.running = False
 
         return signal
 
