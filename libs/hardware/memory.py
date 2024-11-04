@@ -103,7 +103,7 @@ class Memory:
 
     def set_vic_bank(self, bank_bits: int):
         # bank_bits is 2-bit selector from CIA_B register 0 bits #0 #1
-        self.vic_memory_bank = (3 - self.vic_bank) << 14
+        self.vic_memory_bank = (3 - bank_bits) << 14
 
     def vic_read(self, address: int) -> int:
         """Returns memory content as seen by VIC-II"""
