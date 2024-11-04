@@ -101,6 +101,10 @@ class Memory:
             # Ok, time to really write into RAM
             self.ram[address] = value
 
+    def set_vic_bank(self, bank_bits: int):
+        # bank_bits is 2-bit selector from CIA_B register 0 bits #0 #1
+        self.vic_memory_bank = (3 - self.vic_bank) << 14
+
     def vic_read(self, address: int) -> int:
         """Returns memory content as seen by VIC-II"""
         # memory_bank = 3 - (self[0xDD00] & 0b11) << 14

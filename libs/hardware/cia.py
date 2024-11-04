@@ -301,4 +301,4 @@ class CIA_B(CIA):
                 # We'll set a MEMORY internal
                 # Used by the VIC
                 self.vic_bank = value & 0b11
-                self.memory.vic_memory_bank = (3 - self.vic_bank) << 14
+                self.memory.vic_memory_bank = self.vic_bank
