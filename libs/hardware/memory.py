@@ -6,6 +6,7 @@ from libs.hardware.constants import OPCODES, SCREEN_CHARCODE
 class Memory:
     __slots__ = [
         "ram",
+        "ram_color",
         "rom_basic",
         "rom_kernal",
         "rom_chargen",
@@ -15,14 +16,16 @@ class Memory:
         "loram_port",
         "hiram_port",
         "vic_memory_bank",
+        "_any_ram",
     ]
 
     def __init__(self, ram=None, roms=None):
         """
         Memory class that implements PLA for routing reads and write
-        to/from RAM, ROMS, I/O.
+        to/from RAM, ROMS, I/O, including color ram
         """
         self.ram = ram if ram is not None else bytearray(65536)
+        self.ram_color: bytearray = bytearray(1024)
         if roms is None:
             self.rom_basic = None
             self.rom_kernal = None
@@ -37,6 +40,7 @@ class Memory:
 
         # Internals
         self.io_port, self.loram_port, self.hiram_port = True, True, True
+        self._any_ram: bool = True
         self.vic_memory_bank: int = 0x0000
 
     def __getitem__(self, item):
@@ -53,13 +57,19 @@ class Memory:
             return self.rom_basic[address - 0xA000]
         elif 0xE000 <= address and self.hiram_port:
             return self.rom_kernal[address - 0xE000]
+        elif 0xD800 <= address <= 0xDBFF and self.io_port and self._any_ram:
+            return self.ram_color[address - 0xD800]
         elif 0xD000 <= address <= 0xDFFF:
-            if not self.io_port and (self.hiram_port or self.loram_port):
-                return self.rom_chargen[address - 0xD000]
-            else:
+            if self.io_port and self._any_ram:
+                # io_port on and RAM on -> I/O
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
                         return callback(address)
+            elif self._any_ram:
+                # io_port off with RAM on -> CHARGEN
+                return self.rom_chargen[address - 0xD000]
+            # io_port ignored with all RAM off -> RAM
+
         return self.ram[address]
 
     def cpu_write(self, address: int, value: int):
@@ -68,20 +78,32 @@ class Memory:
         if address == 0x01:
             # Set only writable bits in the processor port
             mask = self.ram[0x00]
-            self.ram[0x01] = ((255 - mask) & self.ram[0x01]) | (mask & value)
+            value = ((255 - mask) & self.ram[0x01]) | (mask & value)
+            self.ram[0x01] = value
             # Update internal flags
             self.io_port, self.hiram_port, self.loram_port = map(
-                bool, map(int, f"{self.ram[0x01] & 0x7:03b}")
+                bool, map(int, f"{value & 0x7:03b}")
             )
+            # Cache any RAM flag
+            self._any_ram = self.hiram_port or self.loram_port
             return
 
-        for start, end, callback in self.write_watchers:
-            if start <= address <= end:
-                callback(address, value)
-                break
+        elif 0xD800 <= address <= 0xDBFF and self.io_port and self._any_ram:
+            # Store only lower nibble to 4-bit color ram
+            self.ram_color[address - 0xD800] = value & 0x0F
 
-        # Anyway, write into RAM
-        self.ram[address] = value
+        elif 0xD000 <= address <= 0xDFFF and self.io_port and self._any_ram:
+            for start, end, callback in self.write_watchers:
+                if start <= address <= end:
+                    callback(address, value)
+                    break
+        else:
+            # Ok, time to really write into RAM
+            self.ram[address] = value
+
+    def set_vic_bank(self, bank_bits: int):
+        # bank_bits is 2-bit selector from CIA_B register 0 bits #0 #1
+        self.vic_memory_bank = (3 - self.vic_bank) << 14
 
     def vic_read(self, address: int) -> int:
         """Returns memory content as seen by VIC-II"""

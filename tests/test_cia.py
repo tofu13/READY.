@@ -10,9 +10,9 @@ from libs.hardware.memory import Memory
 def memory():
     # Dont need ROMS
     memory = Memory()
-    # Enable I/O
+    # Enable I/O (Note that hiram or loram must be on to enable I/O)
     memory.cpu_write(0x00, 0xFF)
-    memory.cpu_write(0x01, 0x0B100)
+    memory.cpu_write(0x01, 0b111)
 
     return memory
 
