@@ -239,10 +239,10 @@ class CIA_A(CIA):
                 # TODO: add paddle selection, bits #6 and #7
             case 0x04:
                 "Set lo byte of timer_A"
-                self.timer_A_latch = self.timer_A_latch // 256 + value
+                self.timer_A_latch = (self.timer_A_latch & 0xFF00) + value
             case 0x05:
                 "Set hi byte of timer_A"
-                self.timer_A_latch = value * 256 + self.timer_A_latch % 256
+                self.timer_A_latch = (self.timer_A_latch & 0x00FF) + value * 256
             case 0x0D:
                 # Enable/Disable IRQ sources
                 # Value of bit #7 enables/disables
@@ -292,6 +292,8 @@ class CIA_B(CIA):
         match address & 0x0F:
             case 0x00:
                 return self.vic_bank
+            case _:
+                return 0
 
     def set_registers(self, address, value):
         match address & 0x0F:

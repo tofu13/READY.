@@ -309,7 +309,7 @@ OPCODE_MAP = {
     0xCC: ("CPY", "addressing_ABS", 4, True),
     0xCD: ("CMP", "addressing_ABS", 5, True),
     0xCE: ("DEC", "addressing_ABS", 6, True),
-    0xCF: ("CDP", "addressing_ABS", 6, False),
+    0xCF: ("DCP", "addressing_ABS", 6, False),
     #
     0xD0: ("BNE", "addressing_REL", 2, True),
     0xD1: ("CMP", "addressing_IND_Y", 5, True),

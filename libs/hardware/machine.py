@@ -100,6 +100,7 @@ class Machine(PatchMixin):
         "caps_lock",
         "breakpoints",
         "tracepoints",
+        "running",
         "_clock_counter",
         "_frame_counter",
         "_last_perf_timer",
@@ -148,6 +149,7 @@ class Machine(PatchMixin):
         self.input_buffer = ""
         self._clock_counter = 0
         self._frame_counter = 0
+        self.running: bool = True
 
         self.caption = "Commodore 64 {} {:.1f} FPS {:.1f}% performance"
         self.display_size = (
@@ -241,9 +243,10 @@ class Machine(PatchMixin):
         if address:
             self.cpu.PC = address
 
-        while True:
+        while self.running:
             self.clock()
             self._clock_counter += 1
+        pygame.quit()
 
     def clock(self):
         """
@@ -266,20 +269,21 @@ class Machine(PatchMixin):
             # Run service once a frame (good guess and not configurable)
             self.service()
 
-        # Run CPU
-        if self.cpu.clock():
-            # CPU is ready to fetch, it's the right moment to...
-            # - Activate monitor on breakpoints
-            if self.breakpoints:
-                self.monitor_active |= self.cpu.PC in self.breakpoints
-            if self.monitor_active:
-                self.monitor.cmdloop()
-                self.monitor_active = False
-            # Apply patches
-            if (
-                patch := self.patches.get(self.cpu.PC)
-            ) is not None and self.memory.hiram_port:
-                patch()
+        # Run CPU if VIC is not blocking
+        if not self.bus.memory_bus_required():
+            if self.cpu.clock():
+                # CPU is ready to fetch, it's the right moment to...
+                # - Activate monitor on breakpoints
+                if self.breakpoints:
+                    self.monitor_active |= self.cpu.PC in self.breakpoints
+                if self.monitor_active:
+                    self.monitor.cmdloop()
+                    self.monitor_active = False
+                # Apply patches
+                if (
+                    patch := self.patches.get(self.cpu.PC)
+                ) is not None and self.memory.hiram_port:
+                    patch()
 
         # Run CIAs
         self.ciaA.clock(self.keys_pressed)
@@ -388,7 +392,11 @@ class Machine(PatchMixin):
                 )
 
             elif event.type == pygame.WINDOWCLOSE:
-                pygame.quit()
+                logging.info(
+                    f"Run {self._clock_counter} clock cycles "
+                    f"and {self._frame_counter} frames "
+                )
+                self.running = False
 
         return signal
 

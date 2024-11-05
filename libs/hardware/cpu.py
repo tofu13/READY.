@@ -105,7 +105,7 @@ class CPU:
         :return: None
         """
         # Stack memory is at page 1 (0x100)
-        self.memory[0x100 | self.SP] = value
+        self.memory[0x100 + self.SP] = value
         self.SP = (self.SP - 1) & 0xFF
 
     def pop(self):
@@ -115,7 +115,7 @@ class CPU:
         """
         # Stack memory is at page 1 (0x100)
         self.SP = (self.SP + 1) & 0xFF
-        return self.memory[0x100 | self.SP]
+        return self.memory[0x100 + self.SP]
 
     @staticmethod
     def binary_to_decimal(value):
@@ -129,13 +129,10 @@ class CPU:
 
     def clock(self) -> bool:
         """
-        Execute next instruction
-        Return True when an instruction is fully cexecuted
+        Fetch next instruction or continue executing current
+        Return True when an instruction is fully executed
         and CPU is ready to fetch a new one
         """
-        if self.bus.memory_bus_required():
-            return False
-
         if self._cycles_left > 0:
             # Still working on last instruction
             self._cycles_left -= 1
@@ -518,7 +515,7 @@ class CPU:
 
     def LSR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
-        self.flag_C = value & 0x01
+        self.flag_C = bool(value & 0x01)
         result = value // 2
         self.setNZ(result)
         if address is None:
@@ -551,7 +548,7 @@ class CPU:
     def ROL(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value * 2) | self.flag_C) & 0xFF
+        result = ((value * 2) + self.flag_C) & 0xFF
         self.setNZ(result)
         self.flag_C = _carrytemp
         if address is None:
@@ -563,7 +560,7 @@ class CPU:
     def ROR(self, address):
         value = self.A if address is None else self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value // 2) | self.flag_C * 0x80) & 0xFF
+        result = ((value // 2) + self.flag_C * 0x80) & 0xFF
         self.setNZ(result)
         self.flag_C = _carrytemp
         if address is None:
@@ -652,7 +649,7 @@ class CPU:
         # AND oper + LSR
         # A AND oper, 0 -> [76543210] -> C
         value = self.A & self.memory.cpu_read(address)
-        self.flag_C = value & 0x01
+        self.flag_C = bool(value & 0x01)
         result = value // 2
         self.setNZ(result)
         self.A = result
@@ -728,7 +725,7 @@ class CPU:
         # M = C <- [76543210] <- C, A AND M -> A
         value = self.memory.cpu_read(address)
         _carrytemp = value >= 0x80
-        result = ((value * 2) | self.flag_C) & 0xFF
+        result = ((value * 2) + self.flag_C) & 0xFF
         self.flag_C = _carrytemp
         self.memory.cpu_write(address, result)
         self.A &= result
@@ -740,7 +737,7 @@ class CPU:
         # TODO: BCD mode
         value = self.memory.cpu_read(address)
         _carrytemp = value & 0x01
-        result = ((value // 2) | self.flag_C * 0x80) & 0xFF
+        result = ((value // 2) + self.flag_C * 0x80) & 0xFF
         self.memory.cpu_write(address, result)
 
         result = result + self.A + self.flag_C
@@ -786,7 +783,7 @@ class CPU:
         # LSR oper + EOR oper
         # M = 0 -> [76543210] -> C, A EOR M -> A
         value = self.memory.cpu_read(address)
-        self.flag_C = value & 0x01
+        self.flag_C = bool(value & 0x01)
         result = value // 2
         self.memory.cpu_write(address, result)
         self.A = self.A ^ result
