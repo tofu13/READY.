@@ -52,25 +52,33 @@ class Memory:
     def cpu_read(self, address: int | slice) -> int:
         """Return memory content (RAM, ROM, I/O) as seen by the cpu"""
         if address < 0xA000:  # Maybe helps, maybe not
-            return self.ram[address]
+            value = self.ram[address]
         elif 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
-            return self.rom_basic[address - 0xA000]
+            value = self.rom_basic[address - 0xA000]
         elif 0xE000 <= address and self.hiram_port:
-            return self.rom_kernal[address - 0xE000]
+            value = self.rom_kernal[address - 0xE000]
         elif 0xD800 <= address <= 0xDBFF and self.io_port and self._any_ram:
-            return self.ram_color[address - 0xD800]
+            value = self.ram_color[address - 0xD800]
         elif 0xD000 <= address <= 0xDFFF:
             if self.io_port and self._any_ram:
                 # io_port on and RAM on -> I/O
                 for start, end, callback in self.read_watchers:
                     if start <= address <= end:
-                        return callback(address)
+                        value = callback(address)
+                        break
+                else:
+                    # Unmapped I/O
+                    value = 0x00
             elif self._any_ram:
                 # io_port off with RAM on -> CHARGEN
-                return self.rom_chargen[address - 0xD000]
-            # io_port ignored with all RAM off -> RAM
-
-        return self.ram[address]
+                value = self.rom_chargen[address - 0xD000]
+            else:
+                # io_port ignored with all RAM off -> underlying RAM
+                value = self.ram[address]
+        else:
+            # Actual RAM
+            value = self.ram[address]
+        return value
 
     def cpu_write(self, address: int, value: int):
         """Write into RAM or I/O depending on CPU ports"""
@@ -86,7 +94,6 @@ class Memory:
             )
             # Cache any RAM flag
             self._any_ram = self.hiram_port or self.loram_port
-            return
 
         elif 0xD800 <= address <= 0xDBFF and self.io_port and self._any_ram:
             # Store only lower nibble to 4-bit color ram
@@ -97,6 +104,9 @@ class Memory:
                 if start <= address <= end:
                     callback(address, value)
                     break
+                else:
+                    # Writing to unmapped I/O
+                    pass
         else:
             # Ok, time to really write into RAM
             self.ram[address] = value
@@ -120,7 +130,7 @@ class Memory:
         Optimized consecutive reads
         Return big endian word (16-bit address)
         """
-        if 0xA000 <= address <= 0xBFFF and self.hiram_port and self.loram_port:
+        if 0xA000 <= address <= 0xBFFF and self._any_ram:
             lo, hi = self.rom_basic[address - 0xA000 : address - 0xA000 + 2]
         elif 0xE000 <= address and self.hiram_port:
             lo, hi = self.rom_kernal[address - 0xE000 : address - 0xE000 + 2]
