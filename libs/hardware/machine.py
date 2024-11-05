@@ -392,6 +392,10 @@ class Machine(PatchMixin):
                 )
 
             elif event.type == pygame.WINDOWCLOSE:
+                logging.info(
+                    f"Run {self._clock_counter} clock cycles "
+                    f"and {self._frame_counter} frames "
+                )
                 self.running = False
 
         return signal
