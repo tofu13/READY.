@@ -15,6 +15,7 @@ def main():
     logging.basicConfig(
         filename=config.LOGFILE, filemode="w", format="%(message)s", level=args.loglevel
     )
+    logging.getLogger("d64").setLevel(logging.WARNING)
 
     if args.loadstate:
         c64 = hardware.machine.Machine.from_file(args.loadstate)
