@@ -269,20 +269,21 @@ class Machine(PatchMixin):
             # Run service once a frame (good guess and not configurable)
             self.service()
 
-        # Run CPU
-        if self.cpu.clock():
-            # CPU is ready to fetch, it's the right moment to...
-            # - Activate monitor on breakpoints
-            if self.breakpoints:
-                self.monitor_active |= self.cpu.PC in self.breakpoints
-            if self.monitor_active:
-                self.monitor.cmdloop()
-                self.monitor_active = False
-            # Apply patches
-            if (
-                patch := self.patches.get(self.cpu.PC)
-            ) is not None and self.memory.hiram_port:
-                patch()
+        # Run CPU if VIC is not blocking
+        if not self.bus.memory_bus_required():
+            if self.cpu.clock():
+                # CPU is ready to fetch, it's the right moment to...
+                # - Activate monitor on breakpoints
+                if self.breakpoints:
+                    self.monitor_active |= self.cpu.PC in self.breakpoints
+                if self.monitor_active:
+                    self.monitor.cmdloop()
+                    self.monitor_active = False
+                # Apply patches
+                if (
+                    patch := self.patches.get(self.cpu.PC)
+                ) is not None and self.memory.hiram_port:
+                    patch()
 
         # Run CIAs
         self.ciaA.clock(self.keys_pressed)

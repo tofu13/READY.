@@ -129,13 +129,10 @@ class CPU:
 
     def clock(self) -> bool:
         """
-        Execute next instruction
-        Return True when an instruction is fully cexecuted
+        Fetch next instruction or continue executing current
+        Return True when an instruction is fully executed
         and CPU is ready to fetch a new one
         """
-        if self.bus.memory_bus_required():
-            return False
-
         if self._cycles_left > 0:
             # Still working on last instruction
             self._cycles_left -= 1
