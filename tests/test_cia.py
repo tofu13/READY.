@@ -173,7 +173,7 @@ def test_CIA_tod(cia):
 def test_CIA_A_keyboard(pressed, column, expected, cia_a):
     # Test only keymap-indipendent keys
     cia_a.set_registers(0x00, 0xFF - column)
-    cia_a.clock(pressed)
+    cia_a.keys_pressed = pressed
     assert cia_a.get_registers(0x01) == 0xFF - expected
 
 

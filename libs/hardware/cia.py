@@ -126,10 +126,7 @@ class CIA_A(CIA):
                 for key in NUMPAD_NUMS:
                     KEYBOARD.pop(key, None)
 
-    def clock(self, keys_pressed: set):
-        # Save keys pressed
-        self.keys_pressed = keys_pressed
-
+    def clock(self):
         # Note: should use super(), but it's quite slow
         CIA.clock(self)
 

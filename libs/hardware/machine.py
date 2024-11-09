@@ -286,8 +286,8 @@ class Machine(PatchMixin):
                     patch()
 
         # Run CIAs
-        self.ciaA.clock(self.keys_pressed)
-        self.ciaB.clock()
+        self.ciaA.clock()
+        # self.ciaB.clock()  # TODO: reactivate me
 
     def service(self):
         self.signal = self.manage_events()
@@ -371,18 +371,18 @@ class Machine(PatchMixin):
                 elif event.key == pygame.K_CAPSLOCK:
                     self.caps_lock = not self.caps_lock
                     if not self.caps_lock:
-                        self.keys_pressed.remove(pygame.K_LSHIFT)
+                        self.ciaA.keys_pressed.remove(pygame.K_LSHIFT)
                 else:
-                    self.keys_pressed.add(event.key)
+                    self.ciaA.keys_pressed.add(event.key)
 
                 if self.caps_lock:
-                    self.keys_pressed.add(pygame.K_LSHIFT)
+                    self.ciaA.keys_pressed.add(pygame.K_LSHIFT)
 
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_PAGEDOWN:
                     self.bus.nmi_clear("restore_key")
                 else:
-                    self.keys_pressed.discard(event.key)
+                    self.ciaA.keys_pressed.discard(event.key)
 
             elif event.type == pygame.VIDEORESIZE:
                 h, w = event.size
