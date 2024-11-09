@@ -243,9 +243,9 @@ def test_VIC_II_raster_irq_occurs(vic_ii_raster):
         irq_mock.irq_set.assert_not_called()
 
         for i in range(63 * 2 - 1):  # 1 clock before IRQ
-            vic_ii_raster.clock(0)
+            vic_ii_raster.clock()
         irq_mock.irq_set.assert_not_called()
-        vic_ii_raster.clock(0)  # IRQ here
+        vic_ii_raster.clock()  # IRQ here
         irq_mock.irq_set.assert_called()
 
         # Ack irq
@@ -255,23 +255,23 @@ def test_VIC_II_raster_irq_occurs(vic_ii_raster):
 
 
 def test_VIC_II_raster_clock(vic_ii_raster):
-    frame = vic_ii_raster.clock(0)
+    frame = vic_ii_raster.clock()
     assert frame is None
     assert vic_ii_raster.raster_x == 8
     assert vic_ii_raster.raster_y == 0
 
     # To the next line
     for _ in range(62):
-        vic_ii_raster.clock(0)
+        vic_ii_raster.clock()
 
     assert vic_ii_raster.raster_x == 0
     assert vic_ii_raster.raster_y == 1
 
     # To the end of frame (311 lines missing, 1 clock remaining)
     for _ in range(63 * 311 - 1):
-        vic_ii_raster.clock(0)
+        vic_ii_raster.clock()
     # End of frame now
-    frame = vic_ii_raster.clock(0)
+    frame = vic_ii_raster.clock()
 
     assert vic_ii_raster.raster_x == 0
     assert vic_ii_raster.raster_y == 0
@@ -282,7 +282,7 @@ def test_VIC_II_raster_text_mode(vic_ii_raster):
     vic_ii_raster._frame_on = True
     frame = None
     while frame is None:
-        frame = vic_ii_raster.clock(0)
+        frame = vic_ii_raster.clock()
     assert frame.shape == VIDEO_SIZE
 
 
@@ -295,7 +295,7 @@ def test_VIC_II_raster_bad_lines_occur(vic_ii_raster):
     vic_ii_raster.raster_y = 48
     vic_ii_raster._frame_on = True
 
-    vic_ii_raster.clock(0)
+    vic_ii_raster.clock()
 
     assert vic_ii_raster.char_buffer == bytearray([0x00] * 40)
     assert vic_ii_raster.color_buffer == bytearray([0x00] * 40)
@@ -309,7 +309,7 @@ def test_VIC_II_raster_bad_lines_lock_CPU(vic_ii_raster):
     with mock.patch("libs.hardware.bus.Bus") as irq_mock:
         vic_ii_raster.bus = irq_mock
         irq_mock.require_memory_bus.assert_not_called()
-        vic_ii_raster.clock(0)
+        vic_ii_raster.clock()
         irq_mock.require_memory_bus.assert_called_with(cycles=40)
 
 

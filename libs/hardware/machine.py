@@ -253,7 +253,7 @@ class Machine(PatchMixin):
         Clocks all devices
         """
         # Run VIC-II
-        frame = self.screen.clock(self._clock_counter)
+        frame = self.screen.clock()
 
         # Display complete frame
         if frame is not None:
