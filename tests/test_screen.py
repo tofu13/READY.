@@ -242,7 +242,7 @@ def test_VIC_II_raster_irq_occurs(vic_ii_raster):
         vic_ii_raster.bus = irq_mock
         irq_mock.irq_set.assert_not_called()
 
-        for i in range(63 * 2 - 1):  # 1 clock before IRQ
+        for i in range(63 * 2):  # 1 clock before IRQ
             vic_ii_raster.clock()
         irq_mock.irq_set.assert_not_called()
         vic_ii_raster.clock()  # IRQ here

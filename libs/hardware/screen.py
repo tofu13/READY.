@@ -411,6 +411,15 @@ class RasterScreen(VIC_II):
         )
 
     def clock(self):
+        if (
+            self.raster_x == 0
+            and self.raster_y == self.irq_raster_line
+            and self.irq_raster_enabled
+        ):
+            # Raster IRQ
+            self.irq_raster_occured = True
+            self.bus.irq_set("VIC-II")
+
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
             pixel_pointer = self.raster_y * VIDEO_SIZE_H + self.raster_x
@@ -514,22 +523,15 @@ class RasterScreen(VIC_II):
         if self.raster_x >= SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
-            frame = None
             if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
                 self._frame_on = self.DEN
-                frame = (
+                return (
                     # Cut frame size to ignore out-of-frame pixels
                     np.array(self.frame, dtype=np.ubyte)
                     .reshape((VIDEO_SIZE_V, VIDEO_SIZE_H))
                     .T
                 )
-            if self.irq_raster_enabled and self.irq_raster_line == self.raster_y:
-                # Raster IRQ
-                self.irq_raster_occured = True
-                self.bus.irq_set("VIC-II")
-
-            return frame
 
 
 class VirtualScreen(VIC_II):
