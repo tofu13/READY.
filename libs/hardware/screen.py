@@ -410,7 +410,16 @@ class RasterScreen(VIC_II):
             color_pack[p3],
         )
 
-    def clock(self, clock_counter: int):
+    def clock(self):
+        if (
+            self.raster_x == 0
+            and self.raster_y == self.irq_raster_line
+            and self.irq_raster_enabled
+        ):
+            # Raster IRQ
+            self.irq_raster_occured = True
+            self.bus.irq_set("VIC-II")
+
         if self.raster_x < VIDEO_SIZE_H and self.raster_y < VIDEO_SIZE_V:
             # Raster is in the visible area
             pixel_pointer = self.raster_y * VIDEO_SIZE_H + self.raster_x
@@ -514,22 +523,15 @@ class RasterScreen(VIC_II):
         if self.raster_x >= SCAN_AREA_H:
             self.raster_x = 0
             self.raster_y += 1
-            frame = None
             if self.raster_y >= SCAN_AREA_V:
                 self.raster_y = 0
                 self._frame_on = self.DEN
-                frame = (
+                return (
                     # Cut frame size to ignore out-of-frame pixels
                     np.array(self.frame, dtype=np.ubyte)
                     .reshape((VIDEO_SIZE_V, VIDEO_SIZE_H))
                     .T
                 )
-            if self.irq_raster_enabled and self.irq_raster_line == self.raster_y:
-                # Raster IRQ
-                self.irq_raster_occured = True
-                self.bus.irq_set("VIC-II")
-
-            return frame
 
 
 class VirtualScreen(VIC_II):
@@ -539,7 +541,7 @@ class VirtualScreen(VIC_II):
 
     __slots__ = []
 
-    def clock(self, clock_counter: int):
+    def clock(self):
         pass
 
 
@@ -549,11 +551,12 @@ class FastScreen(VIC_II):
     Text only, fast
     """
 
-    __slots__ = ["font_cache"]
+    __slots__ = ["font_cache", "clock_counter"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.font_cache = self.cache_fonts()
+        self.clock_counter: int = 0
 
     def cache_fonts(self):
         cache = []
@@ -565,8 +568,8 @@ class FastScreen(VIC_II):
             cache.append(font)
         return cache
 
-    def clock(self, clock_counter: int) -> np.array:
-        if clock_counter % CLOCKS_PER_FRAME == 0:
+    def clock(self) -> np.array:
+        if self.clock_counter % CLOCKS_PER_FRAME == 0:
             frame = np.ones(VIDEO_SIZE, dtype="uint8") * self.border_color
 
             if self.DEN:
@@ -598,3 +601,4 @@ class FastScreen(VIC_II):
                 frame[24:344, 51:251] = chars
             self.memory[0xD012] = 0  # This lets the system boot (see $FF5E)
             return frame
+        self.clock_counter += 1

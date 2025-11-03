@@ -246,6 +246,10 @@ class Machine(PatchMixin):
         while self.running:
             self.clock()
             self._clock_counter += 1
+        logging.info(
+            f"Run {self._clock_counter} clock cycles "
+            f"and {self._frame_counter} frames"
+        )
         pygame.quit()
 
     def clock(self):
@@ -253,7 +257,7 @@ class Machine(PatchMixin):
         Clocks all devices
         """
         # Run VIC-II
-        frame = self.screen.clock(self._clock_counter)
+        frame = self.screen.clock()
 
         # Display complete frame
         if frame is not None:
@@ -286,8 +290,8 @@ class Machine(PatchMixin):
                     patch()
 
         # Run CIAs
-        self.ciaA.clock(self.keys_pressed)
-        self.ciaB.clock()
+        self.ciaA.clock()
+        # self.ciaB.clock()  # TODO: reactivate me
 
     def service(self):
         self.signal = self.manage_events()
@@ -371,18 +375,18 @@ class Machine(PatchMixin):
                 elif event.key == pygame.K_CAPSLOCK:
                     self.caps_lock = not self.caps_lock
                     if not self.caps_lock:
-                        self.keys_pressed.remove(pygame.K_LSHIFT)
+                        self.ciaA.keys_pressed.remove(pygame.K_LSHIFT)
                 else:
-                    self.keys_pressed.add(event.key)
+                    self.ciaA.keys_pressed.add(event.key)
 
                 if self.caps_lock:
-                    self.keys_pressed.add(pygame.K_LSHIFT)
+                    self.ciaA.keys_pressed.add(pygame.K_LSHIFT)
 
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_PAGEDOWN:
                     self.bus.nmi_clear("restore_key")
                 else:
-                    self.keys_pressed.discard(event.key)
+                    self.ciaA.keys_pressed.discard(event.key)
 
             elif event.type == pygame.VIDEORESIZE:
                 h, w = event.size
@@ -392,10 +396,6 @@ class Machine(PatchMixin):
                 )
 
             elif event.type == pygame.WINDOWCLOSE:
-                logging.info(
-                    f"Run {self._clock_counter} clock cycles "
-                    f"and {self._frame_counter} frames "
-                )
                 self.running = False
 
         return signal
